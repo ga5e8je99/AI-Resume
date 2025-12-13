@@ -8,65 +8,64 @@ import {
   EyeOff,
   Github,
   Linkedin,
-  Facebook
+  Facebook,
 } from "lucide-react";
 import React, { useState } from "react";
-import axios from "axios";
+
+import { useRouter } from "next/navigation";
 
 export default function AuthPageClient() {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const route = useRouter();
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // التحقق من صحة المدخلات الأساسية
-    if (!loginData.email || !loginData.password) {
-      console.log("Please fill in all fields");
-      return;
-    }
-    
     setIsLoading(true);
-  
-    try {
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
-        {
-          email: loginData.email,
-          password: loginData.password,
-        }
-      );
-  
-      // التحقق من وجود البيانات قبل تخزينها
-      if (res.data && res.data.token) {
-        localStorage.setItem("resumeToken", res.data.token);
-        console.log (res.data)
-      } else {
-        console.log("No token received from server");
+    setError("");
+    setSuccess(false);
+
+    setTimeout(() => {
+      try {
+        const mockResponse = {
+          token: "mock_jwt_token_" + Math.random().toString(36).substr(2, 9),
+          user: {
+            id: "mock_user_" + Math.random().toString(36).substr(2, 9),
+            name: loginData.email.split("@")[0],
+            email: loginData.email,
+          },
+        };
+
+        // Success
+        setSuccess(true);
+
+        localStorage.setItem("auth_token", mockResponse.token);
+        localStorage.setItem("user", JSON.stringify(mockResponse.user));
+
+        // Reset form
+        setLoginData({ email: "", password: "" });
+
+        // Show success message for 3 seconds, then redirect
+      } catch (err) {
+        setError("Login failed. Please try again.");
+        console.error("Login error:", err);
+      } finally {
+        setIsLoading(false);
       }
-      
-      // إعادة التوجيه بعد تسجيل الدخول الناجح (اختياري)
-      // window.location.href = "/dashboard";
-      
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        console.error("Login error:", error.response?.data || error.message);
-      } else {
-        console.error("Login error:", error);
-      }
-      // يمكنك إضافة رسالة خطأ للمستخدم هنا
-    } finally {
-      setIsLoading(false);
-    }
+    }, 1500);
+    setTimeout(() => {
+      route.push("/#upload");
+    }, 3000);
   };
-  
-  // دالة لتحديث حالة المدخلات
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target as HTMLInputElement;
-    setLoginData(prev => ({
+    const { id, value } = e.target;
+    setLoginData((prev) => ({
       ...prev,
-      [id]: value
+      [id]: value,
     }));
   };
 
@@ -83,7 +82,20 @@ export default function AuthPageClient() {
           </p>
         </div>
 
-        <div className="bg-transparent rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
+        {/* عرض رسائل الخطأ أو النجاح */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500 text-red-300 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 p-3 bg-green-500/20 border border-green-500 text-green-300 rounded-xl text-sm">
+            Login successful! Redirecting...
+          </div>
+        )}
+
+        <div className=" bg-gray-800/50 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden border border-gray-700 ">
           <div className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
@@ -143,7 +155,9 @@ export default function AuthPageClient() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />

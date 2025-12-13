@@ -3,7 +3,7 @@
 
 import { Geist, Geist_Mono } from "next/font/google";
 import { useEffect } from "react";
-
+import ScrollToTop from "./components/ScrollToTop";
 import "./globals.css";
 
 
@@ -42,6 +42,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {children}
+        <ScrollToTop/>
       </body>
     </html>
   );

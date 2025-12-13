@@ -415,6 +415,9 @@ export default function Home() {
           animation-delay: 0.2s;
         }
       `}</style>
+      <div className="h-24 backdrop-blur-3xl flex items-center justify-center text-gray-500 text-sm">
+        &copy; 2024 JobMatch. All rights reserved.
+      </div>
     </>
   );
 }

@@ -10,12 +10,22 @@ import {
   Github,
   Twitter,
   Chrome,
-  CheckCircle,
-  XCircle,
 } from "lucide-react";
-import { useState } from "react";
-import axios from "axios";
-import { AxiosError } from "axios";
+import { useState, FormEvent } from "react";
+
+// Typed shape for the (mock) registration response
+interface RegisterResponse {
+  token?: string;
+  user?: {
+    id?: string;
+    _id?: string;
+    name?: string;
+    email?: string;
+    [key: string]: unknown;
+  } | null;
+  [key: string]: unknown;
+}
+
 export default function Register() {
   const [registerData, setRegisterData] = useState({
     name: "",
@@ -28,11 +38,89 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [responseData, setResponseData] = useState<any>(null);
+  const [responseData, setResponseData] = useState<RegisterResponse | null>(null);
+  const [openAlert, setOpenAlert] = useState(false);
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError("");
+    setSuccess(false);
+    setResponseData(null);
+    setOpenAlert(true);
+    console.log("Submitting registration with data:", responseData);
 
+    // Validation
+    if (registerData.password !== registerData.confirmPassword) {
+      setError("Passwords do not match!");
+      return;
+    }
+
+    if (registerData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (!registerData.name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+
+    if (!registerData.email.includes("@")) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    setIsLoading(true);
+
+    // محاكاة اتصال API
+    setTimeout(() => {
+      try {
+        // محاكاة الرد الناجح
+        const mockResponse = {
+          token: "mock_jwt_token_" + Math.random().toString(36).substr(2, 9),
+          user: {
+            id: "mock_user_" + Math.random().toString(36).substr(2, 9),
+            name: registerData.name,
+            email: registerData.email,
+          },
+        };
+
+        // Success
+        setSuccess(true);
+        setResponseData(mockResponse);
+
+        // Save token to localStorage (محتوى تجريبي)
+        localStorage.setItem("auth_token", mockResponse.token);
+        localStorage.setItem("user", JSON.stringify(mockResponse.user));
+
+        // Reset form
+        setRegisterData({
+          name: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+        });
+
+        // Show success message for 5 seconds, then redirect
+        setTimeout(() => {
+          window.location.href = "/auth";
+        }, 5000);
+      } catch (err) {
+        setError("Registration simulation failed. Please try again.");
+        console.error("Registration simulation error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 1500); // تأخير لمحاكاة اتصال الشبكة
+  };
+
+  // ===========================================================================
+  // دوال API الأصلية (معلقة للاستخدام المستقبلي)
+  // ===========================================================================
+  
+  /*
   // Get API URL from environment variable
-  const API_URL = process.env.NEXT_PUBLIC_API_URL
-  || "http://localhost:3000/api";
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -91,24 +179,20 @@ export default function Register() {
 
       // Show success message for 5 seconds, then redirect
       setTimeout(() => {
-        // Redirect to login or dashboard
         window.location.href = "/auth";
       }, 5000);
-
     } catch (err: unknown) {
       const error = err as AxiosError<{ message?: string }>;
-    
+
       console.error("Registration error:", error);
-    
+
       if (error.response) {
-        // Server responded with error
         setError(error.response.data?.message || "Registration failed");
-       
       } else if (error.request) {
-        // Request was made but no response
-        setError("Cannot connect to server. Please check if backend is running.");
+        setError(
+          "Cannot connect to server. Please check if backend is running."
+        );
       } else {
-        // Other errors
         setError(error.message || "An error occurred");
       }
     } finally {
@@ -116,61 +200,30 @@ export default function Register() {
     }
   };
 
-  // Test API connection
-  const testAPIConnection = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/health`);
-      alert(`API is working!\nStatus: ${response.data.message}\nDatabase: ${response.data.database.connected ? 'Connected' : 'Not connected'}`);
-    } catch (error) {
-      alert("Cannot connect to API. Make sure backend server is running on port 3000");
-    }
-  };
+  interface RegisterResponse {
+    token?: string;
+    user?: {
+      _id?: string;
+      id?: string;
+      name?: string;
+      email?: string;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  }
+  */
+  
+  // ===========================================================================
+  // API functions end here
+  // ===========================================================================
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-10 ">
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Create Account
-          </h1>
-          <p className="text-gray-400">Join our resume analyzer platform</p>
-          
-        </div>
+       
 
         {/* Success Message */}
-        {success && responseData && (
-          <div className="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-xl">
-            <div className="flex items-center gap-3 text-blue-400 mb-2">
-              <CheckCircle className="w-5 h-5" />
-              <span className="font-semibold">Registration Successful!</span>
-            </div>
-            <p className="text-blue-300 text-sm mb-3">
-              Welcome, {responseData.user?.name}! You will be redirected to login page in 5 seconds...
-            </p>
-            <div className="text-xs text-gray-400 space-y-1">
-              <div>Token: {responseData.token?.substring(0, 30)}...</div>
-              <div>User ID: {responseData.user?._id || responseData.user?.id}</div>
-              <div>Email: {responseData.user?.email}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-900/30 border border-red-700 rounded-xl">
-            <div className="flex items-center gap-3 text-red-400 mb-2">
-              <XCircle className="w-5 h-5" />
-              <span className="font-semibold">Registration Failed</span>
-            </div>
-            <p className="text-red-300 text-sm">{error}</p>
-            {responseData && (
-              <pre className="mt-2 text-xs text-gray-400 overflow-auto">
-                {JSON.stringify(responseData, null, 2)}
-              </pre>
-            )}
-          </div>
-        )}
+        
 
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden border border-gray-700">
           <div className="p-8">
@@ -266,6 +319,8 @@ export default function Register() {
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-300" />
@@ -312,6 +367,12 @@ export default function Register() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     disabled={isLoading}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    aria-label={
+                      showConfirmPassword ? "Hide confirm password" : "Show confirm password"
+                    }
+                    title={
+                      showConfirmPassword ? "Hide confirm password" : "Show confirm password"
+                    }
                   >
                     {showConfirmPassword ? (
                       <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-300" />
@@ -373,7 +434,6 @@ export default function Register() {
               </button>
             </form>
 
-         
             {/* Social Login Divider */}
             <div className="relative my-8 flex items-center justify-center">
               <div className="w-1/4 border-t border-gray-700"></div>
@@ -387,21 +447,32 @@ export default function Register() {
 
             {/* Social Login Buttons */}
             <div className="grid grid-cols-3 gap-3">
-              <button 
+              <button
+                type="button"
                 disabled={isLoading}
                 className="flex items-center justify-center p-3 border border-gray-700 rounded-xl hover:border-gray-500 hover:bg-gray-800 transition-colors disabled:opacity-50"
+                aria-label="Sign up with GitHub"
+                title="Sign up with GitHub"
               >
                 <Github className="w-5 h-5 text-gray-300" />
               </button>
-              <button 
+
+              <button
+                type="button"
                 disabled={isLoading}
                 className="flex items-center justify-center p-3 border border-gray-700 rounded-xl hover:border-gray-500 hover:bg-gray-800 transition-colors disabled:opacity-50"
+                aria-label="Sign up with Twitter"
+                title="Sign up with Twitter"
               >
                 <Twitter className="w-5 h-5 text-gray-300" />
               </button>
-              <button 
+
+              <button
+                type="button"
                 disabled={isLoading}
                 className="flex items-center justify-center p-3 border border-gray-700 rounded-xl hover:border-gray-500 hover:bg-gray-800 transition-colors disabled:opacity-50"
+                aria-label="Sign up with Google"
+                title="Sign up with Google"
               >
                 <Chrome className="w-5 h-5 text-gray-300" />
               </button>
@@ -435,6 +506,18 @@ export default function Register() {
           </div>
         </div>
       </div>
+      <div className="fixed bottom-4 right-4 text-gray-500 text-xs">
+        &copy; 2024 JobMatch. All rights reserved.
+      </div>
+      {/* Alert */}
+      {success ? (<div className={`${openAlert ? "fixed" : "hidden"} bottom-4 left-4 bg-emerald-700/20 text-sm p-2 rounded-lg border border-emerald-600 text-emerald-300`}>
+        Register is successful
+      </div>):<div className={`${openAlert ? "fixed" : "hidden"} bottom-4 left-4 bg-red-700/20 text-sm p-2 rounded-lg border border-red-600 text-red-300`}>
+        Register is failed , {error}
+      </div>}
+      {/* error alert */}
+      
+      
     </main>
   );
 }
