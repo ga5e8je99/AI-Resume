@@ -1,0 +1,205 @@
+{
+  "users": [
+    {
+      "id": "usr_admin_001",
+      "name": "Admin Manager",
+      "email": "admin@jobmatch.ai",
+      "password": "$2a$10$wT8m9aHn9q6XqZvZl0lPbe4E7mO8QGqVw1jG6w6rD7eF9tY1yM8aW",
+      "role": "admin",
+      "createdAt": "2026-10-09T12:27:52.488Z",
+      "updatedAt": "2026-10-23T12:27:52.488Z"
+    },
+    {
+      "id": "usr_002",
+      "name": "Sarah Jenkins",
+      "email": "sarah.jenkins@example.com",
+      "role": "user",
+      "createdAt": "2026-10-18T12:27:52.488Z",
+      "updatedAt": "2026-10-21T12:27:52.488Z"
+    },
+    {
+      "id": "usr_003",
+      "name": "Omar Mansour",
+      "email": "omar.mansour@gmail.com",
+      "role": "user",
+      "createdAt": "2026-10-21T12:27:52.488Z",
+      "updatedAt": "2026-10-23T12:27:52.488Z"
+    }
+  ],
+  "resumes": [
+    {
+      "id": "res_001",
+      "userId": "usr_002",
+      "title": "Senior Frontend Engineer CV",
+      "templateId": "compact",
+      "theme": {
+        "accentColor": "#10b981",
+        "fontSize": "base",
+        "fontFamily": "var(--font-sans), sans-serif"
+      },
+      "data": {
+        "personalInfo": {
+          "fullName": "Sarah Jenkins",
+          "jobTitle": "Senior Frontend Engineer",
+          "email": "sarah.jenkins@example.com",
+          "phone": "+1 (555) 234-5678",
+          "location": "San Francisco, CA"
+        },
+        "experience": [
+          {
+            "id": "exp1",
+            "title": "Senior Frontend Developer",
+            "company": "TechCorp Solutions",
+            "location": "San Francisco, CA",
+            "startDate": "2022-03",
+            "endDate": "Present",
+            "current": true,
+            "bullets": [
+              "Architected high-performance React Next.js web application serving 500k+ daily users",
+              "Boosted ATS & Core Web Vitals performance score by 35% through code splitting"
+            ]
+          }
+        ],
+        "education": [
+          {
+            "id": "edu1",
+            "degree": "B.S. in Computer Science",
+            "school": "University of California, Berkeley",
+            "graduationDate": "2020"
+          }
+        ],
+        "skills": [
+          "React",
+          "Next.js",
+          "TypeScript",
+          "Tailwind CSS",
+          "GraphQL",
+          "Jest"
+        ]
+      },
+      "createdAt": "2026-10-18T12:27:52.488Z",
+      "updatedAt": "2026-10-22T12:27:52.488Z"
+    },
+    {
+      "id": "res_002",
+      "userId": "usr_003",
+      "title": "Omar Mansour - Full Stack Resume",
+      "templateId": "two-column",
+      "theme": {
+        "accentColor": "#2563eb",
+        "fontSize": "base",
+        "fontFamily": "var(--font-sans), sans-serif"
+      },
+      "data": {
+        "personalInfo": {
+          "fullName": "Omar Mansour",
+          "jobTitle": "Full-Stack Developer",
+          "email": "omar.mansour@gmail.com",
+          "phone": "+20 100 123 4567",
+          "location": "Cairo, Egypt"
+        },
+        "experience": [
+          {
+            "id": "exp1",
+            "title": "Full-Stack Engineer",
+            "company": "CloudVentures",
+            "startDate": "2021-01",
+            "endDate": "Present",
+            "current": true,
+            "bullets": [
+              "Built scalable Node.js microservices handling 10M API requests per month"
+            ]
+          }
+        ],
+        "education": [
+          {
+            "id": "edu1",
+            "degree": "Bachelor of Engineering",
+            "school": "Cairo University",
+            "graduationDate": "2021"
+          }
+        ],
+        "skills": [
+          "Node.js",
+          "React",
+          "MongoDB",
+          "PostgreSQL",
+          "Docker",
+          "AWS"
+        ]
+      },
+      "createdAt": "2026-10-21T12:27:52.488Z",
+      "updatedAt": "2026-10-23T12:27:52.488Z"
+    },
+    {
+      "id": "res_003",
+      "userId": "usr_002",
+      "title": "Sarah Jenkins - Product Lead CV",
+      "templateId": "ats-friendly",
+      "theme": {
+        "accentColor": "#8b5cf6",
+        "fontSize": "base",
+        "fontFamily": "var(--font-sans), sans-serif"
+      },
+      "data": {
+        "personalInfo": {
+          "fullName": "Sarah Jenkins",
+          "jobTitle": "Technical Product Lead",
+          "email": "sarah.jenkins@example.com",
+          "phone": "+1 (555) 234-5678"
+        },
+        "experience": [],
+        "education": [],
+        "skills": [
+          "Product Strategy",
+          "Agile",
+          "Jira",
+          "UX Research",
+          "Metrics Analysis"
+        ]
+      },
+      "createdAt": "2026-10-20T12:27:52.489Z",
+      "updatedAt": "2026-10-21T12:27:52.489Z"
+    }
+  ],
+  "analyses": [
+    {
+      "id": "ana_001",
+      "userId": "usr_002",
+      "resumeFileName": "Sarah_Jenkins_CV.pdf",
+      "targetRole": "Senior Frontend Engineer",
+      "overallScore": 88,
+      "grade": "A",
+      "rankPercentile": "Top 10%",
+      "matchLabel": "Very Strong Match",
+      "subScores": {
+        "keywordsMatch": 92,
+        "formatting": 90,
+        "structure": 85,
+        "contentQuality": 85
+      },
+      "result": {},
+      "createdAt": "2026-10-18T12:27:52.489Z",
+      "updatedAt": "2026-10-18T12:27:52.489Z"
+    },
+    {
+      "id": "ana_002",
+      "userId": "usr_003",
+      "resumeFileName": "Omar_Mansour_FullStack.pdf",
+      "targetRole": "Full-Stack Developer",
+      "overallScore": 78,
+      "grade": "B+",
+      "rankPercentile": "Top 25%",
+      "matchLabel": "Strong Match",
+      "subScores": {
+        "keywordsMatch": 75,
+        "formatting": 85,
+        "structure": 80,
+        "contentQuality": 72
+      },
+      "result": {},
+      "createdAt": "2026-10-21T12:27:52.489Z",
+      "updatedAt": "2026-10-21T12:27:52.489Z"
+    }
+  ]
+}

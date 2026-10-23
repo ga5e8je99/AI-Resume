@@ -1,10 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Navbar from "./components/Navbar";
+import Logo from "./components/Logo";
 import { resumes } from "./contents/index";
 import ResumeCard from "./components/ResumeCard";
 import Link from "next/link";
-import { Upload, CheckCircle,  Sparkles, ChevronRight, PlayCircle,  Zap, Shield, Users, Search, FileCheck, Award, Clock, ArrowRight, Star } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Upload, CheckCircle, Sparkles, ChevronRight, PlayCircle, Zap, Shield, Users, Search, FileCheck, Award, Clock, ArrowRight, Star, AlertCircle } from "lucide-react";
+import { extractTextFromFile } from "./lib/pdfExtractor";
 
 export default function Home() {
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -59,18 +62,45 @@ export default function Home() {
     { number: "04", title: "Get Full Report", description: "Receive comprehensive ATS optimization report" }
   ];
 
+  const router = useRouter();
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const processSelectedFile = async (file: File) => {
+    try {
+      setIsProcessingFile(true);
+      setFileError(null);
+      setUploadedFile(file);
+
+      const text = await extractTextFromFile(file);
+      if (!text || text.trim().length < 25) {
+        throw new Error("Could not extract readable text from this file. Ensure the PDF contains digital text, not only scanned photos.");
+      }
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("jobmatch_resume_text", text);
+        sessionStorage.setItem("jobmatch_resume_filename", file.name);
+      }
+    } catch (err: any) {
+      console.error("Extraction error:", err);
+      setFileError(err.message || "Failed to parse file.");
+    } finally {
+      setIsProcessingFile(false);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setUploadedFile(file);
+      processSelectedFile(file);
     }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && file.type === "application/pdf") {
-      setUploadedFile(file);
+    if (file) {
+      processSelectedFile(file);
     }
   };
 
@@ -84,8 +114,8 @@ export default function Home() {
           <div 
             className="max-w-4xl mx-auto animate-fadeIn delay-200"
           >
-            <div className="inline-flex items-center gap-2 border-2 px-4 py-2 rounded-full mb-6">
-              <Sparkles className="w-4 h-4 text-purple-500" />
+            <div className="inline-flex items-center gap-2 border border-purple-500/30 bg-purple-500/10 px-4 py-2 rounded-full mb-6 backdrop-blur-md">
+              <Sparkles className="w-4 h-4 text-purple-400" />
               <span className="text-sm font-medium text-gray-300">
                 AI-Powered Resume Optimization
               </span>
@@ -100,14 +130,18 @@ export default function Home() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
-              <Link href={'/auth'} className="bg-linear-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl flex items-center gap-2 group">
-                <PlayCircle className="w-5 h-5" />
-                Start Free Analysis
+              <Link href={'/builder'} className="bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/25 flex items-center gap-2 group">
+                <Sparkles className="w-5 h-5 text-cyan-200" />
+                Build ATS Resume Free
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href={'#upload'} className="border-2 border-gray-300 text-gray-300 px-8 py-3 rounded-lg font-semibold text-lg hover:border-indigo-500 hover:text-indigo-600 transition-all duration-300 flex items-center gap-2">
+              <Link href={'/auth'} className="border border-slate-700 bg-slate-900/60 text-slate-200 px-8 py-3 rounded-lg font-semibold text-lg hover:border-slate-500 hover:bg-slate-800 transition-all duration-300 flex items-center gap-2">
+                <PlayCircle className="w-5 h-5" />
+                Start Analysis
+              </Link>
+              <Link href={'#upload'} className="border border-slate-700 bg-slate-900/60 text-slate-200 px-8 py-3 rounded-lg font-semibold text-lg hover:border-indigo-500 hover:text-indigo-400 transition-all duration-300 flex items-center gap-2">
                 <Upload className="w-5 h-5" />
-                Upload Resume
+                Upload Existing CV
               </Link>
             </div>
           </div>
@@ -123,7 +157,7 @@ export default function Home() {
               <div 
                 key={idx}
                 ref={(el) => { sectionRefs.current[idx] = el; }}
-                className="p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 opacity-0 border-2"
+                className="p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 opacity-0 border border-slate-800 bg-slate-900/60 backdrop-blur-md hover:border-slate-700"
               >
                 <div className="text-3xl font-bold text-indigo-400 mb-2">{stat.number}</div>
                 <div className="text-gray-400">{stat.label}</div>
@@ -170,7 +204,7 @@ export default function Home() {
                 <div 
                   key={idx}
                   ref={(el) => { sectionRefs.current[8 + idx] = el; }}
-                  className="border-2 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 opacity-0"
+                  className="border border-slate-800 bg-slate-900/60 backdrop-blur-md p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 opacity-0 hover:border-slate-700"
                 >
                   <div className=" bg-linear-to-tr from-blue-500 to-pink-500 w-14 h-14 rounded-lg flex items-center justify-center mb-6">
                     <div >
@@ -202,7 +236,7 @@ export default function Home() {
                 className="relative opacity-0"
               >
                 
-                <div className=" p-8 border-2 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="p-8 border border-slate-800 bg-slate-900/60 backdrop-blur-md rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:border-slate-700">
                   <div className="text-4xl font-bold text-indigo-100 mb-4">{step.number}</div>
                   <h3 className="text-xl font-bold mb-3">{step.title}</h3>
                   <p className="text-gray-500">{step.description}</p>
@@ -214,7 +248,7 @@ export default function Home() {
 
         {/* Upload Section */}
         <div className="container mx-auto px-6 mb-20" >
-          <div className=" rounded-3xl p-8 md:p-12 max-w-4xl mx-auto" id="upload">
+          <div className="bg-slate-900/70 border border-slate-800/90 rounded-3xl p-8 md:p-12 max-w-4xl mx-auto backdrop-blur-xl shadow-2xl" id="upload">
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Upload Your Resume</h2>
               <p className="text-gray-300">Get instant ATS analysis right on this page</p>
@@ -224,23 +258,61 @@ export default function Home() {
               ref={(el) => { sectionRefs.current[16] = el; }}
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
-              className="bg-white/10 backdrop-blur-sm border-2 border-dashed border-white/30 rounded-2xl p-8 text-center opacity-0"
+              className="bg-slate-950/40 backdrop-blur-sm border-2 border-dashed border-slate-700 hover:border-indigo-500/50 transition-colors rounded-2xl p-8 text-center opacity-0"
             >
-              {uploadedFile ? (
-                <div className="animate-fadeIn">
-                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">File Uploaded!</h3>
-                  <p className="text-gray-300 mb-4">{uploadedFile.name}</p>
-                  <div className="flex justify-center gap-10">
-                  <button 
-                    onClick={() => setUploadedFile(null)}
-                    className="text-indigo-300 hover:text-white transition-colors"
-                  >
-                    Upload different file
-                  </button>
-                  <Link href={'/review'} className="bg-linear-to-r from-purple-800 to-pink-800 p-4 rounded-4xl">
-                  Review Your Resume
-                  </Link>
+              {isProcessingFile ? (
+                <div className="py-8 flex flex-col items-center justify-center animate-pulse">
+                  <div className="w-12 h-12 rounded-full border-3 border-cyan-400 border-t-transparent animate-spin mb-4" />
+                  <h3 className="text-lg font-bold text-white mb-1">Extracting Resume Text...</h3>
+                  <p className="text-sm text-cyan-300">Reading ATS sections, skills, and formatting</p>
+                </div>
+              ) : fileError ? (
+                <div className="py-6 animate-fadeIn">
+                  <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-bold text-red-300 mb-2">Error Reading File</h3>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={() => {
+                        setFileError(null);
+                        setUploadedFile(null);
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold"
+                    >
+                      Upload Another File
+                    </button>
+                    <Link
+                      href="/review"
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-semibold shadow-md"
+                    >
+                      Paste Text or View Sample →
+                    </Link>
+                  </div>
+                </div>
+              ) : uploadedFile ? (
+                <div className="animate-fadeIn py-2">
+                  <CheckCircle className="w-14 h-14 text-emerald-400 mx-auto mb-3" />
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-2">
+                    ✓ Resume Text Extracted
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-1">{uploadedFile.name}</h3>
+                  <p className="text-gray-400 text-sm mb-6">Ready for genuine ATS & Keyword analysis</p>
+                  <div className="flex flex-wrap items-center justify-center gap-4">
+                    <button 
+                      onClick={() => {
+                        setUploadedFile(null);
+                        setFileError(null);
+                      }}
+                      className="text-slate-400 hover:text-white text-sm transition-colors px-4 py-2.5 rounded-xl border border-slate-700"
+                    >
+                      Change file
+                    </button>
+                    <Link
+                      href={'/review'}
+                      className="bg-gradient-to-r from-cyan-500 via-blue-600 to-fuchsia-600 hover:opacity-95 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Review Real ATS Analytics
+                    </Link>
                   </div>
                 </div>
               ) : (
@@ -289,7 +361,7 @@ export default function Home() {
             {/* Before Optimization */}
             <div 
               ref={(el) => { sectionRefs.current[17] = el; }}
-              className="border-2 p-8 rounded-2xl shadow-lg opacity-0"
+              className="border border-red-500/20 bg-slate-900/70 backdrop-blur-md p-8 rounded-2xl shadow-lg opacity-0"
             >
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -322,7 +394,7 @@ export default function Home() {
             {/* After Optimization */}
             <div 
               ref={(el) => { sectionRefs.current[18] = el; }}
-              className="border-2 p-8 rounded-2xl shadow-lg opacity-0"
+              className="border border-emerald-500/20 bg-slate-900/70 backdrop-blur-md p-8 rounded-2xl shadow-lg opacity-0"
             >
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -359,7 +431,7 @@ export default function Home() {
           ref={(el) => { sectionRefs.current[19] = el; }}
           className="container mx-auto px-6 mb-20 opacity-0"
         >
-          <div className="rounded-3xl p-12 text-center text-white">
+          <div className="rounded-3xl p-12 text-center text-white bg-linear-to-r from-blue-950/40 via-purple-950/40 to-slate-950/60 border border-purple-500/20 backdrop-blur-md shadow-2xl">
             <Sparkles className="w-12 h-12 mx-auto mb-6" />
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Ready to Optimize Your Resume?
@@ -415,9 +487,15 @@ export default function Home() {
           animation-delay: 0.2s;
         }
       `}</style>
-      <div className="h-24 backdrop-blur-3xl flex items-center justify-center text-gray-500 text-sm">
-        &copy; 2024 JobMatch. All rights reserved.
-      </div>
+      <footer className="border-t border-slate-800/80 backdrop-blur-3xl py-10 px-6 sm:px-10 mt-16">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+          <Logo size="sm" />
+          <div className="text-gray-400 text-xs sm:text-sm text-center sm:text-right">
+            <p>&copy; {new Date().getFullYear()} JobMatch AI. All rights reserved.</p>
+            <p className="text-xs text-gray-500 mt-1">Smart Resume Analysis & ATS Optimization</p>
+          </div>
+        </div>
+      </footer>
     </>
   );
 }
