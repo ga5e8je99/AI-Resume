@@ -1,10 +1,11 @@
 ---
-title: JobMatch AI - Resume, CV & Cover Letter Studio
+title: JobMatch AI
 emoji: 🚀
-colorFrom: indigo
+colorFrom: purple
 colorTo: emerald
-sdk: docker
-app_port: 7860
+sdk: gradio
+sdk_version: 6.30.0
+app_file: app.py
 pinned: false
 ---
 

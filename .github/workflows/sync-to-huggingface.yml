@@ -29,7 +29,7 @@ jobs:
           fi
 
           # Use environment secret or sensible fallback defaults
-          TARGET_USER="${HF_USERNAME:-ga5e8je99}"
+          TARGET_USER="${HF_USERNAME:-Gamal306}"
           TARGET_SPACE="${HF_SPACE_NAME:-JobMatch-AI}"
 
           echo "🚀 Syncing main branch to Hugging Face Space: https://huggingface.co/spaces/$TARGET_USER/$TARGET_SPACE"
