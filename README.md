@@ -2,7 +2,7 @@
 title: JobMatch AI
 emoji: 🚀
 colorFrom: purple
-colorTo: emerald
+colorTo: green
 sdk: gradio
 sdk_version: 6.30.0
 app_file: app.py
