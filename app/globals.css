@@ -58,6 +58,17 @@ body {
     opacity: 1;
   }
 }
+
+/* RTL Language Support */
+[dir="rtl"] {
+  font-family: var(--font-geist-sans), system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+  letter-spacing: normal !important;
+}
+
+[dir="rtl"] .font-mono {
+  direction: ltr;
+  unicode-bidi: embed;
+}
 .animate-in {
   animation: fadeIn 0.5s ease-in-out;
 }

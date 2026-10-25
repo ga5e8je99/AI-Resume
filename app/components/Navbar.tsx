@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Logo from './Logo';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSelector from './LanguageSelector';
 import {
   LayoutDashboard,
   LogOut,
@@ -15,12 +17,11 @@ import {
   X,
   FileText,
   FileCheck2,
-  Mail,
-  User,
 } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { t, isRtl } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => setIsMobileMenuOpen((prev) => !prev);
@@ -42,7 +43,7 @@ export default function Navbar() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-slate-700/70 text-xs xl:text-sm font-semibold text-slate-200 hover:text-amber-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none transition-all shadow-sm group"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
-            <span>Cover Letter</span>
+            <span>{t('nav_cover_letter')}</span>
             <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
               AI
             </span>
@@ -56,7 +57,7 @@ export default function Navbar() {
               <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
             </span>
-            <span>Resume Builder</span>
+            <span>{t('nav_resume_builder')}</span>
             <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
               ATS
             </span>
@@ -70,7 +71,7 @@ export default function Navbar() {
               <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span>CV Builder</span>
+            <span>{t('nav_cv_builder')}</span>
             <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
               PRO
             </span>
@@ -81,12 +82,15 @@ export default function Navbar() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-xs xl:text-sm font-semibold text-slate-200 hover:text-indigo-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none transition-all shadow-sm"
           >
             <FileCheck2 className="w-3.5 h-3.5 text-indigo-400" />
-            <span>ATS Diagnostic</span>
+            <span>{t('nav_ats_review')}</span>
           </Link>
         </div>
 
         {/* Right Action Cluster */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Language Selector */}
+          <LanguageSelector />
+
           {user ? (
             <div className="hidden sm:flex items-center gap-1.5 sm:gap-2">
               {user.role === 'admin' && (
@@ -96,7 +100,7 @@ export default function Navbar() {
                   title="Admin Dashboard"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Admin</span>
+                  <span>{t('nav_admin')}</span>
                 </Link>
               )}
 
@@ -112,8 +116,8 @@ export default function Navbar() {
                 type="button"
                 onClick={logout}
                 className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:outline-none transition-colors"
-                title="Log Out"
-                aria-label="Log Out of your account"
+                title={t('nav_logout')}
+                aria-label={t('nav_logout')}
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -124,7 +128,7 @@ export default function Navbar() {
               className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 text-xs sm:text-sm font-semibold focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none transition-colors"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In</span>
+              <span>{t('nav_login')}</span>
             </Link>
           )}
 
@@ -135,7 +139,7 @@ export default function Navbar() {
             aria-label="Upload CV to ATS Scanner"
           >
             <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span>Upload CV</span>
+            <span>{t('hero_cta_analyze')}</span>
           </Link>
 
           {/* Mobile Hamburger Toggle */}
@@ -159,8 +163,16 @@ export default function Navbar() {
           aria-label="Mobile Navigation"
           className="lg:hidden mt-2 p-4 bg-slate-900/95 border border-slate-800 rounded-2xl shadow-2xl backdrop-blur-2xl flex flex-col gap-2.5 animate-in fade-in transition-all"
         >
+          {/* Mobile Language Selector */}
+          <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-800/80 mb-1">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              {t('nav_lang_switch')}
+            </span>
+            <LanguageSelector variant="full" />
+          </div>
+
           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
-            Build & Optimize
+            {t('nav_brand_sub')}
           </div>
 
           <Link
@@ -170,7 +182,7 @@ export default function Navbar() {
           >
             <div className="flex items-center gap-2.5">
               <FileText className="w-4 h-4 text-cyan-400" />
-              <span>Resume Builder (ATS)</span>
+              <span>{t('nav_resume_builder')}</span>
             </div>
             <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
               ATS
@@ -184,7 +196,7 @@ export default function Navbar() {
           >
             <div className="flex items-center gap-2.5">
               <FileCheck2 className="w-4 h-4 text-emerald-400" />
-              <span>Full CV Builder (13 Sections)</span>
+              <span>{t('nav_cv_builder')}</span>
             </div>
             <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
               PRO
@@ -198,7 +210,7 @@ export default function Navbar() {
           >
             <div className="flex items-center gap-2.5">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>AI Cover Letter Generator</span>
+              <span>{t('nav_cover_letter')}</span>
             </div>
             <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
               AI
@@ -211,7 +223,7 @@ export default function Navbar() {
             className="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-sm font-semibold text-slate-100 transition-colors"
           >
             <FileCheck2 className="w-4 h-4 text-indigo-400" />
-            <span>ATS Diagnostic & Score</span>
+            <span>{t('nav_ats_review')}</span>
           </Link>
 
           <Link
@@ -220,7 +232,7 @@ export default function Navbar() {
             className="flex items-center justify-center gap-2 p-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 text-white text-sm font-bold shadow-lg shadow-blue-500/25 mt-1"
           >
             <Upload className="w-4 h-4" />
-            <span>Upload CV for Instant Scan</span>
+            <span>{t('hero_cta_analyze')}</span>
           </Link>
 
           <div className="border-t border-slate-800/80 my-1 pt-2">
@@ -232,7 +244,7 @@ export default function Navbar() {
                   className="flex items-center gap-2.5 p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 text-sm font-semibold"
                 >
                   <LayoutDashboard className="w-4 h-4 text-cyan-400" />
-                  <span>My Dashboard ({user.name.split(' ')[0]})</span>
+                  <span>{t('nav_dashboard')} ({user.name.split(' ')[0]})</span>
                 </Link>
 
                 {user.role === 'admin' && (
@@ -242,7 +254,7 @@ export default function Navbar() {
                     className="flex items-center gap-2.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm font-semibold"
                   >
                     <ShieldCheck className="w-4 h-4 text-amber-400" />
-                    <span>Admin Panel</span>
+                    <span>{t('nav_admin')}</span>
                   </Link>
                 )}
 
@@ -255,7 +267,7 @@ export default function Navbar() {
                   className="flex items-center justify-center gap-2 p-2 rounded-xl text-rose-400 hover:bg-rose-950/20 text-xs font-semibold"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Log Out</span>
+                  <span>{t('nav_logout')}</span>
                 </button>
               </div>
             ) : (
@@ -265,14 +277,14 @@ export default function Navbar() {
                   onClick={closeMobileMenu}
                   className="flex-1 text-center py-2.5 rounded-xl bg-slate-800 text-slate-200 text-sm font-semibold hover:bg-slate-700"
                 >
-                  Sign In
+                  {t('nav_login')}
                 </Link>
                 <Link
                   href="/register"
                   onClick={closeMobileMenu}
                   className="flex-1 text-center py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-semibold hover:bg-cyan-500 shadow-md"
                 >
-                  Create Account
+                  {t('nav_signup')}
                 </Link>
               </div>
             )}

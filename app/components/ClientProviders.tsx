@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { AuthProvider } from '../context/AuthContext';
+import { LanguageProvider } from '../context/LanguageContext';
 import ScrollToTop from './ScrollToTop';
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
@@ -14,9 +15,11 @@ export default function ClientProviders({ children }: { children: React.ReactNod
   }, []);
 
   return (
-    <AuthProvider>
-      {children}
-      <ScrollToTop />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        {children}
+        <ScrollToTop />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }

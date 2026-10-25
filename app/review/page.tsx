@@ -41,6 +41,8 @@ import {
 import { initialSampleData } from "../builder/initialData";
 import { extractTextFromFile } from "../lib/pdfExtractor";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
+import LanguageSelector from "../components/LanguageSelector";
 
 export default function ReviewResultPage() {
   const { user } = useAuth();
@@ -267,6 +269,8 @@ export default function ReviewResultPage() {
 
           {/* Action Bar */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <LanguageSelector />
+
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}

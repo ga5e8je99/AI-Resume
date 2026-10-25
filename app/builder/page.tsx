@@ -26,6 +26,8 @@ import {
   Printer,
 } from 'lucide-react';
 import LogoLoader from '../components/LogoLoader';
+import LanguageSelector from '../components/LanguageSelector';
+import { useLanguage } from '../context/LanguageContext';
 
 const emptyResumeData: ResumeData = {
   personalInfo: {
@@ -81,6 +83,7 @@ export default function BuilderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { t, isRtl } = useLanguage();
 
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [resumeTitle, setResumeTitle] = useState<string>('My Professional Resume');
@@ -299,6 +302,8 @@ export default function BuilderPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <LanguageSelector />
+
             {/* Toggle Templates Sidebar (Desktop) */}
             <button
               type="button"

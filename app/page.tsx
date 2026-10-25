@@ -5,6 +5,7 @@ import Navbar from './components/Navbar';
 import Logo from './components/Logo';
 import { resumes } from './contents/index';
 import ResumeCard from './components/ResumeCard';
+import { useLanguage } from './context/LanguageContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -30,6 +31,7 @@ import { extractTextFromFile } from './lib/pdfExtractor';
 
 export default function Home() {
   const router = useRouter();
+  const { t, isRtl } = useLanguage();
 
   // Uploader State
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -114,25 +116,26 @@ export default function Home() {
           <div className="inline-flex items-center gap-2 border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 rounded-full mb-6 backdrop-blur-md">
             <Sparkles className="w-4 h-4 text-cyan-400" />
             <span className="text-xs sm:text-sm font-semibold text-cyan-200">
-              AI-Powered ATS Optimization & Diagnostic Platform
+              {t('hero_badge')}
             </span>
           </div>
 
           {/* Main H1 Title */}
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold mb-6 tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-            Build Resumes That Pass{' '}
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold mb-6 tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent leading-tight">
+            {t('hero_title_prefix')}{' '}
             <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-              Real ATS Filters
-            </span>
+              {t('hero_title_highlight')}
+            </span>{' '}
+            {t('hero_title_suffix')}
           </h1>
 
           {/* Subtitle */}
           <p className="text-base sm:text-lg md:text-xl text-slate-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Create clean, recruiter-approved resumes or scan your existing CV for keyword density, formatting risks, and ATS compliance in seconds.
+            {t('hero_desc')}
           </p>
 
           {/* Two Clear Paths Hierarchy */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-3xl mx-auto mb-16 text-left">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-3xl mx-auto mb-16 text-left rtl:text-right">
             {/* Path 1: Build New */}
             <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-900/50 border border-cyan-500/30 shadow-xl flex flex-col justify-between hover:border-cyan-500/60 transition-all">
               <div>
@@ -140,10 +143,10 @@ export default function Home() {
                   <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-xs">
                     01
                   </div>
-                  <h2 className="text-lg font-bold text-white">Create a New Resume</h2>
+                  <h2 className="text-lg font-bold text-white">{t('hero_cta_create')}</h2>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  Start from scratch or use pre-filled samples. Choose between single-column ATS templates, two-column layouts, or 13-section CV formats.
+                  {t('hero_cta_create_desc')}
                 </p>
               </div>
 
@@ -153,15 +156,15 @@ export default function Home() {
                   className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl text-sm shadow-lg shadow-cyan-500/20 transition-all focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
                 >
                   <FileText className="w-4 h-4" />
-                  <span>Build ATS Resume Free</span>
-                  <ChevronRight className="w-4 h-4 ml-auto" />
+                  <span>{t('nav_resume_builder')}</span>
+                  <ChevronRight className={`w-4 h-4 ml-auto rtl:ml-0 rtl:mr-auto ${isRtl ? 'rotate-180' : ''}`} />
                 </Link>
 
                 <Link
                   href="/cv-builder"
                   className="w-full inline-flex items-center justify-center gap-2 bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-500/30 text-emerald-300 font-semibold py-2 px-4 rounded-xl text-xs transition-colors"
                 >
-                  <span>Need an Academic / Comprehensive CV? Use CV Builder (PRO) →</span>
+                  <span>{t('nav_cv_builder')} (PRO) →</span>
                 </Link>
               </div>
             </div>
@@ -173,10 +176,10 @@ export default function Home() {
                   <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
                     02
                   </div>
-                  <h2 className="text-lg font-bold text-white">Analyze Existing CV</h2>
+                  <h2 className="text-lg font-bold text-white">{t('hero_cta_analyze')}</h2>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  Upload your PDF to test against standard ATS algorithms. Identify missing keywords, formatting traps, and compare against any target job posting.
+                  {t('hero_cta_analyze_desc')}
                 </p>
               </div>
 
@@ -186,15 +189,15 @@ export default function Home() {
                   className="w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
                 >
                   <Upload className="w-4 h-4 text-cyan-400" />
-                  <span>Scan Resume PDF Below</span>
-                  <ChevronRight className="w-4 h-4 ml-auto" />
+                  <span>{t('hero_cta_analyze')}</span>
+                  <ChevronRight className={`w-4 h-4 ml-auto rtl:ml-0 rtl:mr-auto ${isRtl ? 'rotate-180' : ''}`} />
                 </a>
 
                 <Link
                   href="/review"
                   className="w-full inline-flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200 py-2 px-4 text-xs font-semibold"
                 >
-                  <span>Or view interactive sample ATS review directly →</span>
+                  <span>{t('upload_sample_btn')} →</span>
                 </Link>
               </div>
             </div>
@@ -203,10 +206,10 @@ export default function Home() {
           {/* Honest Technical Capabilities */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-16">
             {[
-              { stat: "400+", label: "Industry Skills & Keywords Parsed", icon: <Search className="w-4 h-4 text-cyan-400" /> },
-              { stat: "100%", label: "Client-Side Private Extraction", icon: <Shield className="w-4 h-4 text-emerald-400" /> },
-              { stat: "ISO A4", label: "Standard ATS Compliant Formats", icon: <FileCheck2 className="w-4 h-4 text-blue-400" /> },
-              { stat: "< 2s", label: "Real-Time Diagnostic Speed", icon: <Zap className="w-4 h-4 text-amber-400" /> },
+              { stat: "400+", label: t('hero_metric_skills'), icon: <Search className="w-4 h-4 text-cyan-400" /> },
+              { stat: "100%", label: t('hero_metric_privacy'), icon: <Shield className="w-4 h-4 text-emerald-400" /> },
+              { stat: "ISO A4", label: t('hero_metric_export'), icon: <FileCheck2 className="w-4 h-4 text-blue-400" /> },
+              { stat: "< 2s", label: "< 2s Diagnostic Speed", icon: <Zap className="w-4 h-4 text-amber-400" /> },
             ].map((item, idx) => (
               <div
                 key={idx}
@@ -225,11 +228,13 @@ export default function Home() {
           <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-10 max-w-3xl mx-auto backdrop-blur-xl shadow-2xl">
             <div className="text-center mb-6">
               <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1 rounded-full inline-block mb-3">
-                Instant Diagnostic Engine
+                {t('upload_section_tag')}
               </span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Upload Your Resume</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                {t('upload_section_title')}
+              </h2>
               <p className="text-xs sm:text-sm text-slate-300">
-                Extract readable text, assess formatting compliance, and calculate ATS keyword matches.
+                {t('upload_section_desc')}
               </p>
             </div>
 
@@ -253,15 +258,19 @@ export default function Home() {
               {isProcessingFile ? (
                 <div className="py-8 flex flex-col items-center justify-center">
                   <div className="w-12 h-12 rounded-full border-3 border-cyan-400 border-t-transparent animate-spin mb-4" />
-                  <h3 className="text-base font-bold text-white mb-1">Parsing Resume Text...</h3>
+                  <h3 className="text-base font-bold text-white mb-1">
+                    {t('upload_submitting_btn')}
+                  </h3>
                   <p className="text-xs text-cyan-300">
-                    Extracting sections, skills, and contact metadata in memory
+                    {t('upload_privacy_notice')}
                   </p>
                 </div>
               ) : fileError ? (
                 <div className="py-4">
                   <AlertCircle className="w-10 h-10 text-rose-400 mx-auto mb-2" />
-                  <h3 className="text-base font-bold text-rose-300 mb-1">Upload Issue Detected</h3>
+                  <h3 className="text-base font-bold text-rose-300 mb-1">
+                    {t('common_error')}
+                  </h3>
                   <p className="text-xs text-slate-300 max-w-md mx-auto mb-4">{fileError}</p>
 
                   <div className="flex flex-wrap items-center justify-center gap-3">
@@ -273,13 +282,13 @@ export default function Home() {
                       }}
                       className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors"
                     >
-                      Try Another File
+                      {t('upload_clear_btn')}
                     </button>
                     <Link
                       href="/review"
                       className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md transition-colors"
                     >
-                      View Pre-Loaded Sample Review →
+                      {t('upload_sample_btn')} →
                     </Link>
                   </div>
                 </div>
@@ -287,14 +296,14 @@ export default function Home() {
                 <div className="py-2">
                   <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-2" />
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-2">
-                    <span>✓ Ready for ATS Scoring</span>
+                    <span>✓ {t('common_success')}</span>
                   </div>
 
                   <h3 className="text-lg font-bold text-white mb-0.5 truncate max-w-md mx-auto">
                     {uploadedFile.name}
                   </h3>
                   <p className="text-xs text-slate-400 mb-4">
-                    {formatFileSize(uploadedFile.size)} • {extractedCharCount?.toLocaleString()} characters extracted
+                    {formatFileSize(uploadedFile.size)} • {extractedCharCount?.toLocaleString()} {t('upload_file_chars')}
                   </p>
 
                   <div className="flex flex-wrap items-center justify-center gap-3">
@@ -307,7 +316,7 @@ export default function Home() {
                       }}
                       className="text-slate-400 hover:text-white text-xs transition-colors px-3 py-2 rounded-xl border border-slate-700"
                     >
-                      Change File
+                      {t('upload_clear_btn')}
                     </button>
 
                     <Link
@@ -315,20 +324,22 @@ export default function Home() {
                       className="bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-2"
                     >
                       <Sparkles className="w-4 h-4 text-cyan-200" />
-                      <span>Review ATS Report & Recommendations →</span>
+                      <span>{t('upload_submit_btn')} →</span>
                     </Link>
                   </div>
                 </div>
               ) : (
                 <>
                   <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-white mb-1">Drag & drop your resume here</h3>
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    {t('upload_drop_title')}
+                  </h3>
                   <p className="text-xs text-slate-300 mb-4">
-                    Supports <strong className="text-white">PDF</strong> and <strong className="text-white">TXT</strong> (Max 5MB)
+                    {t('upload_drop_sub')}
                   </p>
 
                   <label className="inline-block bg-white text-slate-900 hover:bg-slate-100 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm cursor-pointer transition-colors shadow-md focus-within:ring-2 focus-within:ring-cyan-400">
-                    Browse File
+                    {t('upload_drop_browse')}
                     <input
                       type="file"
                       className="sr-only"
@@ -344,7 +355,7 @@ export default function Home() {
             <div className="mt-4 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-start gap-2.5 text-slate-400 text-xs leading-relaxed">
               <Lock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <p>
-                <strong className="text-slate-200">Local Client-Side Privacy:</strong> Resume text is extracted in your browser memory for immediate ATS evaluation. No resumes are sold, shared with third-party training sets, or stored unless you choose to save them to your account.
+                <strong className="text-slate-200">{t('hero_metric_privacy')}:</strong> {t('upload_privacy_notice')}
               </p>
             </div>
           </div>
@@ -354,13 +365,13 @@ export default function Home() {
         <section className="container mx-auto px-4 sm:px-6 mb-20">
           <div className="text-center mb-10">
             <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1 rounded-full inline-block mb-3">
-              Standardized Layout Models
+              {t('templates_tag')}
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
-              ATS-Optimized Resume Templates
+              {t('templates_title')}
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-              Engineered with clean headings, parseable date formats, and zero problematic tables or graphics.
+              {t('templates_desc')}
             </p>
           </div>
 
@@ -371,12 +382,17 @@ export default function Home() {
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
+        {/* VALUE PILLARS */}
         <section className="container mx-auto px-4 sm:px-6 mb-20">
           <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">How It Works</h2>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1 rounded-full inline-block mb-3">
+              {t('pillars_tag')}
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              {t('pillars_title')}
+            </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-              A 4-step workflow to prepare your application for both automated scanners and human recruiters.
+              {t('pillars_desc')}
             </p>
           </div>
 
@@ -384,23 +400,23 @@ export default function Home() {
             {[
               {
                 number: "01",
-                title: "Upload or Build",
-                desc: "Upload your current PDF resume or start with a proven ATS template.",
+                title: t('pillar_1_title'),
+                desc: t('pillar_1_desc'),
               },
               {
                 number: "02",
-                title: "Target Job Match",
-                desc: "Paste the job description to identify missing required skills.",
+                title: t('pillar_2_title'),
+                desc: t('pillar_2_desc'),
               },
               {
                 number: "03",
-                title: "Diagnostic Audit",
-                desc: "Inspect contact completeness, quantifiable achievements, and action verbs.",
+                title: t('pillar_3_title'),
+                desc: t('pillar_3_desc'),
               },
               {
                 number: "04",
-                title: "Export & Apply",
-                desc: "Download ATS-compliant Word DOCX or vector PDF ready for job applications.",
+                title: t('pillar_4_title'),
+                desc: t('pillar_4_desc'),
               },
             ].map((step, idx) => (
               <div
@@ -419,81 +435,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ILLUSTRATIVE COMPARISON */}
-        <section className="container mx-auto px-4 sm:px-6 mb-20 max-w-5xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-              Common ATS Weaknesses vs. Optimized Best Practices
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-              See the structural improvements that help applicant tracking systems parse your career history accurately.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Common Pitfalls */}
-            <div className="p-6 rounded-2xl border border-rose-500/20 bg-slate-900/70 backdrop-blur-md">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                <h3 className="text-base font-bold text-white">Common Parsing Pitfalls</h3>
-              </div>
-              <ul className="space-y-2 text-xs text-slate-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-rose-400 font-bold">•</span>
-                  <span>Graphic icons or charts used to represent skill proficiencies (ATS cannot read images).</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-rose-400 font-bold">•</span>
-                  <span>Important contact details hidden inside multi-layer document headers or footers.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-rose-400 font-bold">•</span>
-                  <span>Vague job descriptions lacking concrete, quantifiable business metrics and numbers.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-rose-400 font-bold">•</span>
-                  <span>Missing core industry keywords mentioned in the employer's job description.</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Recommended Approach */}
-            <div className="p-6 rounded-2xl border border-emerald-500/20 bg-slate-900/70 backdrop-blur-md">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <h3 className="text-base font-bold text-white">JobMatch AI Guidelines</h3>
-              </div>
-              <ul className="space-y-2 text-xs text-slate-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Pure digital text layouts formatted in standard single or two-column reading order.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Clear, standard section titles: Experience, Education, Skills, and Projects.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Impact-oriented bullet points incorporating strong action verbs and percentages/metrics.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Instant keyword matching highlighting exact terminology from target job postings.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
         {/* FINAL CALL TO ACTION */}
         <section className="container mx-auto px-4 sm:px-6 mb-16 max-w-4xl text-center">
           <div className="rounded-3xl p-8 sm:p-12 bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-950/40 border border-slate-800 shadow-2xl">
             <Sparkles className="w-10 h-10 text-cyan-400 mx-auto mb-4" />
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-              Ready to Upgrade Your Career Assets?
+              {t('hero_title_prefix')} {t('hero_title_highlight')}
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto mb-6">
-              Create a free ATS resume or run an instant diagnostic report on your existing CV.
+              {t('hero_desc')}
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3">
@@ -501,15 +451,15 @@ export default function Home() {
                 href="/builder"
                 className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm py-3 px-6 rounded-xl shadow-lg transition-colors inline-flex items-center gap-2"
               >
-                <span>Launch Resume Builder</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>{t('hero_cta_create')}</span>
+                <ArrowRight className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`} />
               </Link>
               <a
                 href="#upload"
                 className="bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm py-3 px-6 rounded-xl border border-slate-700 transition-colors inline-flex items-center gap-2"
               >
                 <Upload className="w-4 h-4 text-cyan-400" />
-                <span>Upload Existing CV</span>
+                <span>{t('hero_cta_analyze')}</span>
               </a>
             </div>
           </div>
@@ -521,27 +471,27 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-400">
           <div className="flex items-center gap-3">
             <Logo size="sm" />
-            <span>&copy; {new Date().getFullYear()} JobMatch AI. Smart Career Assets.</span>
+            <span>&copy; {new Date().getFullYear()} JobMatch AI. {t('footer_rights')}</span>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <Link href="/builder" className="hover:text-slate-200 transition-colors">
-              Resume Builder
+              {t('nav_resume_builder')}
             </Link>
             <Link href="/cv-builder" className="hover:text-slate-200 transition-colors">
-              CV Builder (PRO)
+              {t('nav_cv_builder')}
             </Link>
             <Link href="/cover-letter" className="hover:text-slate-200 transition-colors">
-              Cover Letter
+              {t('nav_cover_letter')}
             </Link>
             <Link href="/review" className="hover:text-slate-200 transition-colors">
-              ATS Review
+              {t('nav_ats_review')}
             </Link>
             <Link href="/privacy" className="hover:text-slate-200 transition-colors">
-              Privacy Policy
+              {t('footer_privacy')}
             </Link>
             <Link href="/terms" className="hover:text-slate-200 transition-colors">
-              Terms of Service
+              {t('footer_terms')}
             </Link>
           </div>
         </div>
