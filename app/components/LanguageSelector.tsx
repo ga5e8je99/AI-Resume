@@ -47,16 +47,10 @@ export default function LanguageSelector({
         aria-expanded={isOpen}
         aria-label="Select Language"
       >
-        <span className="text-sm leading-none" role="img" aria-label={languageInfo.name}>
-          {languageInfo.flag}
+        <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+        <span className="font-bold uppercase tracking-wider text-[11px] text-slate-200">
+          {languageInfo.code}
         </span>
-        {variant === 'full' ? (
-          <span className="hidden sm:inline font-semibold">{languageInfo.nativeName}</span>
-        ) : (
-          <span className="font-semibold uppercase tracking-wider text-[11px] text-slate-300">
-            {languageInfo.code}
-          </span>
-        )}
         <ChevronDown
           className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${
             isOpen ? 'rotate-180 text-cyan-400' : ''
@@ -71,7 +65,7 @@ export default function LanguageSelector({
           className="absolute right-0 rtl:right-auto rtl:left-0 mt-2 w-48 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl shadow-black/80 py-1.5 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="px-3 py-1.5 border-b border-slate-800/80 text-[10px] uppercase font-bold tracking-wider text-slate-400">
-            Select Language • اختر اللغة
+            Language • اللغة
           </div>
           <div className="py-1">
             {supportedLanguages.map((item) => {
@@ -89,11 +83,11 @@ export default function LanguageSelector({
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="text-base" role="img" aria-label={item.name}>
-                      {item.flag}
+                    <span className="w-6 h-5 rounded-md bg-slate-800 border border-slate-700 text-[10px] font-mono font-bold flex items-center justify-center text-cyan-300 shrink-0 uppercase">
+                      {item.code}
                     </span>
                     <div className="flex flex-col">
-                      <span className="font-medium text-slate-200">{item.nativeName}</span>
+                      <span className="font-semibold text-slate-200">{item.nativeName}</span>
                       <span className="text-[10px] text-slate-400">{item.name}</span>
                     </div>
                   </div>
