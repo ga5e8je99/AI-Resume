@@ -23,6 +23,7 @@ import {
   Cloud,
   Check,
   Loader2,
+  Printer,
 } from 'lucide-react';
 import LogoLoader from '../components/LogoLoader';
 
@@ -390,11 +391,23 @@ export default function BuilderPage() {
               disabled={isExportingPdf}
               onClick={handleDownloadPdf}
               className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              title="Directly download PDF file to computer (No printer popup)"
+              title="Directly download PDF file to computer"
             >
               <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-200" />
               <span className="hidden sm:inline">{isExportingPdf ? 'Saving PDF...' : 'Download PDF'}</span>
               <span className="sm:hidden">{isExportingPdf ? '...' : 'PDF'}</span>
+            </button>
+
+            {/* Print / Save Vector PDF */}
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-semibold text-xs sm:text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+              title="Print or Save as Vector PDF via browser dialog (preserves 100% selectable text & ATS compatibility)"
+            >
+              <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
+              <span className="hidden sm:inline">Print / Vector</span>
+              <span className="sm:hidden">Print</span>
             </button>
           </div>
         </div>

@@ -1,10 +1,14 @@
 "use client";
 import Link from "next/link";
+import Navbar from "../components/Navbar";
 import { Shield, FileText, Lock, AlertTriangle, ChevronRight } from "lucide-react";
 
 export default function TermsOfService() {
   return (
-    <main className="min-h-screen  text-gray-100">
+    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col justify-between">
+      <div>
+        <Navbar />
+        <main className="container mx-auto px-4 sm:px-6 py-10 max-w-4xl">
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">
@@ -26,7 +30,7 @@ export default function TermsOfService() {
               <h2 className="text-2xl font-bold text-white">1. Introduction</h2>
             </div>
             <p className="text-gray-300 leading-relaxed">
-              Welcome to <span className="font-semibold text-blue-300">Resume Analyzer Pro</span>. 
+              Welcome to <span className="font-semibold text-blue-300">JobMatch AI</span>. 
               These Terms of Service (&quot;Terms&quot;) govern your use of our website, services, and applications 
               (collectively, the &quot;Service&quot;). By accessing or using the Service, you agree to be bound by 
               these Terms. If you disagree with any part of the terms, you may not access the Service.
@@ -154,7 +158,7 @@ export default function TermsOfService() {
             </div>
             <div className="space-y-4 text-gray-300">
               <p>
-                To the maximum extent permitted by law, Resume Analyzer Pro shall not be liable for any indirect, 
+                To the maximum extent permitted by law, JobMatch AI shall not be liable for any indirect, 
                 incidental, special, consequential, or punitive damages resulting from your use of the Service.
               </p>
               <div className="bg-yellow-900/20 border border-yellow-800/30 rounded-xl p-4 mt-4">
@@ -214,7 +218,7 @@ export default function TermsOfService() {
           <div className="mt-12 pt-8 border-t border-gray-700/50">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <Link 
-                href="/auth" 
+                href="/register" 
                 className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2"
               >
                 ← Return to Sign Up
@@ -231,5 +235,7 @@ export default function TermsOfService() {
         </div>
       </div>
     </main>
+      </div>
+    </div>
   );
 }

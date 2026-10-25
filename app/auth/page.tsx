@@ -1,10 +1,10 @@
-import AuthPage from './AuthPageClient'
+import { redirect } from 'next/navigation';
 
 export const metadata = {
-  title: 'JobMatch | Sign In',
-  description: 'Sign in to your account to continue your job search journey'
-}
+  title: 'JobMatch AI | Sign In',
+  description: 'Sign in to your account to manage your resumes and ATS diagnostics',
+};
 
-export default function Page() {
-  return <AuthPage />
+export default function AuthPage() {
+  redirect('/login');
 }

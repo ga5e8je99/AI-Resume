@@ -317,6 +317,13 @@ export default function ReviewResultPage() {
               )}
             </button>
 
+            <Link
+              href="/builder"
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm font-semibold text-cyan-300 hover:text-white transition-all shadow-sm"
+            >
+              <Edit className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Edit in Builder</span>
+            </Link>
             <button
               onClick={handleDownloadReport}
               disabled={isExporting}
@@ -896,9 +903,27 @@ export default function ReviewResultPage() {
                   ✕
                 </button>
               </div>
-              <p className="text-xs text-slate-400">
-                Paste the job description of the position you want to apply for. The system will compare your resume keywords directly against it!
-              </p>
+              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1 text-xs text-slate-300">
+                <p className="font-semibold text-white">How Target Job Matching Works:</p>
+                <p className="text-slate-400 leading-relaxed">
+                  ATS scanners compare applicants directly against specific job postings. 
+                  If you only enter a <strong className="text-slate-200">Job Title</strong>, your resume is benchmarked against our general 400+ industry skills catalog. 
+                  Pasting a complete <strong className="text-slate-200">Job Description</strong> calculates exact keyword alignment and flags high-priority missing terms.
+                </p>
+                <div className="pt-2 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">Need an example?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetRole("Senior Full-Stack Developer");
+                      setTargetJobDescription("We are looking for a Senior Full-Stack Developer with 4+ years of experience in React, Next.js, TypeScript, and Node.js. Experience with REST APIs, GraphQL, PostgreSQL, MongoDB, Docker, CI/CD pipelines, and cloud platforms like AWS or GCP is required. The ideal candidate has strong problem-solving skills, understands unit testing with Jest/Playwright, and has proven experience optimizing web application performance and accessibility (WCAG).");
+                    }}
+                    className="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 underline"
+                  >
+                    + Load Sample Job Description
+                  </button>
+                </div>
+              </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">

@@ -1,56 +1,58 @@
-
-"use client";
-
-import { Geist, Geist_Mono } from "next/font/google";
-import { useEffect } from "react";
-import ScrollToTop from "./components/ScrollToTop";
-import { AuthProvider } from "./context/AuthContext";
-import "./globals.css";
+import type { Metadata, Viewport } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import ClientProviders from './components/ClientProviders';
+import './globals.css';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
+
+export const metadata: Metadata = {
+  title: 'JobMatch AI | Smart ATS Resume Builder & Job Match Scanner',
+  description:
+    'Build ATS-optimized resumes, comprehensive CVs, and AI cover letters. Evaluate keyword matching and formatting readiness with instant, client-side diagnostics.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icons/logo.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-icon.png',
+  },
+  openGraph: {
+    title: 'JobMatch AI | Smart ATS Resume Builder & Job Match Platform',
+    description:
+      'Create recruiter-ready, ATS-friendly resumes and CVs with instant keyword diagnostics.',
+    type: 'website',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#020617',
+  width: 'device-width',
+  initialScale: 1,
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Suppress hydration mismatch warnings from browser extensions
-  useEffect(() => {
-    // Remove extension-added attributes that cause hydration mismatches
-    const bodyElement = document.body;
-    if (bodyElement.hasAttribute("cz-shortcut-listen")) {
-      bodyElement.removeAttribute("cz-shortcut-listen");
-    }
-  }, []);
- 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="dark">
       <head>
-        <title>JobMatch | AI Resume Builder & ATS Scanner</title>
-        <meta name="description" content="AI-Powered ATS Resume Builder & Job Match Scanner" />
-        <meta name="google" content="notranslate" />
-        <link rel="icon" href="/icons/logo.svg" type="image/svg+xml" />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/apple-icon.png" />
-        <meta name="theme-color" content="#020617" />
         <script src="https://js.puter.com/v2/" async></script>
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#07090e] text-slate-100 min-h-screen`}
         suppressHydrationWarning
       >
-        <AuthProvider>
-          {children}
-          <ScrollToTop/>
-        </AuthProvider>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

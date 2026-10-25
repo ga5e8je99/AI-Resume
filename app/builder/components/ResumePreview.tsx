@@ -12,7 +12,7 @@ import CompactTemplate from '../templates/CompactTemplate';
 import TwoColumnTemplate from '../templates/TwoColumnTemplate';
 import AtsFriendlyTemplate from '../templates/AtsFriendlyTemplate';
 import SimpleTemplate from '../templates/SimpleTemplate';
-import { ZoomIn, ZoomOut, CheckCircle2, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, CheckCircle2, Maximize2, Printer } from 'lucide-react';
 
 interface ResumePreviewProps {
   data: ResumeData;
@@ -144,6 +144,17 @@ export function ResumePreview({ data, template, theme }: ResumePreviewProps) {
             <ZoomIn className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
         </div>
+
+        {/* Vector Print to PDF shortcut */}
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-slate-300 hover:text-white bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-lg transition-colors shadow-sm"
+          title="Print to PDF via browser dialog (saves 100% selectable vector text with clickable links for ATS applicant portals)"
+        >
+          <Printer className="w-3 h-3 text-cyan-400" />
+          <span>Vector Print (ATS)</span>
+        </button>
       </div>
 
       {/* Sheet Container with responsive auto-fit wrapper */}

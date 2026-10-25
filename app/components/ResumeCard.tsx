@@ -1,86 +1,88 @@
-import Link from "next/link";
-import ScoreCircle from "./ScoreCircle";
-import Image from "next/image";
-import { Building2, Briefcase, ChevronRight } from "lucide-react";
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import ScoreCircle from './ScoreCircle';
+import { Resume } from '../contents/index';
+import { Layout, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export default function ResumeCard({ resume }: { resume: Resume }) {
   return (
-    <Link
-      href={`/resume/${resume.id}`}
-      className="group animate-in fade-in border border-slate-800 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 block overflow-hidden bg-slate-900/80 backdrop-blur-md hover:border-slate-700 hover:-translate-y-1"
-    >
-      {/* Header Section */}
-      <div className="p-6 pb-4">
-        <div className="flex justify-between items-start mb-4">
+    <div className="group border border-slate-800 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden bg-slate-900/80 backdrop-blur-md hover:border-slate-700 flex flex-col justify-between">
+      {/* Header Info */}
+      <div className="p-5 pb-3">
+        <div className="flex justify-between items-start gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Building2 className="w-4 h-4 text-blue-400" />
-              </div>
-              <h2 className="text-xl font-bold text-white truncate">
-                {resume.companyName}
-              </h2>
-            </div>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 mb-2">
+              <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+              <span>{resume.badge}</span>
+            </span>
 
-            <div className="flex items-center gap-2 mb-3">
-              <Briefcase className="w-4 h-4 text-gray-400" />
-              <p className="text-gray-300 font-medium truncate">
-                {resume.jobTitle}
-              </p>
-            </div>
+            <h3 className="text-lg font-bold text-white truncate">
+              {resume.companyName}
+            </h3>
 
-            <div className="flex items-center gap-4 text-sm text-gray-500"></div>
+            <p className="text-xs text-slate-300 font-medium truncate mt-0.5">
+              {resume.jobTitle}
+            </p>
           </div>
 
-          <div className="shrink-0 ml-4">
+          <div className="shrink-0 flex flex-col items-center">
             <ScoreCircle score={resume.feedback.overallScore} />
-            <div className="text-center mt-2">
-              <span className="text-sm font-medium text-gray-400">Score</span>
-            </div>
+            <span className="text-[10px] font-semibold text-slate-400 mt-1 uppercase tracking-wider">
+              ATS Score
+            </span>
           </div>
         </div>
+
+        <p className="text-xs text-slate-400 line-clamp-2 mt-3 leading-relaxed">
+          {resume.summary}
+        </p>
       </div>
 
       {/* Divider */}
-      <div className="px-6">
-        <div className="border-t border-slate-800" />
+      <div className="px-5">
+        <div className="border-t border-slate-800/80" />
       </div>
 
-      {/* Image Preview Section */}
-      <div className="relative overflow-hidden bg-slate-950/60">
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-gray-300">Preview</span>
-            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 transition-transform" />
-          </div>
-
-          <div className="relative rounded-xl overflow-hidden border border-slate-800 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-            <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent z-10" />
+      {/* Image Preview & Interactive CTA */}
+      <div className="p-4 bg-slate-950/40">
+        <Link
+          href={`/builder?template=${resume.templateId}`}
+          className="block relative rounded-xl overflow-hidden border border-slate-800 group-hover:border-cyan-500/50 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
+          aria-label={`Use ${resume.companyName} template in Resume Builder`}
+        >
+          <div className="relative w-full h-[220px] bg-slate-900">
             <Image
               src={resume.imagePath}
-              alt={`${resume.companyName} Resume Preview`}
-              width={500}
-              height={300}
-              className="w-full h-[280px] object-cover object-top transition-transform duration-500 group-hover:scale-[1.02]"
-              priority={false}
+              alt={`${resume.companyName} Preview`}
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
             />
-
-            {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/10 transition-colors duration-300 z-20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
           </div>
+        </Link>
 
-          {/* Status Indicator */}
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-gray-400">Analysis Complete</span>
-            </div>
-            <button className="text-xs text-blue-400 hover:text-blue-300 font-medium px-3 py-1 rounded-full hover:bg-blue-500/10 transition-colors">
-              View Details
-            </button>
-          </div>
+        {/* Action Button Row */}
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <Link
+            href={`/review`}
+            className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-800/60 font-medium"
+          >
+            Inspect Score
+          </Link>
+
+          <Link
+            href={`/builder?template=${resume.templateId}`}
+            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold py-1.5 px-3.5 rounded-xl shadow-md shadow-cyan-500/20 transition-all group-hover:shadow-cyan-500/40 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
+          >
+            <span>Use Template</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

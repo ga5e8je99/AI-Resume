@@ -1,36 +1,39 @@
 "use client";
 import Link from "next/link";
+import Navbar from "../components/Navbar";
 import { Shield, Lock, Database, EyeOff, Mail, Server, ChevronRight } from "lucide-react";
 
 export default function PrivacyPolicy() {
   return (
-    <main className="min-h-screen text-gray-100">
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-900/30 rounded-2xl mb-6 border border-green-700/50">
-            <Shield className="w-8 h-8 text-green-400" />
-          </div>
-          <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-linear-to-r from-green-400 to-emerald-300">
-            Privacy Policy
-          </h1>
-          <p className="text-gray-400 text-lg">Last updated: {new Date().toLocaleDateString()}</p>
-        </div>
+    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col justify-between">
+      <div>
+        <Navbar />
 
-        {/* Main Content */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-3xl border border-gray-700/50 p-8 md:p-10">
-          {/* Introduction */}
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-2 h-6 bg-green-500 rounded-full"></div>
-              <h2 className="text-2xl font-bold text-white">1. Introduction</h2>
+        <main className="container mx-auto px-4 sm:px-6 py-10 max-w-4xl">
+          {/* Header */}
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-cyan-950/50 rounded-2xl mb-4 border border-cyan-500/30">
+              <Shield className="w-7 h-7 text-cyan-400" />
             </div>
-            <p className="text-gray-300 leading-relaxed">
-              At <span className="font-semibold text-green-300">Resume Analyzer Pro</span>, we take your privacy seriously. 
-              This Privacy Policy explains how we collect, use, disclose, and safeguard your information 
-              when you use our Service. Please read this policy carefully.
-            </p>
-          </section>
+            <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-300">
+              Privacy Policy
+            </h1>
+            <p className="text-slate-400 text-sm">Last updated: {new Date().toLocaleDateString()}</p>
+          </div>
+
+          {/* Main Content */}
+          <div className="bg-slate-900/80 backdrop-blur-sm rounded-3xl border border-slate-800 p-6 sm:p-10 shadow-xl space-y-8">
+            {/* Introduction */}
+            <section>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-2 h-5 bg-cyan-500 rounded-full"></div>
+                <h2 className="text-xl font-bold text-white">1. Introduction</h2>
+              </div>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                At <span className="font-semibold text-cyan-300">JobMatch AI</span>, we take your privacy and career data confidentiality seriously. 
+                This Privacy Policy explains how our client-side ATS diagnostic engine and optional cloud services collect, process, and safeguard your information.
+              </p>
+            </section>
 
           {/* Information We Collect */}
           <section className="mb-10">
@@ -281,25 +284,26 @@ export default function PrivacyPolicy() {
           </div>
 
           {/* Navigation */}
-          <div className="mt-12 pt-8 border-t border-gray-700/50">
+          <div className="mt-12 pt-8 border-t border-slate-800">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <Link 
                 href="/terms" 
-                className="text-green-400 hover:text-green-300 transition-colors flex items-center gap-2"
+                className="text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-2 text-sm font-semibold"
               >
                 ← View Terms of Service
               </Link>
               <Link 
-                href="/auth" 
-                className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2"
+                href="/register" 
+                className="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-2 text-xs font-semibold"
               >
-                Return to Sign Up
+                <span>Create Account</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
         </div>
-      </div>
-    </main>
-  );
+      </main>
+    </div>
+  </div>
+);
 }
