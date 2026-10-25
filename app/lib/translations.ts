@@ -31,6 +31,29 @@ export interface TranslationDictionary {
   nav_signup: string;
   nav_logout: string;
   nav_lang_switch: string;
+  nav_services: string;
+  nav_templates: string;
+
+  // Services Suite Section
+  services_tag: string;
+  services_title: string;
+  services_desc: string;
+  service_resume_title: string;
+  service_resume_badge: string;
+  service_resume_desc: string;
+  service_resume_action: string;
+  service_cv_title: string;
+  service_cv_badge: string;
+  service_cv_desc: string;
+  service_cv_action: string;
+  service_cover_title: string;
+  service_cover_badge: string;
+  service_cover_desc: string;
+  service_cover_action: string;
+  service_review_title: string;
+  service_review_badge: string;
+  service_review_desc: string;
+  service_review_action: string;
 
   // Hero Section
   hero_badge: string;
@@ -139,6 +162,28 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     nav_signup: 'Get Started',
     nav_logout: 'Sign Out',
     nav_lang_switch: 'Language',
+    nav_services: 'Services',
+    nav_templates: 'Templates',
+
+    services_tag: 'Comprehensive Suite',
+    services_title: 'Core Career Tools & Services',
+    services_desc: 'Everything you need to create applicant-tracking-system compliant job applications with verified algorithmic checks.',
+    service_resume_title: 'ATS Resume Builder',
+    service_resume_badge: '100% ATS Safe',
+    service_resume_desc: 'Single & two-column standard formats engineered specifically for Taleo, Workday, and Greenhouse parsers.',
+    service_resume_action: 'Launch Builder',
+    service_cv_title: 'Academic & Executive CV',
+    service_cv_badge: '13 Sections PRO',
+    service_cv_desc: 'Comprehensive multi-page format for academia, leadership, publications, research grants, and honors.',
+    service_cv_action: 'Open CV Builder',
+    service_cover_title: 'AI Cover Letter Engine',
+    service_cover_badge: 'Tailored AI',
+    service_cover_desc: 'Synthesize authentic, tailored cover letters matching your target job requirements and preferred tone.',
+    service_cover_action: 'Create Cover Letter',
+    service_review_title: 'ATS Diagnostic Audit',
+    service_review_badge: 'Instant Scanner',
+    service_review_desc: 'Deep algorithmic score evaluating contact details, formatting safety, and missing high-priority keywords.',
+    service_review_action: 'Inspect Resume',
 
     hero_badge: 'Intelligent Career Engine • Free & Private',
     hero_title_prefix: 'Build & Optimize Resumes for',
@@ -240,6 +285,28 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     nav_signup: 'ابدأ مجاناً',
     nav_logout: 'تسجيل الخروج',
     nav_lang_switch: 'اللغة',
+    nav_services: 'الخدمات',
+    nav_templates: 'القوالب',
+
+    services_tag: 'منظومة الأدوات المتكاملة',
+    services_title: 'الخدمات والأدوات المهنية الأساسية',
+    services_desc: 'كل ما تحتاجه لإعداد ملفات مهنية متوافقة 100% مع أنظمة تتبع المتقدمين ومعايير مسؤولي التوظيف.',
+    service_resume_title: 'منشئ السيرة الذاتية ATS',
+    service_resume_badge: 'متوافق 100% مع ATS',
+    service_resume_desc: 'قوالب قياسية أحادية وثنائية الأعمدة مصممة خصيصاً لاجتياز أنظمة Taleo و Workday و Greenhouse بنجاح.',
+    service_resume_action: 'فتح المنشئ',
+    service_cv_title: 'منشئ CV الأكاديمي الشامل',
+    service_cv_badge: '13 قسماً تخصصياً PRO',
+    service_cv_desc: 'سيرة ذاتية متقدمة متعددة الصفحات مخصصة للأكاديميين والمدراء مع أقسام الأبحاث والمنح واللغات.',
+    service_cv_action: 'فتح منشئ CV',
+    service_cover_title: 'خطاب التقديم الذكي بالذكاء الاصطناعي',
+    service_cover_badge: 'صياغة مخصصة AI',
+    service_cover_desc: 'توليد خطابات تقديم احترافية ومقنعة تتطابق بدقة مع متطلبات الوصف الوظيفي والخبرات العملية.',
+    service_cover_action: 'إنشاء خطاب تقديم',
+    service_review_title: 'فحص وتشخيص توافق ATS',
+    service_review_badge: 'فحص خوارزمي فوري',
+    service_review_desc: 'تقييم شامل لبيانات الاتصال والتنسيق وكشف المهارات والكلمات المفتاحية الناقصة.',
+    service_review_action: 'بدء الفحص',
 
     hero_badge: 'منظومة مهنية ذكية مدعومة بالذكاء الاصطناعي • مجانية وآمنة',
     hero_title_prefix: 'ابنِ وافحص سيرتك الذاتية لأنظمة',
@@ -341,6 +408,28 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     nav_signup: 'Commencer',
     nav_logout: 'Déconnexion',
     nav_lang_switch: 'Langue',
+    nav_services: 'Services',
+    nav_templates: 'Modèles',
+
+    services_tag: 'Suite Professionnelle',
+    services_title: 'Nos Services & Outils Carrière',
+    services_desc: 'Tous les outils nécessaires pour créer des candidatures conformes aux ATS avec des audits algorithmiques transparents.',
+    service_resume_title: 'Créateur de CV ATS',
+    service_resume_badge: '100% Conforme ATS',
+    service_resume_desc: 'Mises en page standard à colonne unique ou double, optimisées pour Taleo, Workday et Greenhouse.',
+    service_resume_action: "Lancer l'éditeur",
+    service_cv_title: 'CV Académique & Exécutif',
+    service_cv_badge: '13 Sections PRO',
+    service_cv_desc: 'Format complet multi-pages pour chercheurs et cadres supérieurs avec publications, cours et distinctions.',
+    service_cv_action: 'Ouvrir CV Pro',
+    service_cover_title: 'Lettre de Motivation IA',
+    service_cover_badge: 'Sur-Mesure IA',
+    service_cover_desc: 'Rédigez des lettres de motivation percutantes et adaptées au poste visé et à votre style.',
+    service_cover_action: 'Générer la lettre',
+    service_review_title: 'Audit & Diagnostic ATS',
+    service_review_badge: 'Scanner Instantané',
+    service_review_desc: 'Évaluation algorithmique complète des coordonnées, de la structure et des mots-clés manquants.',
+    service_review_action: 'Auditer le CV',
 
     hero_badge: 'Moteur de Carrière Intelligent • Gratuit & Privé',
     hero_title_prefix: 'Créez & Optimisez vos CV pour les',
@@ -442,6 +531,28 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     nav_signup: 'Kostenlos starten',
     nav_logout: 'Abmelden',
     nav_lang_switch: 'Sprache',
+    nav_services: 'Services',
+    nav_templates: 'Vorlagen',
+
+    services_tag: 'Komplettlösung',
+    services_title: 'Kern-Werkzeuge & Karriere-Services',
+    services_desc: 'Alles, was Sie für ATS-konforme Bewerbungen mit algorithmisch geprüfter Erfolgsquote benötigen.',
+    service_resume_title: 'ATS-Lebenslauf Editor',
+    service_resume_badge: '100% ATS-Sicher',
+    service_resume_desc: 'Ein- und zweispaltige Standardlayouts, optimiert für Taleo, Workday und Greenhouse.',
+    service_resume_action: 'Editor starten',
+    service_cv_title: 'Akademischer & Executive CV',
+    service_cv_badge: '13 Fachbereiche PRO',
+    service_cv_desc: 'Mehrseitiger Lebenslauf für Führungskräfte und Wissenschaftler mit Publikationen und Zertifikaten.',
+    service_cv_action: 'CV Pro öffnen',
+    service_cover_title: 'KI-Anschreiben Generator',
+    service_cover_badge: 'Präzise KI',
+    service_cover_desc: 'Formulieren Sie überzeugende Anschreiben, die perfekt auf die Stelle und Ihre Erfahrung abgestimmt sind.',
+    service_cover_action: 'Anschreiben erstellen',
+    service_review_title: 'ATS-Diagnose & Audit',
+    service_review_badge: 'Echtzeit-Prüfung',
+    service_review_desc: 'Detaillierter Score für Kontaktdaten, Formatierung und fehlende Schlüsselbegriffe.',
+    service_review_action: 'CV analysieren',
 
     hero_badge: 'Intelligente Karriere-Engine • Kostenlos & Sicher',
     hero_title_prefix: 'Erstellen & Optimieren Sie Lebensläufe für',
@@ -543,6 +654,28 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     nav_signup: 'Empezar Gratis',
     nav_logout: 'Cerrar Sesión',
     nav_lang_switch: 'Idioma',
+    nav_services: 'Servicios',
+    nav_templates: 'Plantillas',
+
+    services_tag: 'Suite Profesional',
+    services_title: 'Herramientas y Servicios Profesionales',
+    services_desc: 'Todo lo necesario para crear candidaturas compatibles con ATS con revisiones algorítmicas verificadas.',
+    service_resume_title: 'Creador de CV ATS',
+    service_resume_badge: '100% Seguro para ATS',
+    service_resume_desc: 'Diseños estándar de una o dos columnas optimizados para filtros de Taleo, Workday y Greenhouse.',
+    service_resume_action: 'Abrir Creador',
+    service_cv_title: 'CV Académico y Ejecutivo',
+    service_cv_badge: '13 Secciones PRO',
+    service_cv_desc: 'Formato integral de varias páginas para investigadores y directivos con publicaciones y premios.',
+    service_cv_action: 'Abrir CV PRO',
+    service_cover_title: 'Carta de Presentación IA',
+    service_cover_badge: 'IA Personalizada',
+    service_cover_desc: 'Redacta cartas de presentación convincentes adaptadas a la vacante y a tu trayectoria profesional.',
+    service_cover_action: 'Crear Carta',
+    service_review_title: 'Diagnóstico y Revisión ATS',
+    service_review_badge: 'Escaneo Inmediato',
+    service_review_desc: 'Puntuación profunda que evalúa datos de contacto, riesgos de formato y competencias ausentes.',
+    service_review_action: 'Escanear CV',
 
     hero_badge: 'Motor de Carrera Inteligente • Gratuito & Privado',
     hero_title_prefix: 'Crea y Optimiza tu Currículum para',
@@ -644,6 +777,28 @@ export const translations: Record<LanguageCode, TranslationDictionary> = {
     nav_signup: 'Ücretsiz Başla',
     nav_logout: 'Çıkış Yap',
     nav_lang_switch: 'Dil',
+    nav_services: 'Hizmetler',
+    nav_templates: 'Şablonlar',
+
+    services_tag: 'Kapsamlı Platform',
+    services_title: 'Temel Kariyer Araçları ve Hizmetleri',
+    services_desc: 'Aday takip sistemleri (ATS) ile tam uyumlu başvurular hazırlamak için ihtiyacınız olan tüm araçlar.',
+    service_resume_title: 'ATS Özgeçmiş Oluşturucu',
+    service_resume_badge: '%100 ATS Uyumlu',
+    service_resume_desc: 'Taleo, Workday ve Greenhouse için özel olarak geliştirilmiş tek ve çift sütunlu standart şablonlar.',
+    service_resume_action: 'Oluşturucuyu Aç',
+    service_cv_title: 'Akademik ve Yönetici CV',
+    service_cv_badge: '13 Bölümlü PRO',
+    service_cv_desc: 'Akademisyenler ve üst düzey yöneticiler için yayınlar, projeler ve ödülleri içeren kapsamlı CV formatı.',
+    service_cv_action: 'CV Pro Başlat',
+    service_cover_title: 'Yapay Zeka Ön Yazı Motoru',
+    service_cover_badge: 'Akıllı Yapay Zeka',
+    service_cover_desc: 'Hedef pozisyonun gereksinimlerine ve tarzınıza uygun ikna edici ön yazılar oluşturun.',
+    service_cover_action: 'Ön Yazı Oluştur',
+    service_review_title: 'ATS Teşhis ve İnceleme',
+    service_review_badge: 'Anında Tarayıcı',
+    service_review_desc: 'İletişim bilgilerini, biçimlendirmeyi ve eksik anahtar kelimeleri algoritmik olarak puanlayın.',
+    service_review_action: 'CV İncele',
 
     hero_badge: 'Akıllı Kariyer Motoru • Ücretsiz ve Güvenli',
     hero_title_prefix: 'Özgeçmişinizi Hazırlayın ve',

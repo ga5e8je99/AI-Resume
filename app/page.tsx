@@ -223,6 +223,140 @@ export default function Home() {
           </div>
         </section>
 
+        {/* CORE PLATFORM SERVICES SECTION (Moved from Navbar for a clean, professional UX) */}
+        <section id="services" className="container mx-auto px-4 sm:px-6 mb-20 scroll-mt-24">
+          <div className="text-center mb-10">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1 rounded-full inline-flex items-center gap-1.5 mb-3">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{t('services_tag')}</span>
+            </span>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white mb-3">
+              {t('services_title')}
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed">
+              {t('services_desc')}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 max-w-7xl mx-auto">
+            {/* 1. AI Cover Letter Generator */}
+            <div className="group relative rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/50 p-6 flex flex-col justify-between backdrop-blur-xl transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/5">
+              <div className="absolute top-0 inset-x-6 h-[2px] bg-gradient-to-r from-transparent via-amber-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300">
+                    {t('service_cover_badge')}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-white mb-2 group-hover:text-amber-300 transition-colors">
+                  {t('service_cover_title')}
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed mb-6">
+                  {t('service_cover_desc')}
+                </p>
+              </div>
+
+              <Link
+                href="/cover-letter"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500 border border-amber-500/30 text-amber-300 hover:text-slate-950 font-bold text-xs transition-all shadow-sm group-hover:shadow-md"
+              >
+                <span>{t('service_cover_action')}</span>
+                <ArrowRight className={`w-3.5 h-3.5 ${isRtl ? 'rotate-180' : ''}`} />
+              </Link>
+            </div>
+
+            {/* 2. ATS Resume Builder */}
+            <div className="group relative rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/50 p-6 flex flex-col justify-between backdrop-blur-xl transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/5">
+              <div className="absolute top-0 inset-x-6 h-[2px] bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300">
+                    {t('service_resume_badge')}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                  {t('service_resume_title')}
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed mb-6">
+                  {t('service_resume_desc')}
+                </p>
+              </div>
+
+              <Link
+                href="/builder"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-cyan-500/10 hover:bg-cyan-500 border border-cyan-500/30 text-cyan-300 hover:text-slate-950 font-bold text-xs transition-all shadow-sm group-hover:shadow-md"
+              >
+                <span>{t('service_resume_action')}</span>
+                <ArrowRight className={`w-3.5 h-3.5 ${isRtl ? 'rotate-180' : ''}`} />
+              </Link>
+            </div>
+
+            {/* 3. Academic & Executive CV Builder */}
+            <div className="group relative rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 p-6 flex flex-col justify-between backdrop-blur-xl transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/5">
+              <div className="absolute top-0 inset-x-6 h-[2px] bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                    <FileCheck2 className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+                    {t('service_cv_badge')}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-white mb-2 group-hover:text-emerald-300 transition-colors">
+                  {t('service_cv_title')}
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed mb-6">
+                  {t('service_cv_desc')}
+                </p>
+              </div>
+
+              <Link
+                href="/cv-builder"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 border border-emerald-500/30 text-emerald-300 hover:text-slate-950 font-bold text-xs transition-all shadow-sm group-hover:shadow-md"
+              >
+                <span>{t('service_cv_action')}</span>
+                <ArrowRight className={`w-3.5 h-3.5 ${isRtl ? 'rotate-180' : ''}`} />
+              </Link>
+            </div>
+
+            {/* 4. ATS Diagnostic & Review */}
+            <div className="group relative rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 p-6 flex flex-col justify-between backdrop-blur-xl transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/5">
+              <div className="absolute top-0 inset-x-6 h-[2px] bg-gradient-to-r from-transparent via-indigo-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                    <Search className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">
+                    {t('service_review_badge')}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-white mb-2 group-hover:text-indigo-300 transition-colors">
+                  {t('service_review_title')}
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed mb-6">
+                  {t('service_review_desc')}
+                </p>
+              </div>
+
+              <Link
+                href="/review"
+                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500 border border-indigo-500/30 text-indigo-300 hover:text-slate-950 font-bold text-xs transition-all shadow-sm group-hover:shadow-md"
+              >
+                <span>{t('service_review_action')}</span>
+                <ArrowRight className={`w-3.5 h-3.5 ${isRtl ? 'rotate-180' : ''}`} />
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* RESUME UPLOAD SECTION */}
         <section id="upload" className="container mx-auto px-4 sm:px-6 mb-20 scroll-mt-24">
           <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-10 max-w-3xl mx-auto backdrop-blur-xl shadow-2xl">
@@ -362,7 +496,7 @@ export default function Home() {
         </section>
 
         {/* TEMPLATE SHOWCASE SECTION */}
-        <section className="container mx-auto px-4 sm:px-6 mb-20">
+        <section id="templates" className="container mx-auto px-4 sm:px-6 mb-20 scroll-mt-24">
           <div className="text-center mb-10">
             <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1 rounded-full inline-block mb-3">
               {t('templates_tag')}
