@@ -19,11 +19,11 @@ import {
   Eye,
   Edit3,
   FileText,
-  Sliders,
   Cloud,
   Check,
   Loader2,
   Printer,
+  Palette,
 } from 'lucide-react';
 import LogoLoader from '../components/LogoLoader';
 import LanguageSelector from '../components/LanguageSelector';
@@ -304,21 +304,6 @@ export default function BuilderPage() {
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <LanguageSelector />
 
-            {/* Toggle Templates Sidebar (Desktop) */}
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen((prev) => !prev)}
-              className={`hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-                isSidebarOpen
-                  ? 'bg-cyan-500/15 border-cyan-500/35 text-cyan-300 shadow-sm shadow-cyan-500/10'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
-              }`}
-              title={isSidebarOpen ? 'Minimize Templates Sidebar' : 'Open Templates Sidebar'}
-            >
-              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{isSidebarOpen ? 'Sidebar' : 'Templates & Style'}</span>
-            </button>
-
             <input
               type="file"
               ref={fileInputRef}
@@ -455,7 +440,7 @@ export default function BuilderPage() {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Sliders className="w-3.5 h-3.5" />
+            <Palette className="w-3.5 h-3.5" />
             <span>Templates</span>
           </button>
         </div>
