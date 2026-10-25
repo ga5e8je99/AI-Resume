@@ -1,36 +1,162 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+---
+title: JobMatch AI - Resume, CV & Cover Letter Studio
+emoji: 🚀
+colorFrom: indigo
+colorTo: emerald
+sdk: docker
+app_port: 7860
+pinned: false
+---
 
-## Getting Started
+# JobMatch AI — المنصة الذكية للسير الذاتية وخطابات التقديم
 
-First, run the development server:
+منصة ذكية متكاملة ومصممة لتمكين الباحثين عن عمل والمهنيين من بناء وتخصيص السير الذاتية (Resumes) وتوليد خطابات تقديم مخصصة ومبهرة بنسبة 100% بنقرة زر واحدة عبر الذكاء الاصطناعي، مع ضمان التوافق التام مع أنظمة تتبع المتقدمين (ATS).
 
+---
+
+## 🌟 ميزة: مولد خطابات التقديم الذكي (AI Cover Letter Generator)
+
+تمت إضافة وحدة متطورة لإنشاء خطابات التغطية والتقديم (`/cover-letter`) تجمع بين إمكانيات نماذج اللغة الكبيرة (LLMs) وخوارزميات المطابقة المحلية فائقة الاعتمادية:
+
+### ✨ أهم القدرات والمواصفات:
+- **استخراج الكلمات المفتاحية التلقائي:** استخراج المهارات والمتطلبات بنقرة واحدة من نص الوصف الوظيفي المباشر أو عبر جلب محتوى رابط الإعلان، مع خوارزمية تحليل تكرار وتحييد الكلمات العامة.
+- **تحديد نبرة الخطاب (4 نبرات مخصصة):**
+  - **رسمي (Formal):** للشركات الكبرى، المؤسسات الحكومية، والبنوك.
+  - **تقني (Technical):** للمطورين، مهندسي البرمجيات، والوظائف التحليلية.
+  - **قيادي (Leadership):** للمناصب الإدارية، مديري المنتجات، والقيادات التنفيذية.
+  - **حماسي (Enthusiastic):** للشركات الناشئة وبيئات العمل الابتكارية.
+- **دعم ثنائي اللغة كامل (عربي / إنجليزي):** مع توجيه ذكي للمحتوى والواجهة (`dir="rtl"` و `dir="ltr"`).
+- **تطابق القوالب مع السيرة الذاتية (Template Parity):** أربعة قوالب أنيقة ومتناسقة مع السيرة الذاتية (`modern`, `compact`, `classic`, `ats-friendly`).
+- **تصدير PDF مباشر ونسخ فوري:** تصدير نظيف عالي الدقة بقياس A4 عبر قواعد الطباعة الاحترافية (`@media print`) بدون تشويه، ونسخ نقي بضغطة زر واحدة.
+- **حفظ ومزامنة المسودات:** حفظ تلقائي محلي بدون تجميد واجهة المستخدم (Debounced Persistence)، مع مزامنة سحابية في قاعدة البيانات وتصفية سريعة.
+- **محرك صمود مدمج (Zero-Downtime Fallback):** في حال عدم توفر مفاتيح خارجية أو انقطاع الإنترنت أو نفاد الرصيد، يتحول النظام تلقائياً وبأجزاء من الثانية إلى محرك الـ ATS الداخلي المبرمج خوارزمياً لتوليد خطاب كامل واحترافي دون أي انقطاع للخدمة.
+- **أمان وموثوقية متقدمة:** حماية كاملة ضد هجمات IDOR، تزوير الطلبات CSRF، حقن النصوص XSS، ثغرات SSRF، ونظام حماية معدل الطلبات Sliding Window Rate Limiting.
+
+---
+
+## 🛠️ المتطلبات والمعمارية التقنية (Tech Stack)
+
+- **Framework:** [Next.js 16](https://nextjs.org) (App Router)
+- **UI Library:** [React 19](https://react.dev)
+- **Language:** [TypeScript 5](https://www.typescriptlang.org)
+- **Styling:** [Tailwind CSS v4](https://tailwindcss.com) مع Vanilla CSS للطباعة الدقيقة
+- **Database:** نظام هجين مزدوج يدعم [MongoDB Atlas](https://www.mongodb.com/atlas) ومخزن الملفات المحلي السريع (`.data/db.json`)
+- **Authentication:** JWT (JSON Web Tokens) و HttpOnly Cookies
+- **AI Engine:** تكامل OpenAI / LLM-Compatible API مع محرك ATS محلي خوارزمي مدمج
+
+---
+
+## 🚀 خطوات التشغيل المحلي (Quick Start)
+
+### 1. استنساخ المستودع وتثبيت الحزم:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# تثبيت كافة الحزم والاعتماديات
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. إعداد المتغيرات البيئية:
+انسخ ملف الإعدادات النموذجي `.env.example` إلى `.env.local`:
+```bash
+cp .env.example .env.local
+```
+*(ملاحظة: النظام مهيأ مسبقاً للعمل محلياً بصورة كاملة حتى بدون إدخال أي مفاتيح خارجية بفضل المخزن المحلي ومحرك الـ ATS الداخلي).*
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. تنفيذ ترحيل البيانات (Database Migration):
+قم بتشغيل سكربت الترحيل للتحقق من سلامة الحقول الافتراضية في قاعدة البيانات:
+```bash
+npm run db:migrate
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. تشغيل خادم التطوير:
+```bash
+npm run dev
+```
+افتح المتصفح على: [http://localhost:3000](http://localhost:3000)
+للوصول المباشر لمولد الخطابات: [http://localhost:3000/cover-letter](http://localhost:3000/cover-letter)
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## ⚙️ دليل المتغيرات البيئية (Environment Variables)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| المتغير | النوع | القيمة الافتراضية | الوصف |
+| :--- | :---: | :--- | :--- |
+| `MONGODB_URI` | اختياري | `mongodb://127.0.0.1:27017/jobmatch` | رابط الاتصال بقاعدة بيانات MongoDB. في حال عدم توفره يتم التحويل تلقائياً لمخزن JSON المحلي. |
+| `JWT_SECRET` | إلزامي | - | المفتاح السري لتوقيع وفحص رموز المصادقة وجلسات المستخدمين. |
+| `ADMIN_KEY` | إلزامي | - | مفتاح الوصول الخاص بالعمليات والمسارات الإدارية. |
+| `ADMIN_EMAILS` | اختياري | `admin@jobmatch.ai` | البريد الإلكتروني للمسؤولين بصلاحيات إدارية موسعة. |
+| `NEXT_PUBLIC_APP_URL` | إلزامي | `http://localhost:3000` | الرابط المعتمد للمنصة للتحقق من أصول الطلبات ومنع هجمات CSRF. |
+| `NEXT_PUBLIC_API_URL` | اختياري | `http://localhost:3000/api` | مسار الـ API للواجهات الأمامية. |
+| `OPENAI_API_KEY` | اختياري | `""` | مفتاح مزود الذكاء الاصطناعي الخارجي (OpenAI أو متوافق معه). في حال تركه فارغاً يعمل المحرك المحلي مجاناً. |
+| `OPENAI_MODEL` | اختياري | `gpt-4o-mini` | اسم النموذج التوليدي المستهدف. |
+| `OPENAI_BASE_URL` | اختياري | `https://api.openai.com/v1` | عنوان الخادم لمزود النماذج التوليدية. |
+| `AI_REQUEST_TIMEOUT_MS`| اختياري | `15000` | المهلة القصوى بالمللي ثانية للطلب الخارجي قبل التحويل التلقائي للمحرك الداخلي. |
+| `AI_MAX_RETRIES` | اختياري | `2` | عدد محاولات إعادة الاتصال عند الأخطاء الشبكية المؤقتة. |
+| `AI_PROVIDER_ENABLED` | اختياري | `true` | خيار تعطيل الاتصال الخارجي وإلزام النظام بالاعتماد على المحرك المحلي. |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> 🔒 **الأمان:** ملف `.env.example` يحتوي فقط على نماذج وتوضيحات دون أي أسرار أو مفاتيح حقيقية. تم تكوين `.gitignore` لحظر كافة ملفات `.env` باستثناء ملف النموذج.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🧪 حزمة الاختبارات الشاملة (Automated Test Suites)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+تتضمن ميزة خطابات التقديم حزمة اختبارات مؤتمتة متطورة تغطي 8 أجنحة تشغيلية وأكثر من 208 فحصاً تلقائياً:
+
+```bash
+# تشغيل كامل أجنحة الاختبار دفعة واحدة:
+npm test
+# أو
+npm run test:cover-letter
+```
+
+### الأجنحة المشمولة في الفحص التلقائي:
+1. **Business Logic & Arabic Normalization:** معالجة النصوص، توحيد التشكيل، وخوارزميات استخراج الكلمات المفتاحية.
+2. **REST APIs & Core CRUD:** التحقق من مسارات إنشاء، قراءة، تعديل، وحذف المسودات برمجياً.
+3. **Security, IDOR, XSS & CSRF Protection:** التحقق من عزل الصلاحيات، حظر هجمات تزوير الطلبات، وتطهير النصوص.
+4. **Server AI Integration & Fallback Resilience:** فحص سلاسة التحول للمحرك الداخلي عند انقطاع الخدمة الخارجية.
+5. **Data Validation, Quality & Binary Detection:** كشف المدخلات العشوائية والملفات الثنائية المشفرة وحظر روابط الـ SSRF.
+6. **Edge Cases, 6 Dimensions & Boundary Checks:** تغطية الحالات الحدية (نصوص فارغة، نصوص عملاقة، أحرف خاصة، لغات متعددة).
+7. **UI Flow, Component Contracts & Concurrency:** فحص اتساق مكونات واجهة المستخدم ومنع النقرات المتكررة والتزامن.
+8. **Performance, Rate Limiting & Reliability:** فحص تقليل حجم الحزم بنسبة 98% عبر الإسقاط (`?summary=true`)، واختبار الـ Rate Limiting والـ Debounce.
+
+---
+
+## 📂 هيكلية الملفات ذات الصلة بالميزة
+
+```text
+app/
+├── cover-letter/
+│   ├── page.tsx                           # الصفحة الرئيسية لمولد خطابات التقديم
+│   └── components/
+│       ├── ToneCardSelector.tsx           # منتقي نبرة الخطاب (رسمي، تقني، قيادي، حماسي)
+│       ├── KeywordsCloud.tsx              # عرض وتعديل الكلمات المفتاحية التفاعلية
+│       ├── GeneratingStepper.tsx          # مؤشر مراحل التوليد الذكي
+│       ├── CoverLetterPreview.tsx         # معاينة الخطاب الحية وتبديل القوالب والطباعة
+│       ├── SavedDraftsModal.tsx           # نافذة إدارة والبحث في المسودات المحفوظة
+│       └── ManualResumeForm.tsx           # إدخال بيانات السيرة الذاتية يدوياً
+├── api/
+│   ├── cover-letter/
+│   │   ├── generate/route.ts              # API توليد الخطاب الذكي مع Rate Limit
+│   │   └── extract-keywords/route.ts      # API استخراج الكلمات المفتاحية من نص أو رابط
+│   └── cover-letters/
+│       ├── route.ts                       # API جلب المسودات (Summary Projection) وإنشائها
+│       └── [id]/route.ts                  # API جلب وتعديل وحذف مسودة محددة (IDOR Guard)
+├── lib/
+│   ├── aiCoverLetterClient.ts             # عميل الذكاء الاصطناعي مع التراجع للمحرك المحلي
+│   ├── coverLetterService.ts              # محرك استخراج الكلمات والتوليد الخوارزمي المدمج
+│   ├── rateLimit.ts                       # نظام الحماية Sliding-Window Rate Limiter
+│   ├── datastore.ts                       # طبقة التخزين المزدوجة (MongoDB + JSON)
+│   └── auth.ts                            # المصادقة وفحص الـ JWT وحماية CSRF
+└── models/
+    └── CoverLetter.ts                     # مخطط بيانات Mongoose والفهارس المركبة
+```
+
+---
+
+## 📖 التوثيق الفني المفصل للمطورين
+للاطلاع على التوثيق التفصيلي لمخططات الطلب والاستجابة، معايير الأمان، وأكواد الأخطاء، يُرجى مراجعة:
+👉 [docs/cover-letter-feature.md](docs/cover-letter-feature.md)
+
+---
+
+## 📄 الترخيص (License)
+هذا المشروع خاص وخاضع لحقوق التطوير لمنصة **JobMatch AI**.

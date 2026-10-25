@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Logo from "./Logo";
 import { useAuth } from "../context/AuthContext";
-import { LayoutDashboard, LogOut, User, LogIn, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, LogOut, User, LogIn, ShieldCheck, Sparkles } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -14,6 +14,18 @@ export default function Navbar() {
 
       <div className="flex items-center gap-1.5 sm:gap-3">
         <Link
+          href="/cover-letter"
+          className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm font-semibold text-slate-200 hover:text-amber-400 transition-all shadow-md group shrink-0"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:rotate-12 transition-transform" />
+          <span className="hidden md:inline">Cover Letter</span>
+          <span className="md:hidden">Letter</span>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            AI
+          </span>
+        </Link>
+
+        <Link
           href="/builder"
           className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm font-semibold text-slate-100 hover:text-cyan-400 transition-all shadow-md group shrink-0"
         >
@@ -22,9 +34,24 @@ export default function Navbar() {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
           </span>
           <span className="hidden sm:inline">Resume Builder</span>
-          <span className="sm:hidden">Builder</span>
+          <span className="sm:hidden">Resume</span>
           <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
             ATS
+          </span>
+        </Link>
+
+        <Link
+          href="/cv-builder"
+          className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-950/60 border border-emerald-500/30 text-xs sm:text-sm font-semibold text-slate-100 hover:text-emerald-300 transition-all shadow-md group shrink-0"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="hidden sm:inline">CV Builder</span>
+          <span className="sm:hidden">CV</span>
+          <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+            PRO
           </span>
         </Link>
 

@@ -10,196 +10,143 @@
       "updatedAt": "2026-10-23T12:27:52.488Z"
     },
     {
-      "id": "usr_002",
-      "name": "Sarah Jenkins",
-      "email": "sarah.jenkins@example.com",
+      "id": "usr_mvl8wx9p0rt4",
+      "name": "Test User",
+      "email": "test_1792776622193@example.com",
+      "password": "$2b$10$sF3s9v3qd8JCQImmZJ0ST.Qhla89vTJiLd0GyuMAqoDAcrhS5J0M2",
       "role": "user",
-      "createdAt": "2026-10-18T12:27:52.488Z",
-      "updatedAt": "2026-10-21T12:27:52.488Z"
+      "createdAt": "2026-10-23T17:30:25.261Z",
+      "updatedAt": "2026-10-23T17:30:25.261Z"
     },
     {
-      "id": "usr_003",
-      "name": "Omar Mansour",
-      "email": "omar.mansour@gmail.com",
+      "id": "usr_mvl8x5ln2e6f",
+      "name": "Cover User",
+      "email": "cu_1792776635075@example.com",
+      "password": "$2b$10$p/n0CjIaLr2U5iI5CE/gheAFvBUH7mgwuDu.m5A9s.7UolaLa0Af6",
       "role": "user",
-      "createdAt": "2026-10-21T12:27:52.488Z",
-      "updatedAt": "2026-10-23T12:27:52.488Z"
+      "createdAt": "2026-10-23T17:30:36.059Z",
+      "updatedAt": "2026-10-23T17:30:36.059Z"
+    },
+    {
+      "id": "usr_mvl8xqfs4xbj",
+      "name": "Cover Tester",
+      "email": "ct_1792776660378@example.com",
+      "password": "$2b$10$M7uQG7P8Ano4PRBSFCh4Z.9b0aELo9Ndrp0ypqViqc6qGVvKuPW/2",
+      "role": "user",
+      "createdAt": "2026-10-23T17:31:03.064Z",
+      "updatedAt": "2026-10-23T17:31:03.064Z"
     }
   ],
-  "resumes": [
+  "resumes": [],
+  "analyses": [],
+  "coverLetters": [
     {
-      "id": "res_001",
-      "userId": "usr_002",
-      "title": "Senior Frontend Engineer CV",
+      "id": "cl_mvmkzm7b6q9s",
+      "userId": "user_security_a",
+      "title": "User A Confidential Cover Letter",
+      "companyName": "Secret Corp",
+      "jobTitle": "Security Lead",
+      "jobDescription": "",
+      "extractedKeywords": [],
+      "tone": "formal",
+      "language": "ar",
+      "status": "saved",
+      "isArchived": false,
+      "sender": {
+        "fullName": "",
+        "email": "",
+        "phone": "",
+        "location": "",
+        "linkedin": "",
+        "portfolio": ""
+      },
+      "recipient": {
+        "companyName": "Secret Corp",
+        "jobTitle": "Security Lead",
+        "hiringManager": "",
+        "department": "",
+        "location": ""
+      },
+      "content": {
+        "subject": "",
+        "salutation": "Dear Hiring Team,",
+        "introduction": "Confidential introduction text.",
+        "bodyParagraphs": [
+          "Paragraph 1 for User A confidential application."
+        ],
+        "conclusion": "Best regards.",
+        "signOff": "Sincerely,",
+        "fullText": "Confidential Cover Letter Body Text for User A"
+      },
       "templateId": "compact",
-      "theme": {
-        "accentColor": "#10b981",
-        "fontSize": "base",
-        "fontFamily": "var(--font-sans), sans-serif"
-      },
-      "data": {
-        "personalInfo": {
-          "fullName": "Sarah Jenkins",
-          "jobTitle": "Senior Frontend Engineer",
-          "email": "sarah.jenkins@example.com",
-          "phone": "+1 (555) 234-5678",
-          "location": "San Francisco, CA"
-        },
-        "experience": [
-          {
-            "id": "exp1",
-            "title": "Senior Frontend Developer",
-            "company": "TechCorp Solutions",
-            "location": "San Francisco, CA",
-            "startDate": "2022-03",
-            "endDate": "Present",
-            "current": true,
-            "bullets": [
-              "Architected high-performance React Next.js web application serving 500k+ daily users",
-              "Boosted ATS & Core Web Vitals performance score by 35% through code splitting"
-            ]
-          }
-        ],
-        "education": [
-          {
-            "id": "edu1",
-            "degree": "B.S. in Computer Science",
-            "school": "University of California, Berkeley",
-            "graduationDate": "2020"
-          }
-        ],
-        "skills": [
-          "React",
-          "Next.js",
-          "TypeScript",
-          "Tailwind CSS",
-          "GraphQL",
-          "Jest"
-        ]
-      },
-      "createdAt": "2026-10-18T12:27:52.488Z",
-      "updatedAt": "2026-10-22T12:27:52.488Z"
+      "createdAt": "2026-10-24T15:56:12.455Z",
+      "updatedAt": "2026-10-24T15:56:12.455Z"
     },
     {
-      "id": "res_002",
-      "userId": "usr_003",
-      "title": "Omar Mansour - Full Stack Resume",
-      "templateId": "two-column",
-      "theme": {
-        "accentColor": "#2563eb",
-        "fontSize": "base",
-        "fontFamily": "var(--font-sans), sans-serif"
+      "id": "cl_mvmkzbcl30y9",
+      "userId": "user_security_a",
+      "title": "User A Confidential Cover Letter",
+      "companyName": "Secret Corp",
+      "jobTitle": "Security Lead",
+      "jobDescription": "",
+      "extractedKeywords": [],
+      "tone": "formal",
+      "language": "ar",
+      "status": "saved",
+      "isArchived": false,
+      "sender": {
+        "fullName": "",
+        "email": "",
+        "phone": "",
+        "location": "",
+        "linkedin": "",
+        "portfolio": ""
       },
-      "data": {
-        "personalInfo": {
-          "fullName": "Omar Mansour",
-          "jobTitle": "Full-Stack Developer",
-          "email": "omar.mansour@gmail.com",
-          "phone": "+20 100 123 4567",
-          "location": "Cairo, Egypt"
-        },
-        "experience": [
-          {
-            "id": "exp1",
-            "title": "Full-Stack Engineer",
-            "company": "CloudVentures",
-            "startDate": "2021-01",
-            "endDate": "Present",
-            "current": true,
-            "bullets": [
-              "Built scalable Node.js microservices handling 10M API requests per month"
-            ]
-          }
-        ],
-        "education": [
-          {
-            "id": "edu1",
-            "degree": "Bachelor of Engineering",
-            "school": "Cairo University",
-            "graduationDate": "2021"
-          }
-        ],
-        "skills": [
-          "Node.js",
-          "React",
-          "MongoDB",
-          "PostgreSQL",
-          "Docker",
-          "AWS"
-        ]
+      "recipient": {
+        "companyName": "Secret Corp",
+        "jobTitle": "Security Lead",
+        "hiringManager": "",
+        "department": "",
+        "location": ""
       },
-      "createdAt": "2026-10-21T12:27:52.488Z",
-      "updatedAt": "2026-10-23T12:27:52.488Z"
+      "content": {
+        "subject": "",
+        "salutation": "Dear Hiring Team,",
+        "introduction": "Confidential introduction text.",
+        "bodyParagraphs": [
+          "Paragraph 1 for User A confidential application."
+        ],
+        "conclusion": "Best regards.",
+        "signOff": "Sincerely,",
+        "fullText": "Confidential Cover Letter Body Text for User A"
+      },
+      "templateId": "compact",
+      "createdAt": "2026-10-24T15:55:58.389Z",
+      "updatedAt": "2026-10-24T15:55:58.389Z"
     },
     {
-      "id": "res_003",
-      "userId": "usr_002",
-      "title": "Sarah Jenkins - Product Lead CV",
-      "templateId": "ats-friendly",
-      "theme": {
-        "accentColor": "#8b5cf6",
-        "fontSize": "base",
-        "fontFamily": "var(--font-sans), sans-serif"
+      "id": "cl_mvl8xqsagt3q",
+      "userId": "usr_mvl8xqfs4xbj",
+      "title": "Amazon AWS Cover Letter",
+      "companyName": "Amazon Web Services",
+      "jobTitle": "DevOps Architect",
+      "jobDescription": "",
+      "extractedKeywords": [],
+      "tone": "formal",
+      "language": "ar",
+      "sender": {},
+      "recipient": {
+        "companyName": "Amazon Web Services",
+        "jobTitle": "DevOps Architect"
       },
-      "data": {
-        "personalInfo": {
-          "fullName": "Sarah Jenkins",
-          "jobTitle": "Technical Product Lead",
-          "email": "sarah.jenkins@example.com",
-          "phone": "+1 (555) 234-5678"
-        },
-        "experience": [],
-        "education": [],
-        "skills": [
-          "Product Strategy",
-          "Agile",
-          "Jira",
-          "UX Research",
-          "Metrics Analysis"
-        ]
+      "content": {
+        "fullText": "Dear AWS Team..."
       },
-      "createdAt": "2026-10-20T12:27:52.489Z",
-      "updatedAt": "2026-10-21T12:27:52.489Z"
-    }
-  ],
-  "analyses": [
-    {
-      "id": "ana_001",
-      "userId": "usr_002",
-      "resumeFileName": "Sarah_Jenkins_CV.pdf",
-      "targetRole": "Senior Frontend Engineer",
-      "overallScore": 88,
-      "grade": "A",
-      "rankPercentile": "Top 10%",
-      "matchLabel": "Very Strong Match",
-      "subScores": {
-        "keywordsMatch": 92,
-        "formatting": 90,
-        "structure": 85,
-        "contentQuality": 85
-      },
-      "result": {},
-      "createdAt": "2026-10-18T12:27:52.489Z",
-      "updatedAt": "2026-10-18T12:27:52.489Z"
-    },
-    {
-      "id": "ana_002",
-      "userId": "usr_003",
-      "resumeFileName": "Omar_Mansour_FullStack.pdf",
-      "targetRole": "Full-Stack Developer",
-      "overallScore": 78,
-      "grade": "B+",
-      "rankPercentile": "Top 25%",
-      "matchLabel": "Strong Match",
-      "subScores": {
-        "keywordsMatch": 75,
-        "formatting": 85,
-        "structure": 80,
-        "contentQuality": 72
-      },
-      "result": {},
-      "createdAt": "2026-10-21T12:27:52.489Z",
-      "updatedAt": "2026-10-21T12:27:52.489Z"
+      "templateId": "compact",
+      "createdAt": "2026-10-23T17:31:03.514Z",
+      "updatedAt": "2026-10-23T17:31:03.514Z",
+      "status": "saved",
+      "isArchived": false
     }
   ]
 }

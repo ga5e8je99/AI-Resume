@@ -1,0 +1,37 @@
+name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "❌ Error: HF_TOKEN secret is not configured in GitHub Secrets."
+            echo "Please go to: Repository Settings -> Secrets and variables -> Actions -> New repository secret"
+            echo "Add HF_TOKEN with your Hugging Face Write Token (https://huggingface.co/settings/tokens)."
+            exit 1
+          fi
+
+          # Use environment secret or sensible fallback defaults
+          TARGET_USER="${HF_USERNAME:-ga5e8je99}"
+          TARGET_SPACE="${HF_SPACE_NAME:-JobMatch-AI}"
+
+          echo "🚀 Syncing main branch to Hugging Face Space: https://huggingface.co/spaces/$TARGET_USER/$TARGET_SPACE"
+          git push --force "https://$TARGET_USER:$HF_TOKEN@huggingface.co/spaces/$TARGET_USER/$TARGET_SPACE" main:main
+          echo "✅ Synchronization initiated successfully! Hugging Face is now building the Docker demo."

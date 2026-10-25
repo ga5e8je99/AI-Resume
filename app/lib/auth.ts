@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'jobmatch_ats_ai_resume_super_secret_jwt_key_2026';
 
-export const ADMIN_SECRET_KEY = process.env.ADMIN_KEY || 'jobmatch_admin_secret_2026';
+export const ADMIN_SECRET_KEY = process.env.ADMIN_KEY || 'GA138989@20102011f';
 
 export interface AuthTokenPayload {
   userId: string;
@@ -89,3 +89,31 @@ export function verifyAdmin(req: NextRequest): { isAdmin: boolean; user?: AuthTo
 
   return { isAdmin: false, user, reason: 'Insufficient privileges' };
 }
+
+// Validate that mutating requests originate from the same host (CSRF protection)
+export function validateCsrfOrigin(req: NextRequest): boolean {
+  const origin = req.headers.get('origin');
+  if (!origin) return true; // Non-browser clients or requests without Origin header (e.g. server-to-server or tests)
+
+  const host = req.headers.get('host');
+  if (!host) return true;
+
+  try {
+    const originUrl = new URL(origin);
+    const originHost = originUrl.host; // includes port
+    if (originHost.toLowerCase() === host.toLowerCase()) return true;
+
+    // Check against configured APP URL if present
+    if (process.env.NEXT_PUBLIC_APP_URL) {
+      try {
+        const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL);
+        if (originUrl.host.toLowerCase() === appUrl.host.toLowerCase()) return true;
+      } catch {}
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+

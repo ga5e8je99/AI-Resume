@@ -76,11 +76,14 @@ body {
   }
 
   #resume-preview,
-  #resume-preview * {
+  #resume-preview *,
+  #cover-letter-sheet,
+  #cover-letter-sheet * {
     visibility: visible !important;
   }
 
-  #resume-preview {
+  #resume-preview,
+  #cover-letter-sheet {
     position: relative !important;
     left: 0 !important;
     top: 0 !important;
@@ -89,7 +92,6 @@ body {
     margin: 0 !important;
     padding: 0 !important;
     box-shadow: none !important;
-    border: none !important;
     border-radius: 0 !important;
     background: #ffffff !important;
     transform: none !important;

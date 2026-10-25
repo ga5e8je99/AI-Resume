@@ -26,7 +26,340 @@ import {
   UserCheck,
   UserX,
   Sparkles,
+  Rocket,
+  Lightbulb,
+  Palette,
+  Briefcase,
+  Bot,
+  Zap,
+  Globe,
+  Share2,
+  Code,
+  DollarSign,
+  Plus,
+  Check,
+  Clock,
+  Star,
+  FileCheck,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+
+export interface RoadmapIdea {
+  id: string;
+  title: string;
+  category: 'ai' | 'design' | 'jobs' | 'export' | 'business';
+  categoryLabel: string;
+  description: string;
+  specs: string[];
+  impact: 'عالي جداً' | 'عالي' | 'متوسط';
+  effort: 'سريع (1-3 أيام)' | 'متوسط (1-2 أسبوع)' | 'كبير (شهر)';
+  priority: 'urgent' | 'high' | 'medium';
+  status: 'idea' | 'in-progress' | 'completed';
+  badgeColor: string;
+}
+
+const DEFAULT_ROADMAP_IDEAS: RoadmapIdea[] = [
+  {
+    id: 'idea-cover-letter',
+    title: 'مولد خطابات التقديم الذكي (AI Cover Letter Generator)',
+    category: 'ai',
+    categoryLabel: 'ذكاء اصطناعي',
+    description: 'توليد خطابات تقديم مخصصة ومبهرة بنسبة 100% لأي إعلان وظيفي بنقرة زر واحدة بناءً على السيرة الذاتية واشتراطات الشركة.',
+    specs: [
+      'استخراج الكلمات المفتاحية التلقائي من نص أو رابط الوصف الوظيفي (Job Description).',
+      'تحديد نبرة الخطاب (رسمي، تقني، قيادي، حماسي) مع إمكانية التوليد باللغتين العربية والإنجليزية.',
+      'تنسيق مطابق وموازي لقالب الـ Resume المختار مع زر تصدير PDF مباشر ونسخ بنقرة واحدة.',
+      'حفظ مسودات خطابات التغطية لكل شركة في قاعدة البيانات للرجوع إليها لاحقاً.',
+    ],
+    impact: 'عالي جداً',
+    effort: 'متوسط (1-2 أسبوع)',
+    priority: 'urgent',
+    status: 'in-progress',
+    badgeColor: 'border-violet-500/30 bg-violet-500/10 text-violet-400',
+  },
+  {
+    id: 'idea-auto-tailor-cv',
+    title: 'التوليد والتعديل التلقائي الذكي للـ CV حسب الوظيفة (Auto-Tailored CV)',
+    category: 'ai',
+    categoryLabel: 'ذكاء اصطناعي',
+    description: 'تكييف وإعادة صياغة السيرة الذاتية بالكامل لتتطابق بنسبة 95%+ مع أي شاغر وظيفي مستهدف دون الحاجة لإعادة كتابتها يدوياً.',
+    specs: [
+      'المستخدم يلصق رابط الوظيفة أو وصفها، فيقوم الذكاء الاصطناعي بإعادة صياغة نقاط الخبرة (Bullet Points).',
+      'إبراز المهارات المتوافقة وسد فجوات الكلمات المفتاحية المفقودة تلقائياً في السيرة الذاتية.',
+      'حساب النتيجة التقديرية للـ ATS قبل وبعد التطوير لإثبات الفارق للمستخدم.',
+      'إمكانية حفظ نسخة مخصصة لكل شركة يتقدم إليها المستخدم (e.g., CV_Google, CV_Vodafone).',
+    ],
+    impact: 'عالي جداً',
+    effort: 'متوسط (1-2 أسبوع)',
+    priority: 'urgent',
+    status: 'in-progress',
+    badgeColor: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400',
+  },
+  {
+    id: 'idea-job-aggregator',
+    title: 'محرك جلب وتجميع الوظائف من كبرى المنصات (Real-Time Job Aggregator)',
+    category: 'jobs',
+    categoryLabel: 'سوق العمل والوظائف',
+    description: 'تجميع مباشر للوظائف الشاغرة من أشهر المنصات (LinkedIn, Wuzzuf, Indeed, Bayt, Tanqeeb) مع حساب درجة المطابقة الفورية.',
+    specs: [
+      'سحب الوظائف اليومية وتصنيفها حسب الدولة (مصر، السعودية، الإمارات، والعمل عن بعد Remote).',
+      'فحص تلقائي للمطابقة (Instant Match Score %): إظهار نسبة توافق الـ CV مع كل وظيفة معروضة.',
+      'فلترة الوظائف التي يتجاوز معدل توافقها 80% ليتقدم إليها المستخدم فورياً.',
+      'زر تقديم بضغطة واحدة مع السيرة الذاتية المحسنة تلقائياً.',
+    ],
+    impact: 'عالي جداً',
+    effort: 'كبير (شهر)',
+    priority: 'urgent',
+    status: 'idea',
+    badgeColor: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+  },
+  {
+    id: 'idea-mock-interview',
+    title: 'محاكي المقابلات الشخصية الذكي (AI Mock Interviewer)',
+    category: 'ai',
+    categoryLabel: 'ذكاء اصطناعي',
+    description: 'إجراء مقابلة تدريبية افتراضية مع الذكاء الاصطناعي تحاكي أسئلة الموارد البشرية والأسئلة التقنية لوظيفتك المستهدفة.',
+    specs: [
+      'توليد 5 إلى 10 أسئلة مخصصة بدقة بناءً على خبرات السيرة والوظيفة المستهدفة.',
+      'إتاحة الإجابة بالصوت (Speech-to-Text) أو كتابة نصية مع مؤقت واقعي للضغط النفسي.',
+      'تقييم فوري شامل لكل إجابة: درجة الثقة، وضوح الكلمات، المصطلحات، ونموذج STAR.',
+      'تقديم الإجابة النموذجية المثلى لكل سؤال لتدريب المستخدم على أفضل طريقة للرد.',
+    ],
+    impact: 'عالي',
+    effort: 'متوسط (1-2 أسبوع)',
+    priority: 'high',
+    status: 'idea',
+    badgeColor: 'border-purple-500/30 bg-purple-500/10 text-purple-400',
+  },
+  {
+    id: 'idea-linkedin-optimizer',
+    title: 'فاحص ومطور ملف LinkedIn الاحترافي (LinkedIn Profile Optimizer)',
+    category: 'ai',
+    categoryLabel: 'ذكاء اصطناعي',
+    description: 'أداة ذكية لتحليل حساب لينكدإن وإعادة صياغة العناوين والنبذة الشخصية لزيادة فرص الظهور في بحث مسؤولي التوظيف (Recruiter Search).',
+    specs: [
+      'توليد صيغ احترافية للـ Headline لجذب مسؤولي التوظيف بالكلمات المفتاحية الأكثر طلباً.',
+      'صياغة قسم النبذة التعريفية (About Section) بطريقة سردية مقنعة تلخص إنجازاتك بالأرقام.',
+      'تحديد أفضل المهارات (Skills) التي يجب إضافتها لتصدر نتائج البحث في مجالك.',
+    ],
+    impact: 'عالي',
+    effort: 'سريع (1-3 أيام)',
+    priority: 'high',
+    status: 'idea',
+    badgeColor: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+  },
+  {
+    id: 'idea-drag-drop-builder',
+    title: 'محرر بصري متطور بالسحب والإفلات (Visual Drag & Drop CV Builder)',
+    category: 'design',
+    categoryLabel: 'تصميم وتجربة المستخدم',
+    description: 'تطوير واجهة بناء السيرة الذاتية لتكون تفاعلية كلياً مع إمكانية تحريك الأقسام وإعادة ترتيبها بالسحب والإفلات المباشر.',
+    specs: [
+      'إعادة ترتيب الأقسام (التعليم، الخبرات، المهارات، اللغات) وتغيير موضعها بالسحب المباشر.',
+      'إمكانية التعديل المباشر داخل ورقة المعاينة الحية (Inline Editing).',
+      'لوحة تحكم مرنة لتغيير الخطوط، المسافات، تباعد السطور، وألوان العناوين بحرية.',
+      'تصميم أنيق فائق الجودة متوافق مع كافة أحجام الشاشات مع دعم كامل لخصائص RTL العربية.',
+    ],
+    impact: 'عالي جداً',
+    effort: 'متوسط (1-2 أسبوع)',
+    priority: 'urgent',
+    status: 'in-progress',
+    badgeColor: 'border-pink-500/30 bg-pink-500/10 text-pink-400',
+  },
+  {
+    id: 'idea-templates-gallery',
+    title: 'حزمة قوالب عالمية معتمدة (Harvard & Modern ATS Gallery)',
+    category: 'design',
+    categoryLabel: 'تصميم وتجربة المستخدم',
+    description: 'إضافة مكتبة تضم 10 قوالب جديدة مصممة بدقة لتلائم معايير كبرى الجامعات (هارفارد، ستانفورد) وأنظمة ATS العالمية.',
+    specs: [
+      'قالب Harvard Academic الكلاسيكي المفضل للوظائف الإدارية والاستشارية والمالية.',
+      'قالب Modern Tech المتخصص لمهندسي البرمجيات والتقنيين مع تسليط الضوء على Stack و GitHub.',
+      'قالب Creative Minimal للمصممين مع مظهر نظيف وبسيط يمرر الفحص الآلي بدون عقبات.',
+      'خيارات متقدمة لتخصيص الألوان والسمات البصرية بنقرة واحدة.',
+    ],
+    impact: 'عالي',
+    effort: 'سريع (1-3 أيام)',
+    priority: 'high',
+    status: 'idea',
+    badgeColor: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+  },
+  {
+    id: 'idea-public-portfolio-url',
+    title: 'رابط ويب تفاعلي وبورتفوليو أونلاين بـ QR Code لكل مستخدم',
+    category: 'design',
+    categoryLabel: 'تصميم وتجربة المستخدم',
+    description: 'تمكين المستخدم من نشر سيرته كصفحة ويب شخصية خاصة به برابط سريع وباركود QR لمشاركته مع مدراء التوظيف والشبكات المهنية.',
+    specs: [
+      'إنشاء رابط مخصص (e.g., jobmatch.ai/cv/ahmed-ali) بتصميم تفاعلي متجاوب مع الهواتف.',
+      'إنشاء رمز QR تلقائي عالي الدقة لوضعه في أعلى ملف الـ PDF المطبوع.',
+      'إحصائيات ذكية للمستخدم: عدد زوار الصفحة، البلدان، وتحميلات ملف السيرة الذاتية.',
+      'إمكانية حماية الصفحة بكلمة مرور أو جعلها متاحة فقط لمن يملك الرابط.',
+    ],
+    impact: 'عالي',
+    effort: 'متوسط (1-2 أسبوع)',
+    priority: 'high',
+    status: 'idea',
+    badgeColor: 'border-teal-500/30 bg-teal-500/10 text-teal-400',
+  },
+  {
+    id: 'idea-kanban-tracker',
+    title: 'نظام تتبع طلبات التوظيف (Job Application Kanban Tracker)',
+    category: 'jobs',
+    categoryLabel: 'سوق العمل والوظائف',
+    description: 'لوحة تفاعلية لإدارة ومتابعة طلبات التقديم على الوظائف في مكان واحد مثل Trello، لمعرفة ما تم إرساله وما تم الرد عليه.',
+    specs: [
+      'أعمدة منظمة: (تم التقديم 📤 -> مقابلة هاتفية 📞 -> مقابلة تقنية 💻 -> عرض وظيفي 🎉 -> مرفوض ❌).',
+      'حفظ السيرة الذاتية وخطاب التغطية المستخدمين في كل تقديم بشكل مستقل.',
+      'إضافة ملاحظات، الرواتب المتوقعة، ومواعيد المقابلات مع منبهات تقويم Google Calendar.',
+    ],
+    impact: 'متوسط',
+    effort: 'متوسط (1-2 أسبوع)',
+    priority: 'medium',
+    status: 'idea',
+    badgeColor: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400',
+  },
+  {
+    id: 'idea-multi-export',
+    title: 'تصدير متقدم بصيغ متعددة (Word docx, ATS Plain Text, High-Res PDF)',
+    category: 'export',
+    categoryLabel: 'تصدير وتكامل تقني',
+    description: 'توفير خيارات تصدير متنوعة تناسب كافة متطلبات الشركات، مع معالجة احترافية لدعم الخطوط واللغة العربية.',
+    specs: [
+      'تصدير ملف Microsoft Word (.docx) قابل للتعديل ومنسق بأسلوب ATS قياسي.',
+      'تصدير نص خام (Plain Text) مخصص للتقديم في النماذج النصية المعقدة لشركات مثل Oracle و Taleo.',
+      'محرك PDF فائق الدقة بدون أي تشويه في تشابك الحروف العربية أو المسافات.',
+      'ضغط ذكي لحجم الملف ليكون دائماً أقل من 500KB مع الحفاظ على أعلى نقاء بصري.',
+    ],
+    impact: 'عالي جداً',
+    effort: 'متوسط (1-2 أسبوع)',
+    priority: 'urgent',
+    status: 'in-progress',
+    badgeColor: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400',
+  },
+  {
+    id: 'idea-portfolio-scraper',
+    title: 'جالب مشاريع GitHub و Behance التلقائي (Dev & Creative Scraper)',
+    category: 'export',
+    categoryLabel: 'تصدير وتكامل تقني',
+    description: 'استيراد فوري للمشاريع من حساب المطور في GitHub أو المصمم في Behance وصياغتها كإنجازات قوية في السيرة الذاتية.',
+    specs: [
+      'إدخال اسم مستخدم GitHub لجلب أهم المستودعات (Repos)، والنجوم، واللغات البرمجية المستخدمة.',
+      'الذكاء الاصطناعي يلخص فكرة كل مشروع، وأبرز التحديات، والنتائج بأسلوب احترافي مختصر.',
+      'دعم جلب روابط المعارض والتصاميم من Behance مع مصغرات الصور.',
+    ],
+    impact: 'متوسط',
+    effort: 'سريع (1-3 أيام)',
+    priority: 'medium',
+    status: 'idea',
+    badgeColor: 'border-sky-500/30 bg-sky-500/10 text-sky-400',
+  },
+  {
+    id: 'idea-free-for-seekers',
+    title: 'نموذج المنصة المجانية 100% للباحثين عن عمل (100% Free Job Seekers Model)',
+    category: 'business',
+    categoryLabel: 'الاشتراكات والأعمال',
+    description: 'إتاحة كافة أدوات المنصة، بناء السيرة، قوالب ATS، وتوليد Cover Letters مجاناً بالكامل دون أي رسوم على الأفراد لضمان أعلى انتشار فيروسي (Viral Growth).',
+    specs: [
+      'إتاحة جميع القوالب، فحص ATS، وتوليد خطابات التقديم بالذكاء الاصطناعي مجاناً 100% للأفراد.',
+      'استغلال الميزة المجانية في حملات تيك توك ولينكدإن وجروبات الخريجين لتحقيق ملايين الزيارات العضوية السريعة.',
+      'بناء أضخم قاعدة بيانات كفاءات وباحثين عن عمل لتصبح المنصة ذات قيمة خيالية للشركات.',
+    ],
+    impact: 'عالي جداً',
+    effort: 'سريع (1-3 أيام)',
+    priority: 'urgent',
+    status: 'in-progress',
+    badgeColor: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+  },
+  {
+    id: 'idea-b2b-employers',
+    title: 'بوابة الشركات وأصحاب الأعمال والوظائف المميزة (B2B Employer Portal & Featured Jobs)',
+    category: 'business',
+    categoryLabel: 'الاشتراكات والأعمال',
+    description: 'تحصيل الأرباح من الشركات والـ HR بدلاً من الباحثين عن عمل (نفس نموذج Indeed و Wuzzuf).',
+    specs: [
+      'إعلانات وظائف مميزة (Featured Job Listings) مدفوعة لتثبيت وظائف الشركات في مقدمة المنصة.',
+      'محرك البحث في بنك الكفاءات (Talent Search Database) باشتراك شهري للشركات للوصول للمرشحين المناسبين.',
+      'أداة الفرز الآلي للشركات (Bulk ATS Screener): فحص 100+ سيرة ذاتية وتحديد أفضل 5 مرشحين بضغطة زر.',
+    ],
+    impact: 'عالي جداً',
+    effort: 'كبير (شهر)',
+    priority: 'urgent',
+    status: 'idea',
+    badgeColor: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400',
+  },
+  {
+    id: 'idea-edtech-affiliate',
+    title: 'التسويق بالعمولة للكورسات والدورات التدريبية (EdTech & Courses Affiliate)',
+    category: 'business',
+    categoryLabel: 'الاشتراكات والأعمال',
+    description: 'توصية المستخدم بالدورات والشهادات المناسبة لسد فجوات المهارات في السيرة الذاتية والحصول على عمولات من منصات التعليم.',
+    specs: [
+      'الذكاء الاصطناعي يحلل نقاط الضعف في الـ CV ويقترح دورات تدريبية معتمدة لسد نقص المهارات.',
+      'الربط مع برامج الأفلييت العالمية (Coursera, Udemy, edX) والمنصات العربية (ينفع، المنتور).',
+      'الحصول على عمولة 20% إلى 50% عن كل تسجيل دون أن يدفع الباحث عن عمل أي قرش للموقع.',
+    ],
+    impact: 'عالي',
+    effort: 'سريع (1-3 أيام)',
+    priority: 'high',
+    status: 'idea',
+    badgeColor: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+  },
+  {
+    id: 'idea-ads-sponsorships',
+    title: 'شبكة إعلانات جوجل والرعايات المؤسسية (Google AdSense & CSR Sponsorships)',
+    category: 'business',
+    categoryLabel: 'الاشتراكات والأعمال',
+    description: 'توليد دخل سلبي مستمر من حركة الزيارات العالية عبر إعلانات Google AdSense ورعايات البنوك والشركات الكبرى.',
+    specs: [
+      'دمج إعلانات Google AdSense أنيقة وغير مزعجة في صفحات النتائج وصفحات تنزيل الـ PDF.',
+      'عقد شراكات رعاية سنوية مع البنوك والمصارف وشركات الاتصالات لدعم توظيف وتأهيل الشباب (CSR).',
+      'إظهار شعار الجهة الراعية في الترويسة مع شعار (مبادرة مجانية لدعم الشباب برعاية X).',
+    ],
+    impact: 'عالي',
+    effort: 'سريع (1-3 أيام)',
+    priority: 'high',
+    status: 'idea',
+    badgeColor: 'border-purple-500/30 bg-purple-500/10 text-purple-400',
+  },
+  {
+    id: 'idea-vip-human-review',
+    title: 'خدمة الاستشارة والمراجعة البشرية المخصصة الاختيارية (Optional VIP Human Review)',
+    category: 'business',
+    categoryLabel: 'الاشتراكات والأعمال',
+    description: 'خدمة مدفوعة اختيارية تماماً للمدراء والباحثين عن مراجعة بشرية 1-on-1 مع مستشار توظيف، بينما تظل كافة أدوات المنصة مجانية 100%.',
+    specs: [
+      'الأداة الذكية والقوالب والـ PDF مجانية بالكامل بلا أي استثناء.',
+      'خيار إضافي فرعي اختياري لمن يرغب في فحص يدوي دقيق من استشاري موارد بشرية محترف.',
+      'تسليم الملاحظات والتعديلات خلال 24-48 ساعة بهامش ربح مرتفع جداً (High-Ticket Upsell).',
+    ],
+    impact: 'متوسط',
+    effort: 'سريع (1-3 أيام)',
+    priority: 'medium',
+    status: 'idea',
+    badgeColor: 'border-pink-500/30 bg-pink-500/10 text-pink-400',
+  },
+  {
+    id: 'idea-telegram-whatsapp-alerts',
+    title: 'تنبيهات الفرص الذكية عبر واتساب وتيليجرام (WhatsApp & Telegram Alerts)',
+    category: 'ai',
+    categoryLabel: 'ذكاء اصطناعي',
+    description: 'بوت ذكي يرسل إشعاراً فورياً للمستخدم عندما تتوفر وظيفة شاغرة تناسب مهاراته وسيرته بنسبة توافق تفوق 85%.',
+    specs: [
+      'ربط حساب التيليجرام أو الواتساب برقم هاتف المستخدم بنقرة واحدة.',
+      'إرسال ملخص يومي بأهم الوظائف الجديدة مع نسبة التوافق ورابط التقديم المباشر.',
+      'إمكانية الاستفسار من البوت عن حالة طلبات التوظيف أو طلب تعديل سريع على السيرة الذاتية.',
+    ],
+    impact: 'متوسط',
+    effort: 'متوسط (1-2 أسبوع)',
+    priority: 'medium',
+    status: 'idea',
+    badgeColor: 'border-green-500/30 bg-green-500/10 text-green-400',
+  },
+];
+
 
 interface AdminStats {
   metrics: {
@@ -112,7 +445,7 @@ export default function AdminDashboardPage() {
   const [isVerifyingKey, setIsVerifyingKey] = useState(false);
 
   // Dashboard Data
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'resumes' | 'analyses'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'resumes' | 'analyses' | 'plan'>('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
   const [resumesList, setResumesList] = useState<AdminResume[]>([]);
@@ -125,12 +458,174 @@ export default function AdminDashboardPage() {
   const [resumeTemplateFilter, setResumeTemplateFilter] = useState('all');
   const [analysisSearch, setAnalysisSearch] = useState('');
 
+  // Roadmap State & Management
+  const [roadmapIdeas, setRoadmapIdeas] = useState<RoadmapIdea[]>(DEFAULT_ROADMAP_IDEAS);
+  const [planCategoryFilter, setPlanCategoryFilter] = useState<string>('all');
+  const [planStatusFilter, setPlanStatusFilter] = useState<string>('all');
+  const [planSearch, setPlanSearch] = useState<string>('');
+  const [isAddIdeaModalOpen, setIsAddIdeaModalOpen] = useState<boolean>(false);
+  const [expandedIdeaId, setExpandedIdeaId] = useState<string | null>(null);
+
+  // New Idea Form State
+  const [newIdeaTitle, setNewIdeaTitle] = useState('');
+  const [newIdeaCategory, setNewIdeaCategory] = useState<'ai' | 'design' | 'jobs' | 'export' | 'business'>('ai');
+  const [newIdeaDescription, setNewIdeaDescription] = useState('');
+  const [newIdeaSpecs, setNewIdeaSpecs] = useState('');
+  const [newIdeaPriority, setNewIdeaPriority] = useState<'urgent' | 'high' | 'medium'>('high');
+  const [newIdeaImpact, setNewIdeaImpact] = useState<'عالي جداً' | 'عالي' | 'متوسط'>('عالي');
+  const [newIdeaEffort, setNewIdeaEffort] = useState<'سريع (1-3 أيام)' | 'متوسط (1-2 أسبوع)' | 'كبير (شهر)'>('متوسط (1-2 أسبوع)');
+
   // Notifications
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const showNotice = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Load Roadmap from LocalStorage with smart merge of new default ideas
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('jobmatch_roadmap_ideas');
+      if (saved) {
+        const parsed: RoadmapIdea[] = JSON.parse(saved);
+        const existingIds = new Set(parsed.map((item) => item.id));
+        const missingDefaults = DEFAULT_ROADMAP_IDEAS.filter((def) => !existingIds.has(def.id));
+        if (missingDefaults.length > 0) {
+          const merged = [...parsed, ...missingDefaults];
+          setRoadmapIdeas(merged);
+          localStorage.setItem('jobmatch_roadmap_ideas', JSON.stringify(merged));
+        } else {
+          setRoadmapIdeas(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading roadmap from localStorage:', e);
+    }
+  }, []);
+
+  const saveRoadmapIdeas = (ideas: RoadmapIdea[]) => {
+    setRoadmapIdeas(ideas);
+    try {
+      localStorage.setItem('jobmatch_roadmap_ideas', JSON.stringify(ideas));
+    } catch (e) {
+      console.error('Error saving roadmap to localStorage:', e);
+    }
+  };
+
+  const handleUpdateIdeaStatus = (id: string, newStatus: 'idea' | 'in-progress' | 'completed') => {
+    const updated = roadmapIdeas.map((idea) =>
+      idea.id === id ? { ...idea, status: newStatus } : idea
+    );
+    saveRoadmapIdeas(updated);
+    showNotice(
+      newStatus === 'completed'
+        ? 'تهانينا! تم تحديث حالة الميزة إلى مكتملة بنجاح 🎉'
+        : newStatus === 'in-progress'
+        ? 'تم نقل الميزة إلى قيد التطوير والعمل 🚀'
+        : 'تم نقل الميزة إلى قائمة الأفكار المجدولة 💡'
+    );
+  };
+
+  const handleDeleteIdea = (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذه الفكرة من خطة التطوير؟')) return;
+    const updated = roadmapIdeas.filter((item) => item.id !== id);
+    saveRoadmapIdeas(updated);
+    showNotice('تم حذف الفكرة من خطة التطوير');
+  };
+
+  const handleResetDefaultIdeas = () => {
+    if (!confirm('هل تريد إعادة تعيين خطة التطوير إلى الخطة الأساسية الشاملة؟')) return;
+    saveRoadmapIdeas(DEFAULT_ROADMAP_IDEAS);
+    showNotice('تمت استعادة خطة التطوير الأساسية بنجاح');
+  };
+
+  const handleCreateNewIdea = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newIdeaTitle.trim()) return;
+
+    const categoryLabels: Record<string, string> = {
+      ai: 'ذكاء اصطناعي',
+      design: 'تصميم وتجربة المستخدم',
+      jobs: 'سوق العمل والوظائف',
+      export: 'تصدير وتكامل تقني',
+      business: 'الاشتراكات والأعمال',
+    };
+
+    const categoryBadges: Record<string, string> = {
+      ai: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400',
+      design: 'border-pink-500/30 bg-pink-500/10 text-pink-400',
+      jobs: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+      export: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400',
+      business: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+    };
+
+    const specsArray = newIdeaSpecs
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    const newIdea: RoadmapIdea = {
+      id: `custom-idea-${Date.now()}`,
+      title: newIdeaTitle.trim(),
+      category: newIdeaCategory,
+      categoryLabel: categoryLabels[newIdeaCategory] || 'تطوير المنصة',
+      description: newIdeaDescription.trim() || 'فكرة وخدمة جديدة مخصصة لتطوير منصة JobMatch.',
+      specs: specsArray.length > 0 ? specsArray : ['تنفيذ واختبار الميزة وفق المعايير البرمجية والتصميمية الحديثة.'],
+      impact: newIdeaImpact,
+      effort: newIdeaEffort,
+      priority: newIdeaPriority,
+      status: 'idea',
+      badgeColor: categoryBadges[newIdeaCategory] || 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400',
+    };
+
+    const updated = [newIdea, ...roadmapIdeas];
+    saveRoadmapIdeas(updated);
+    setIsAddIdeaModalOpen(false);
+    setNewIdeaTitle('');
+    setNewIdeaDescription('');
+    setNewIdeaSpecs('');
+    showNotice('تمت إضافة الفكرة بنجاح إلى خطة التطوير! 🚀');
+  };
+
+  const handleExportRoadmap = () => {
+    let md = `# 🚀 خطة تطوير منصة JobMatch AI (Roadmap 2026)\n\n`;
+    md += `تاريخ التصدير: ${new Date().toLocaleDateString('ar-EG')}\n`;
+    md += `إجمالي الميزات والخدمات: ${roadmapIdeas.length}\n`;
+    const completedCount = roadmapIdeas.filter((i) => i.status === 'completed').length;
+    md += `نسبة الإنجاز: ${Math.round((completedCount / (roadmapIdeas.length || 1)) * 100)}%\n\n`;
+    md += `---\n\n`;
+
+    roadmapIdeas.forEach((idea, idx) => {
+      const statusText =
+        idea.status === 'completed'
+          ? '✅ مكتمل'
+          : idea.status === 'in-progress'
+          ? '⏳ قيد التنفيذ'
+          : '💡 فكرة مجدولة';
+      md += `### ${idx + 1}. ${idea.title}\n`;
+      md += `- **التصنيف:** ${idea.categoryLabel}\n`;
+      md += `- **الحالة:** ${statusText}\n`;
+      md += `- **الأولوية:** ${
+        idea.priority === 'urgent' ? 'قصوى 🔥' : idea.priority === 'high' ? 'عالية ⭐' : 'متوسطة'
+      }\n`;
+      md += `- **الأثر:** ${idea.impact} | **الجهد التقديري:** ${idea.effort}\n`;
+      md += `- **الوصف:** ${idea.description}\n`;
+      md += `- **المواصفات الفنية:**\n`;
+      idea.specs.forEach((s) => {
+        md += `  * ${s}\n`;
+      });
+      md += `\n`;
+    });
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `JobMatch_Development_Roadmap_${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotice('تم تصدير ملف خطة التطوير (Markdown) بنجاح!');
   };
 
   // Check admin authorization on load
@@ -711,6 +1206,21 @@ export default function AdminDashboardPage() {
             <ScanSearch className="w-4 h-4" />
             <span>سجل فحص ATS ({analysesList.length})</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('plan')}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${
+              activeTab === 'plan'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold shadow-md shadow-orange-500/25'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Rocket className="w-4 h-4 text-amber-400 group-hover:text-amber-300" />
+            <span>خطة التطوير ({roadmapIdeas.length})</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+              خارطة الطريق
+            </span>
+          </button>
         </div>
 
         {/* TAB 1: OVERVIEW & ANALYTICS */}
@@ -1256,6 +1766,612 @@ export default function AdminDashboardPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: DEVELOPMENT ROADMAP & FUTURE PLAN */}
+        {activeTab === 'plan' && (() => {
+          const filteredRoadmapIdeas = roadmapIdeas.filter((item) => {
+            const matchesCategory = planCategoryFilter === 'all' || item.category === planCategoryFilter;
+            const matchesStatus = planStatusFilter === 'all' || item.status === planStatusFilter;
+            const matchesSearch =
+              planSearch.trim() === '' ||
+              item.title.toLowerCase().includes(planSearch.toLowerCase()) ||
+              item.description.toLowerCase().includes(planSearch.toLowerCase()) ||
+              item.specs.some((s) => s.toLowerCase().includes(planSearch.toLowerCase()));
+            return matchesCategory && matchesStatus && matchesSearch;
+          });
+
+          const totalRoadmapItems = roadmapIdeas.length;
+          const completedRoadmapItems = roadmapIdeas.filter((i) => i.status === 'completed').length;
+          const inProgressRoadmapItems = roadmapIdeas.filter((i) => i.status === 'in-progress').length;
+          const plannedRoadmapItems = roadmapIdeas.filter((i) => i.status === 'idea').length;
+          const completionPercentage =
+            totalRoadmapItems > 0 ? Math.round((completedRoadmapItems / totalRoadmapItems) * 100) : 0;
+
+          const getCategoryIcon = (cat: string) => {
+            switch (cat) {
+              case 'ai':
+                return <Bot className="w-4 h-4 text-cyan-400" />;
+              case 'design':
+                return <Palette className="w-4 h-4 text-pink-400" />;
+              case 'jobs':
+                return <Briefcase className="w-4 h-4 text-emerald-400" />;
+              case 'export':
+                return <Code className="w-4 h-4 text-yellow-400" />;
+              case 'business':
+                return <DollarSign className="w-4 h-4 text-amber-400" />;
+              default:
+                return <Sparkles className="w-4 h-4 text-cyan-400" />;
+            }
+          };
+
+          const getPriorityBadge = (priority: string) => {
+            switch (priority) {
+              case 'urgent':
+                return (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    أولوية قصوى 🔥
+                  </span>
+                );
+              case 'high':
+                return (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    أولوية عالية ⭐
+                  </span>
+                );
+              default:
+                return (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    أولوية متوسطة 📌
+                  </span>
+                );
+            }
+          };
+
+          return (
+            <div className="space-y-6">
+              {/* Header Hero Banner */}
+              <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-cyan-950/30 border border-amber-500/20 rounded-3xl p-6 sm:p-8 backdrop-blur-md relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+                <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                  <div className="space-y-2 max-w-2xl">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold">
+                      <Rocket className="w-3.5 h-3.5 text-amber-400" />
+                      <span>خارطة طريق تطوير المنصة والخدمات المستقبلية 2026</span>
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                      خطة التطوير الشاملة لمنصة JobMatch
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      توثيق ومتابعة كافة الأفكار المتفق عليها، ترقيات الذكاء الاصطناعي الذاتية، تحسينات التصميم والقوالب،
+                      وربط الوظائف المباشرة للارتقاء بالمنصة إلى الصدارة في سوق العمل.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      onClick={() => setIsAddIdeaModalOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>إضافة فكرة جديدة</span>
+                    </button>
+
+                    <button
+                      onClick={handleExportRoadmap}
+                      className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 hover:text-white transition-all cursor-pointer"
+                      title="تحميل خطة التطوير بصيغة Markdown"
+                    >
+                      <Download className="w-4 h-4 text-cyan-400" />
+                      <span>تصدير الخطة</span>
+                    </button>
+
+                    <button
+                      onClick={handleResetDefaultIdeas}
+                      className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-xs text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
+                      title="استعادة الخطة الأساسية"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">الافتراضية</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress & KPIs Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">إجمالي الأفكار</span>
+                    <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400">
+                      <Rocket className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-extrabold text-white">{totalRoadmapItems}</div>
+                  <p className="text-[11px] text-slate-400 mt-1">ميزة وخدمة في الخطة</p>
+                </div>
+
+                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">قيد التنفيذ والبرمجة</span>
+                    <div className="p-2 rounded-xl bg-cyan-500/15 text-cyan-400">
+                      <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-extrabold text-white">{inProgressRoadmapItems}</div>
+                  <p className="text-[11px] text-cyan-400 mt-1">جاري تطويرها حالياً</p>
+                </div>
+
+                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">مكتمل ومنفذ</span>
+                    <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-400">
+                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-extrabold text-white">{completedRoadmapItems}</div>
+                  <p className="text-[11px] text-emerald-400 mt-1">جاهزة وتعمل بالمنصة</p>
+                </div>
+
+                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">نسبة الإنجاز العامة</span>
+                    <div className="p-2 rounded-xl bg-purple-500/15 text-purple-400">
+                      <Award className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl sm:text-3xl font-extrabold text-white">{completionPercentage}%</span>
+                    <span className="text-[11px] text-slate-400">من إجمالي الخطة</span>
+                  </div>
+                  <div className="w-full bg-slate-800 h-2 rounded-full mt-2.5 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-500 via-cyan-400 to-emerald-400 rounded-full transition-all duration-500"
+                      style={{ width: `${completionPercentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters & Search Toolbar */}
+              <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 backdrop-blur-sm space-y-4">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                  {/* Search Input */}
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={planSearch}
+                      onChange={(e) => setPlanSearch(e.target.value)}
+                      placeholder="ابحث في أفكار التطوير، الذكاء الاصطناعي، التصميم، أو المواصفات..."
+                      className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 placeholder-slate-500"
+                    />
+                    {planSearch && (
+                      <button
+                        onClick={() => setPlanSearch('')}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Status Filter */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                    <button
+                      onClick={() => setPlanStatusFilter('all')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                        planStatusFilter === 'all'
+                          ? 'bg-amber-500 text-slate-950 font-bold'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      الكل ({totalRoadmapItems})
+                    </button>
+                    <button
+                      onClick={() => setPlanStatusFilter('in-progress')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                        planStatusFilter === 'in-progress'
+                          ? 'bg-cyan-500 text-slate-950 font-bold'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      ⏳ قيد التنفيذ ({inProgressRoadmapItems})
+                    </button>
+                    <button
+                      onClick={() => setPlanStatusFilter('idea')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                        planStatusFilter === 'idea'
+                          ? 'bg-purple-500 text-white font-bold'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      💡 أفكار مجدولة ({plannedRoadmapItems})
+                    </button>
+                    <button
+                      onClick={() => setPlanStatusFilter('completed')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                        planStatusFilter === 'completed'
+                          ? 'bg-emerald-500 text-slate-950 font-bold'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      ✅ مكتملة ({completedRoadmapItems})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Category Pills */}
+                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pt-1 border-t border-slate-800/80">
+                  <span className="text-xs text-slate-400 whitespace-nowrap ml-2">التصنيف:</span>
+                  <button
+                    onClick={() => setPlanCategoryFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      planCategoryFilter === 'all'
+                        ? 'bg-slate-700 text-white font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    🌟 كافة المجالات
+                  </button>
+                  <button
+                    onClick={() => setPlanCategoryFilter('ai')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      planCategoryFilter === 'ai'
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <Bot className="w-3.5 h-3.5" />
+                    <span>الذكاء الاصطناعي (AI)</span>
+                  </button>
+                  <button
+                    onClick={() => setPlanCategoryFilter('design')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      planCategoryFilter === 'design'
+                        ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <Palette className="w-3.5 h-3.5" />
+                    <span>التصميم والقوالب (UI/UX)</span>
+                  </button>
+                  <button
+                    onClick={() => setPlanCategoryFilter('jobs')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      planCategoryFilter === 'jobs'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>محرك الوظائف وسوق العمل</span>
+                  </button>
+                  <button
+                    onClick={() => setPlanCategoryFilter('export')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      planCategoryFilter === 'export'
+                        ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <Code className="w-3.5 h-3.5" />
+                    <span>التصدير والتكامل التقني</span>
+                  </button>
+                  <button
+                    onClick={() => setPlanCategoryFilter('business')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      planCategoryFilter === 'business'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <DollarSign className="w-3.5 h-3.5" />
+                    <span>الاشتراكات والمدفوعات</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Ideas Cards Grid */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                {filteredRoadmapIdeas.map((idea, index) => {
+                  const isExpanded = expandedIdeaId === idea.id;
+                  return (
+                    <div
+                      key={idea.id}
+                      className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 rounded-3xl p-5 sm:p-6 backdrop-blur-sm transition-all duration-200 flex flex-col justify-between group shadow-xl relative overflow-hidden"
+                    >
+                      {/* Top Badges */}
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-3.5">
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-200">
+                              {getCategoryIcon(idea.category)}
+                              <span>{idea.categoryLabel}</span>
+                            </span>
+                            {getPriorityBadge(idea.priority)}
+                          </div>
+
+                          {/* Status Pill */}
+                          <div>
+                            {idea.status === 'completed' && (
+                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>مكتمل</span>
+                              </span>
+                            )}
+                            {idea.status === 'in-progress' && (
+                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center gap-1">
+                                <Clock className="w-3 h-3 animate-spin" />
+                                <span>قيد التنفيذ</span>
+                              </span>
+                            )}
+                            {idea.status === 'idea' && (
+                              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                                <Lightbulb className="w-3 h-3" />
+                                <span>فكرة مجدولة</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Title & Description */}
+                        <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-amber-300 transition-colors mb-2">
+                          {idea.title}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                          {idea.description}
+                        </p>
+
+                        {/* Specs List */}
+                        <div className="space-y-2 mb-5 bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3.5">
+                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3 text-amber-400" />
+                            <span>المواصفات الفنية ومخرجات الميزة:</span>
+                          </div>
+                          <ul className="space-y-1.5">
+                            {idea.specs.slice(0, isExpanded ? idea.specs.length : 3).map((spec, sIdx) => (
+                              <li key={sIdx} className="text-xs text-slate-300 flex items-start gap-2">
+                                <span className="text-cyan-400 font-bold shrink-0 mt-0.5">•</span>
+                                <span className="leading-relaxed">{spec}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {idea.specs.length > 3 && (
+                            <button
+                              onClick={() => setExpandedIdeaId(isExpanded ? null : idea.id)}
+                              className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium pt-1 flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>{isExpanded ? 'عرض أقل' : `عرض ${idea.specs.length - 3} مواصفات إضافية...`}</span>
+                              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Footer Actions & Metadata */}
+                      <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-400 text-[11px]">
+                            الأثر: <strong className="text-slate-200">{idea.impact}</strong>
+                          </span>
+                          <span className="text-slate-600">•</span>
+                          <span className="text-slate-400 text-[11px]">
+                            الجهد: <strong className="text-slate-200">{idea.effort}</strong>
+                          </span>
+                        </div>
+
+                        {/* Status Switcher Buttons */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-slate-400 hidden sm:inline">الحالة:</span>
+                          <button
+                            onClick={() => handleUpdateIdeaStatus(idea.id, 'idea')}
+                            className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                              idea.status === 'idea'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                            title="تعيين كفكرة مجدولة"
+                          >
+                            💡 فكرة
+                          </button>
+                          <button
+                            onClick={() => handleUpdateIdeaStatus(idea.id, 'in-progress')}
+                            className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                              idea.status === 'in-progress'
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                            title="تعيين كقيد التطوير"
+                          >
+                            🚀 قيد التنفيذ
+                          </button>
+                          <button
+                            onClick={() => handleUpdateIdeaStatus(idea.id, 'completed')}
+                            className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                              idea.status === 'completed'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                            title="تعيين كمكتمل"
+                          >
+                            ✅ مكتمل
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteIdea(idea.id)}
+                            className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors ml-1 cursor-pointer"
+                            title="حذف من الخطة"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {filteredRoadmapIdeas.length === 0 && (
+                  <div className="col-span-1 xl:col-span-2 py-12 text-center bg-slate-900/50 border border-slate-800 rounded-3xl p-8">
+                    <Lightbulb className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                    <h4 className="text-base font-bold text-white mb-1">لا توجد أفكار مطابقة للبحث أو الفلتر المختار</h4>
+                    <p className="text-xs text-slate-400 mb-4">
+                      جرب مسح خانة البحث أو تغيير التصنيف لعرض المزيد من الميزات.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setPlanSearch('');
+                        setPlanCategoryFilter('all');
+                        setPlanStatusFilter('all');
+                      }}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer"
+                    >
+                      إعادة ضبط الفلاتر
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Modal: Add New Roadmap Idea */}
+        {isAddIdeaModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
+              <button
+                onClick={() => setIsAddIdeaModalOpen(false)}
+                className="absolute top-5 left-5 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-3 rounded-2xl bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                  <Rocket className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">إضافة فكرة أو خدمة جديدة للخطة</h3>
+                  <p className="text-xs text-slate-400">سجل فكرتك ومواصفاتها لتنضم إلى خارطة طريق التطوير</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleCreateNewIdea} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">عنوان الفكرة / الميزة *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newIdeaTitle}
+                    onChange={(e) => setNewIdeaTitle(e.target.value)}
+                    placeholder="مثال: مولد البورتفوليو الشخصي بالذكاء الاصطناعي"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">التصنيف</label>
+                    <select
+                      value={newIdeaCategory}
+                      onChange={(e: any) => setNewIdeaCategory(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="ai">🤖 ذكاء اصطناعي (AI Features)</option>
+                      <option value="design">🎨 تصميم وقوالب (UI/UX Design)</option>
+                      <option value="jobs">💼 محرك الوظائف (Job Integration)</option>
+                      <option value="export">⚡ تصدير وتكامل (Tech & Export)</option>
+                      <option value="business">💳 اشتراكات ومدفوعات (Business)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">الأولوية</label>
+                    <select
+                      value={newIdeaPriority}
+                      onChange={(e: any) => setNewIdeaPriority(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="urgent">قصوى 🔥 (Urgent)</option>
+                      <option value="high">عالية ⭐ (High)</option>
+                      <option value="medium">متوسطة 📌 (Medium)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">الأثر المتوقع</label>
+                    <select
+                      value={newIdeaImpact}
+                      onChange={(e: any) => setNewIdeaImpact(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="عالي جداً">عالي جداً</option>
+                      <option value="عالي">عالي</option>
+                      <option value="متوسط">متوسط</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">الجهد التقديري</label>
+                    <select
+                      value={newIdeaEffort}
+                      onChange={(e: any) => setNewIdeaEffort(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="سريع (1-3 أيام)">سريع (1-3 أيام)</option>
+                      <option value="متوسط (1-2 أسبوع)">متوسط (1-2 أسبوع)</option>
+                      <option value="كبير (شهر)">كبير (شهر)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">الوصف العام للميزة</label>
+                  <textarea
+                    rows={2}
+                    value={newIdeaDescription}
+                    onChange={(e) => setNewIdeaDescription(e.target.value)}
+                    placeholder="اشرح الهدف من هذه الميزة وكيف تفيد المستخدم..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    المواصفات الفنية والتفاصيل (كل نقطة في سطر منفصل)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newIdeaSpecs}
+                    onChange={(e) => setNewIdeaSpecs(e.target.value)}
+                    placeholder="النقطة الأولى&#10;النقطة الثانية&#10;النقطة الثالثة..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400 resize-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddIdeaModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>حفظ وإضافة إلى الخطة</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

@@ -1,0 +1,123 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser, validateCsrfOrigin } from '@/app/lib/auth';
+import DataStore from '@/app/lib/datastore';
+import { CoverLetterService } from '@/app/lib/coverLetterService';
+import { AICoverLetterClient } from '@/app/lib/aiCoverLetterClient';
+import { GenerateCoverLetterRequest } from '@/app/cover-letter/types';
+import { applyRateLimit } from '@/app/lib/rateLimit';
+
+// POST /api/cover-letter/generate - Synthesize an AI-tailored cover letter with server-side AI and robust fallback
+export async function POST(req: NextRequest) {
+  try {
+    // 1. CSRF Protection for browser calls
+    if (!validateCsrfOrigin(req)) {
+      return NextResponse.json(
+        { success: false, error: 'Cross-origin request blocked (CSRF protection)' },
+        { status: 403 }
+      );
+    }
+
+    // 2. Rate Limiting: 40 AI generations per minute per user/IP
+    const authUser = getAuthenticatedUser(req);
+    const rateLimit = applyRateLimit(
+      req,
+      { limit: 40, windowMs: 60 * 1000, keyPrefix: 'gen' },
+      authUser?.userId
+    );
+    if (!rateLimit.allowed && rateLimit.errorResponse) {
+      return rateLimit.errorResponse;
+    }
+
+    let body: GenerateCoverLetterRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Invalid JSON request payload' },
+        { status: 400 }
+      );
+    }
+
+    // 2. Contract Validation
+    const validation = CoverLetterService.validateRequest(body);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { success: false, error: validation.error },
+        { status: 400 }
+      );
+    }
+
+    // 3. If jobUrl is provided and jobDescription is not, fetch from URL
+    let resolvedDescription = (body.jobDescription || '').trim();
+    if (!resolvedDescription && body.jobUrl) {
+      try {
+        resolvedDescription = await CoverLetterService.fetchJobDescriptionFromUrl(body.jobUrl.trim());
+      } catch (fetchErr: unknown) {
+        const msg = fetchErr instanceof Error ? fetchErr.message : 'Failed to fetch job description from the provided URL';
+        return NextResponse.json(
+          {
+            success: false,
+            error: msg,
+          },
+          { status: 422 }
+        );
+      }
+    }
+
+    // 4. Fallback check for minimum text length
+    if (resolvedDescription.length < 25) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'الوصف الوظيفي المسترجع غير كافٍ لتوليد الخطاب. يرجى توفير نص أطول أو لصقه يدوياً.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // 5. IDOR & Authorization Protection: Validate resume ownership if resumeId is provided
+    let resumeData: Record<string, unknown> | null = null;
+    if (body.resumeId && typeof body.resumeId === 'string') {
+      const cleanResumeId = body.resumeId.trim();
+      const authUser = getAuthenticatedUser(req);
+      const resume = await DataStore.getResumeById(cleanResumeId);
+
+      if (resume) {
+        if (resume.userId && (!authUser || resume.userId !== authUser.userId)) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'غير مصرح لك بالوصول إلى بيانات هذه السيرة الذاتية (Access denied to the specified resume)',
+            },
+            { status: 403 }
+          );
+        }
+        resumeData = resume;
+      }
+    }
+
+    // 6. Synthesize Cover Letter via AI integration client (with domain fallback)
+    const synthesizedBody: GenerateCoverLetterRequest = {
+      ...body,
+      jobDescription: resolvedDescription,
+      language: body.language || CoverLetterService.detectLanguage(resolvedDescription),
+    };
+
+    const aiResult = await AICoverLetterClient.generateCoverLetter(synthesizedBody, resumeData);
+
+    return NextResponse.json({
+      success: true,
+      coverLetter: aiResult.coverLetter,
+      extractedKeywords: aiResult.coverLetter.extractedKeywords,
+      provider: aiResult.provider,
+      aiGenerated: aiResult.aiGenerated,
+    });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('Error generating cover letter:', errorMsg);
+    return NextResponse.json(
+      { success: false, error: 'حدث خطأ أثناء معالجة الطلب. يرجى المحاولة مرة أخرى لاحقاً.' },
+      { status: 500 }
+    );
+  }
+}

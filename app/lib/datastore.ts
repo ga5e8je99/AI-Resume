@@ -5,6 +5,8 @@ import connectToDatabase from './db';
 import User, { IUser } from '../models/User';
 import Resume, { IResume } from '../models/Resume';
 import Analysis, { IAnalysis } from '../models/Analysis';
+import CoverLetter, { ICoverLetter } from '../models/CoverLetter';
+import { CoverLetterService } from './coverLetterService';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -50,10 +52,32 @@ export interface StoredAnalysis {
   updatedAt: string;
 }
 
+export interface StoredCoverLetter {
+  id: string;
+  userId: string;
+  title: string;
+  companyName: string;
+  jobTitle: string;
+  jobDescription?: string;
+  extractedKeywords: string[];
+  tone: 'formal' | 'technical' | 'leadership' | 'enthusiastic';
+  language: 'ar' | 'en';
+  status?: 'draft' | 'saved' | 'archived';
+  isArchived?: boolean;
+  sender: any;
+  recipient: any;
+  content: any;
+  templateId: string;
+  linkedResumeId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface LocalDatabase {
   users: StoredUser[];
   resumes: StoredResume[];
   analyses: StoredAnalysis[];
+  coverLetters?: StoredCoverLetter[];
 }
 
 // Initial seed data so user sees complete, realistic data right away
@@ -239,7 +263,9 @@ function readLocalDb(): LocalDatabase {
       return INITIAL_DB;
     }
     const raw = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed.coverLetters) parsed.coverLetters = [];
+    return parsed;
   } catch (err) {
     console.error('Error reading local db file, fallback to initial:', err);
     return INITIAL_DB;
@@ -843,6 +869,310 @@ export const DataStore = {
     db.analyses = db.analyses.filter((a) => !(a.id === id && a.userId === userId));
     writeLocalDb(db);
     return true;
+  },
+
+  // User-facing Cover Letter operations
+  async getUserCoverLetters(
+    userId: string,
+    options?: { page?: number; limit?: number; status?: string; search?: string; isArchived?: boolean; summaryOnly?: boolean }
+  ) {
+    const page = Math.max(1, Number(options?.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(options?.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const query: any = { userId };
+        if (options?.isArchived !== undefined) {
+          query.isArchived = Boolean(options.isArchived);
+        }
+        if (options?.status && options.status !== 'all') {
+          query.status = options.status;
+        }
+        if (options?.search && options.search.trim()) {
+          const s = options.search.trim();
+          query.$or = [
+            { title: { $regex: s, $options: 'i' } },
+            { companyName: { $regex: s, $options: 'i' } },
+            { jobTitle: { $regex: s, $options: 'i' } },
+          ];
+        }
+
+        let findQuery: any = CoverLetter.find(query).sort({ updatedAt: -1 }).skip(skip).limit(limit);
+        if (options?.summaryOnly) {
+          findQuery = findQuery.select('title companyName jobTitle tone language status isArchived templateId updatedAt createdAt extractedKeywords recipient sender linkedResumeId');
+        }
+
+        const [cls, total] = await Promise.all([
+          findQuery.lean(),
+          CoverLetter.countDocuments(query),
+        ]);
+
+        const items = cls.map((c: any) => ({
+          id: c._id.toString(),
+          userId: c.userId?.toString(),
+          title: c.title,
+          companyName: c.companyName,
+          jobTitle: c.jobTitle,
+          jobDescription: options?.summaryOnly ? undefined : c.jobDescription,
+          tone: c.tone,
+          language: c.language,
+          status: c.status || 'saved',
+          isArchived: Boolean(c.isArchived),
+          templateId: c.templateId,
+          content: options?.summaryOnly ? undefined : c.content,
+          sender: c.sender,
+          recipient: c.recipient,
+          extractedKeywords: c.extractedKeywords || [],
+          linkedResumeId: c.linkedResumeId?.toString(),
+          updatedAt: c.updatedAt,
+          createdAt: c.createdAt,
+        }));
+
+        return {
+          items,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit) || 1,
+        };
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    let list = (db.coverLetters || []).filter((c) => c.userId === userId);
+
+    if (options?.isArchived !== undefined) {
+      list = list.filter((c) => Boolean(c.isArchived) === Boolean(options.isArchived));
+    }
+    if (options?.status && options.status !== 'all') {
+      list = list.filter((c) => (c.status || 'saved') === options.status);
+    }
+    if (options?.search && options.search.trim()) {
+      const s = options.search.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.title?.toLowerCase().includes(s) ||
+          c.companyName?.toLowerCase().includes(s) ||
+          c.jobTitle?.toLowerCase().includes(s)
+      );
+    }
+
+    const total = list.length;
+    list.sort(
+      (a, b) =>
+        new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+    );
+
+    const items = list.slice(skip, skip + limit).map((c) => ({
+      ...c,
+      status: c.status || 'saved',
+      isArchived: Boolean(c.isArchived),
+      content: options?.summaryOnly ? undefined : c.content,
+      jobDescription: options?.summaryOnly ? undefined : c.jobDescription,
+    }));
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  },
+
+  async getUserCoverLetterById(id: string, userId: string) {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        if (mongoose.Types.ObjectId.isValid(id)) {
+          const c: any = await CoverLetter.findOne({ _id: id, userId }).lean();
+          if (c) {
+            return {
+              id: c._id.toString(),
+              userId: c.userId?.toString(),
+              title: c.title,
+              companyName: c.companyName,
+              jobTitle: c.jobTitle,
+              jobDescription: c.jobDescription,
+              extractedKeywords: c.extractedKeywords || [],
+              tone: c.tone,
+              language: c.language,
+              status: c.status || 'saved',
+              isArchived: Boolean(c.isArchived),
+              sender: c.sender,
+              recipient: c.recipient,
+              content: c.content,
+              templateId: c.templateId,
+              linkedResumeId: c.linkedResumeId?.toString(),
+              createdAt: c.createdAt,
+              updatedAt: c.updatedAt,
+            };
+          }
+        }
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    const list = db.coverLetters || [];
+    const found = list.find((c) => c.id === id && c.userId === userId);
+    if (!found) return null;
+    return {
+      ...found,
+      status: found.status || 'saved',
+      isArchived: Boolean(found.isArchived),
+    };
+  },
+
+  async createUserCoverLetter(userId: string, data: any) {
+    const defaultTitle = data.title || (data.companyName ? `Cover Letter - ${data.companyName}` : 'My Cover Letter');
+    const sanitized = {
+      title: CoverLetterService.sanitizeText(defaultTitle).slice(0, 150),
+      companyName: CoverLetterService.sanitizeText(data.recipient?.companyName || data.companyName).slice(0, 120),
+      jobTitle: CoverLetterService.sanitizeText(data.recipient?.jobTitle || data.jobTitle).slice(0, 120),
+      jobDescription: CoverLetterService.sanitizeText(data.jobDescription).slice(0, 30000),
+      extractedKeywords: Array.isArray(data.extractedKeywords)
+        ? data.extractedKeywords.map(CoverLetterService.sanitizeText).filter(Boolean).slice(0, 20)
+        : [],
+      tone: ['formal', 'technical', 'leadership', 'enthusiastic'].includes(data.tone) ? data.tone : 'formal',
+      language: ['ar', 'en'].includes(data.language) ? data.language : 'ar',
+      status: ['draft', 'saved', 'archived'].includes(data.status) ? data.status : 'saved',
+      isArchived: Boolean(data.isArchived || false),
+      sender: {
+        fullName: CoverLetterService.sanitizeText(data.sender?.fullName || '').slice(0, 100),
+        email: CoverLetterService.sanitizeText(data.sender?.email || '').slice(0, 100),
+        phone: CoverLetterService.sanitizeText(data.sender?.phone || '').slice(0, 50),
+        location: CoverLetterService.sanitizeText(data.sender?.location || '').slice(0, 100),
+        linkedin: CoverLetterService.sanitizeText(data.sender?.linkedin || '').slice(0, 200),
+        portfolio: CoverLetterService.sanitizeText(data.sender?.portfolio || '').slice(0, 200),
+      },
+      recipient: {
+        companyName: CoverLetterService.sanitizeText(data.recipient?.companyName || data.companyName || '').slice(0, 120),
+        jobTitle: CoverLetterService.sanitizeText(data.recipient?.jobTitle || data.jobTitle || '').slice(0, 120),
+        hiringManager: CoverLetterService.sanitizeText(data.recipient?.hiringManager || data.hiringManager || '').slice(0, 100),
+        department: CoverLetterService.sanitizeText(data.recipient?.department || '').slice(0, 100),
+        location: CoverLetterService.sanitizeText(data.recipient?.location || '').slice(0, 100),
+      },
+      content: {
+        subject: CoverLetterService.sanitizeText(data.content?.subject || '').slice(0, 200),
+        salutation: CoverLetterService.sanitizeText(data.content?.salutation || '').slice(0, 150),
+        introduction: CoverLetterService.sanitizeText(data.content?.introduction || '').slice(0, 3000),
+        bodyParagraphs: Array.isArray(data.content?.bodyParagraphs)
+          ? data.content.bodyParagraphs.map(CoverLetterService.sanitizeText).filter(Boolean).slice(0, 10)
+          : [],
+        conclusion: CoverLetterService.sanitizeText(data.content?.conclusion || '').slice(0, 3000),
+        signOff: CoverLetterService.sanitizeText(data.content?.signOff || '').slice(0, 100),
+        fullText: CoverLetterService.sanitizeText(data.content?.fullText || '').slice(0, 20000),
+      },
+      templateId: CoverLetterService.sanitizeText(data.templateId || 'compact').slice(0, 50),
+      linkedResumeId: data.linkedResumeId ? String(data.linkedResumeId).slice(0, 64) : undefined,
+    };
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const created = await CoverLetter.create({ userId, ...sanitized });
+        return {
+          id: created._id.toString(),
+          userId,
+          ...sanitized,
+          createdAt: created.createdAt,
+          updatedAt: created.updatedAt,
+        };
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    if (!db.coverLetters) db.coverLetters = [];
+    const newCl: StoredCoverLetter = {
+      id: 'cl_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      userId,
+      ...sanitized,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    db.coverLetters.unshift(newCl);
+    writeLocalDb(db);
+    return newCl;
+  },
+
+  async updateUserCoverLetter(id: string, userId: string, updateData: any) {
+    const sanitizedUpdate: any = {};
+    if (updateData.title !== undefined) sanitizedUpdate.title = CoverLetterService.sanitizeText(updateData.title).slice(0, 150);
+    if (updateData.companyName !== undefined) sanitizedUpdate.companyName = CoverLetterService.sanitizeText(updateData.companyName).slice(0, 120);
+    if (updateData.jobTitle !== undefined) sanitizedUpdate.jobTitle = CoverLetterService.sanitizeText(updateData.jobTitle).slice(0, 120);
+    if (updateData.jobDescription !== undefined) sanitizedUpdate.jobDescription = CoverLetterService.sanitizeText(updateData.jobDescription).slice(0, 30000);
+    if (updateData.extractedKeywords !== undefined) {
+      sanitizedUpdate.extractedKeywords = Array.isArray(updateData.extractedKeywords)
+        ? updateData.extractedKeywords.map(CoverLetterService.sanitizeText).filter(Boolean).slice(0, 20)
+        : [];
+    }
+    if (updateData.tone !== undefined && ['formal', 'technical', 'leadership', 'enthusiastic'].includes(updateData.tone)) sanitizedUpdate.tone = updateData.tone;
+    if (updateData.language !== undefined && ['ar', 'en'].includes(updateData.language)) sanitizedUpdate.language = updateData.language;
+    if (updateData.status !== undefined && ['draft', 'saved', 'archived'].includes(updateData.status)) sanitizedUpdate.status = updateData.status;
+    if (updateData.isArchived !== undefined) sanitizedUpdate.isArchived = Boolean(updateData.isArchived);
+    if (updateData.sender !== undefined) sanitizedUpdate.sender = updateData.sender;
+    if (updateData.recipient !== undefined) sanitizedUpdate.recipient = updateData.recipient;
+    if (updateData.content !== undefined) sanitizedUpdate.content = updateData.content;
+    if (updateData.templateId !== undefined) sanitizedUpdate.templateId = CoverLetterService.sanitizeText(updateData.templateId).slice(0, 50);
+    if (updateData.linkedResumeId !== undefined) sanitizedUpdate.linkedResumeId = updateData.linkedResumeId ? String(updateData.linkedResumeId).slice(0, 64) : undefined;
+    sanitizedUpdate.updatedAt = new Date();
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        if (mongoose.Types.ObjectId.isValid(id)) {
+          const updated: any = await CoverLetter.findOneAndUpdate(
+            { _id: id, userId },
+            { $set: sanitizedUpdate },
+            { new: true }
+          ).lean();
+          if (updated) {
+            return {
+              id: updated._id.toString(),
+              userId: updated.userId?.toString(),
+              ...updated,
+            };
+          }
+        }
+      } catch (err) {}
+      return null;
+    }
+
+    const db = readLocalDb();
+    if (!db.coverLetters) db.coverLetters = [];
+    const item = db.coverLetters.find((c) => c.id === id && c.userId === userId);
+    if (item) {
+      Object.assign(item, sanitizedUpdate);
+      item.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return item;
+    }
+    return null;
+  },
+
+  async deleteUserCoverLetter(id: string, userId: string): Promise<boolean> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        if (mongoose.Types.ObjectId.isValid(id)) {
+          const res = await CoverLetter.findOneAndDelete({ _id: id, userId });
+          return !!res;
+        }
+      } catch (err) {}
+      return false;
+    }
+
+    const db = readLocalDb();
+    if (!db.coverLetters) db.coverLetters = [];
+    const initialLen = db.coverLetters.length;
+    db.coverLetters = db.coverLetters.filter((c) => !(c.id === id && c.userId === userId));
+    if (db.coverLetters.length < initialLen) {
+      writeLocalDb(db);
+      return true;
+    }
+    return false;
   },
 
   // User auth helpers
