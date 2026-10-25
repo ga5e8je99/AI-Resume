@@ -1,5 +1,5 @@
 export type CoverLetterTone = 'formal' | 'technical' | 'leadership' | 'enthusiastic';
-export type CoverLetterLanguage = 'ar' | 'en';
+export type CoverLetterLanguage = 'ar' | 'en' | 'fr' | 'de' | 'es' | 'tr';
 export type CoverLetterStatus = 'draft' | 'saved' | 'archived';
 
 export interface CoverLetterRecipient {

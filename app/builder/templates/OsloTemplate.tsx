@@ -1,5 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
+import { getDocumentHeadings } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -13,11 +14,13 @@ interface TemplateProps {
 export default function OsloTemplate({ data, theme }: TemplateProps) {
   const { personalInfo, experience, education, projects, skills, certifications } = data;
   const accent = theme.accentColor || '#1e293b';
+  const h = getDocumentHeadings(theme.documentLanguage);
 
   return (
     <div 
       className="bg-white text-gray-900 w-full min-h-[1050px] p-12 font-sans leading-relaxed text-[13px] print:p-8"
       style={{ fontFamily: theme.fontFamily }}
+      dir={h.dir}
     >
       {/* Header */}
       <div className="flex justify-between items-start border-b border-gray-300 pb-5 mb-6">
@@ -63,7 +66,7 @@ export default function OsloTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b border-gray-300 pb-1 mb-2.5"
             style={{ color: accent }}
           >
-            Professional Summary
+            {h.summary}
           </h2>
           <p className="text-gray-700 text-xs leading-relaxed">
             {personalInfo.summary}
@@ -78,7 +81,7 @@ export default function OsloTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b border-gray-300 pb-1 mb-3"
             style={{ color: accent }}
           >
-            Employment History
+            {h.experience}
           </h2>
           <div className="space-y-4">
             {experience.map((exp) => (
@@ -87,14 +90,14 @@ export default function OsloTemplate({ data, theme }: TemplateProps) {
                   <span className="font-bold text-gray-900 text-sm">
                     {exp.position}, <span className="font-normal text-gray-700">{exp.company}</span>
                   </span>
-                  <span className="text-gray-500 font-medium">
-                    {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                  <span className={`text-gray-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
+                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
                   </span>
                 </div>
                 {exp.location && (
                   <p className="text-gray-500 italic mb-1.5">{exp.location}</p>
                 )}
-                <ul className="list-disc list-outside ml-4 space-y-1 text-gray-700">
+                <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-1 text-gray-700`}>
                   {exp.description.filter(d => d.trim()).map((bullet, idx) => (
                     <li key={idx} className="leading-snug">{bullet}</li>
                   ))}
@@ -112,7 +115,7 @@ export default function OsloTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b border-gray-300 pb-1 mb-2.5"
             style={{ color: accent }}
           >
-            Skills
+            {h.skills}
           </h2>
           <p className="text-xs text-gray-700 leading-relaxed">
             {skills.join(' • ')}
@@ -127,7 +130,7 @@ export default function OsloTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b border-gray-300 pb-1 mb-2.5"
             style={{ color: accent }}
           >
-            Education
+            {h.education}
           </h2>
           <div className="space-y-2.5">
             {education.map((edu) => (
@@ -137,10 +140,10 @@ export default function OsloTemplate({ data, theme }: TemplateProps) {
                     {edu.degree} in {edu.fieldOfStudy}
                   </span>
                   <div className="text-gray-600">
-                    {edu.institution} {edu.gpa && `| GPA: ${edu.gpa}`}
+                    {edu.institution} {edu.gpa && `| ${h.gpa}: ${edu.gpa}`}
                   </div>
                 </div>
-                <span className="text-gray-500 font-medium">
+                <span className={`text-gray-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
                   {edu.startDate} – {edu.endDate}
                 </span>
               </div>
@@ -156,7 +159,7 @@ export default function OsloTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b border-gray-300 pb-1 mb-3"
             style={{ color: accent }}
           >
-            Key Projects
+            {h.projects}
           </h2>
           <div className="space-y-3">
             {projects.map((proj) => (
@@ -169,10 +172,10 @@ export default function OsloTemplate({ data, theme }: TemplateProps) {
                 </div>
                 {proj.techStack && (
                   <p className="text-gray-500 italic text-[11px] mb-1">
-                    Technologies: {proj.techStack}
+                    {proj.techStack}
                   </p>
                 )}
-                <ul className="list-disc list-outside ml-4 space-y-0.5 text-gray-700">
+                <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-0.5 text-gray-700`}>
                   {proj.description.filter(d => d.trim()).map((b, idx) => (
                     <li key={idx} className="leading-snug">{b}</li>
                   ))}
@@ -190,9 +193,9 @@ export default function OsloTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b border-gray-300 pb-1 mb-2"
             style={{ color: accent }}
           >
-            Certificates
+            {h.certifications}
           </h2>
-          <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-gray-700">
+          <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-0.5 text-xs text-gray-700`}>
             {certifications.map((cert, idx) => (
               <li key={idx}>{cert}</li>
             ))}

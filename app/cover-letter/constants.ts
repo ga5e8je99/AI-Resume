@@ -52,6 +52,10 @@ export const TONE_PRESETS: TonePreset[] = [
 export const LANGUAGE_OPTIONS: { id: CoverLetterLanguage; label: string; dir: 'rtl' | 'ltr' }[] = [
   { id: 'ar', label: 'العربية (RTL)', dir: 'rtl' },
   { id: 'en', label: 'English (LTR)', dir: 'ltr' },
+  { id: 'fr', label: 'Français', dir: 'ltr' },
+  { id: 'de', label: 'Deutsch', dir: 'ltr' },
+  { id: 'es', label: 'Español', dir: 'ltr' },
+  { id: 'tr', label: 'Türkçe', dir: 'ltr' },
 ];
 
 export const GENERATION_STEPS = [

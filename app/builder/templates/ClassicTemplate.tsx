@@ -1,5 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
+import { getDocumentHeadings } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -13,11 +14,13 @@ interface TemplateProps {
 export default function ClassicTemplate({ data, theme }: TemplateProps) {
   const { personalInfo, experience, education, projects, skills, certifications } = data;
   const accent = theme.accentColor || '#1e293b';
+  const h = getDocumentHeadings(theme.documentLanguage);
 
   return (
     <div 
       className="bg-white text-gray-900 w-full min-h-[1050px] p-10 font-sans leading-relaxed text-[13px] print:p-8"
       style={{ fontFamily: theme.fontFamily }}
+      dir={h.dir}
     >
       {/* Header */}
       <div className="flex justify-between items-start border-b-2 pb-4 mb-5" style={{ borderColor: accent }}>
@@ -63,7 +66,7 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b pb-1 mb-2"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Professional Summary
+            {h.summary}
           </h2>
           <p className="text-gray-700 text-xs leading-normal">
             {personalInfo.summary}
@@ -78,22 +81,22 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b pb-1 mb-3"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Work Experience
+            {h.experience}
           </h2>
           <div className="space-y-4">
             {experience.map((exp) => (
               <div key={exp.id} className="text-xs">
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-bold text-gray-900">{exp.position}</span>
-                  <span className="text-gray-500 font-medium">
-                    {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                  <span className={`text-gray-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
+                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
                   </span>
                 </div>
                 <div className="flex justify-between items-baseline text-gray-700 mb-1.5 font-medium italic">
                   <span>{exp.company}</span>
                   {exp.location && <span>{exp.location}</span>}
                 </div>
-                <ul className="list-disc list-outside ml-4 space-y-1 text-gray-600">
+                <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-1 text-gray-600`}>
                   {exp.description.filter(d => d.trim()).map((bullet, idx) => (
                     <li key={idx} className="leading-snug">{bullet}</li>
                   ))}
@@ -111,7 +114,7 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b pb-1 mb-3"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Key Projects
+            {h.projects}
           </h2>
           <div className="space-y-3">
             {projects.map((proj) => (
@@ -125,7 +128,7 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
                 {proj.link && (
                   <p className="text-[11px] text-gray-600 mb-1">{proj.link.replace(/^https?:\/\//, '')}</p>
                 )}
-                <ul className="list-disc list-outside ml-4 space-y-0.5 text-gray-600">
+                <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-0.5 text-gray-600`}>
                   {proj.description.filter(d => d.trim()).map((b, idx) => (
                     <li key={idx} className="leading-snug">{b}</li>
                   ))}
@@ -143,10 +146,10 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b pb-1 mb-2"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Technical & Professional Skills
+            {h.skills}
           </h2>
           <p className="text-xs text-gray-700 leading-relaxed">
-            <span className="font-semibold text-gray-900">Skills: </span>
+            <span className="font-semibold text-gray-900">{h.skills}: </span>
             {skills.join(' • ')}
           </p>
         </div>
@@ -159,16 +162,16 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b pb-1 mb-2"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Education
+            {h.education}
           </h2>
           <div className="space-y-2">
             {education.map((edu) => (
               <div key={edu.id} className="text-xs flex justify-between items-baseline">
                 <div>
                   <span className="font-bold text-gray-900">{edu.degree} in {edu.fieldOfStudy}</span>
-                  <div className="text-gray-600 italic">{edu.institution} {edu.gpa && `• GPA: ${edu.gpa}`}</div>
+                  <div className="text-gray-600 italic">{edu.institution} {edu.gpa && `• ${h.gpa}: ${edu.gpa}`}</div>
                 </div>
-                <span className="text-gray-500 font-medium">
+                <span className={`text-gray-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
                   {edu.startDate} – {edu.endDate}
                 </span>
               </div>
@@ -184,9 +187,9 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
             className="text-xs font-bold uppercase tracking-wider border-b pb-1 mb-2"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Certifications & Honors
+            {h.certifications}
           </h2>
-          <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-gray-600">
+          <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-0.5 text-xs text-gray-600`}>
             {certifications.map((cert, idx) => (
               <li key={idx}>{cert}</li>
             ))}

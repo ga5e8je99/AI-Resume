@@ -99,8 +99,12 @@ export type CvTemplateId =
   | 'modern-two-column'
   | 'classic-ats';
 
+import { DocumentLanguage } from '../lib/documentI18n';
+export type { DocumentLanguage };
+
 export interface CvThemeConfig {
   accentColor: string;
   fontFamily: string;
   fontSize: 'sm' | 'base' | 'lg';
+  documentLanguage?: DocumentLanguage;
 }

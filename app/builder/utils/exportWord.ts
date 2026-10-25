@@ -8,6 +8,7 @@ import {
   BorderStyle,
 } from 'docx';
 import { ResumeData, ThemeConfig } from '../types';
+import { getDocumentHeadings } from '@/app/lib/documentI18n';
 
 /**
  * Generates an ATS-compliant Word (.docx) document directly in the browser
@@ -19,6 +20,7 @@ export async function exportResumeToDocx(
 ): Promise<void> {
   const { personalInfo, experience, education, projects, skills, certifications } = data;
   const accentHex = theme?.accentColor?.replace('#', '') || '1E3A8A';
+  const h = getDocumentHeadings(theme?.documentLanguage);
 
   const doc = new Document({
     sections: [
@@ -87,7 +89,7 @@ export async function exportResumeToDocx(
           // 4. Professional Summary
           ...(personalInfo.summary
             ? [
-                createSectionHeading('PROFESSIONAL SUMMARY', accentHex),
+                createSectionHeading(h.summary.toUpperCase(), accentHex),
                 new Paragraph({
                   spacing: { after: 180 },
                   children: [
@@ -103,7 +105,7 @@ export async function exportResumeToDocx(
           // 5. Work Experience
           ...(experience.length > 0
             ? [
-                createSectionHeading('WORK EXPERIENCE', accentHex),
+                createSectionHeading(h.experience.toUpperCase(), accentHex),
                 ...experience.flatMap((exp) => [
                   new Paragraph({
                     spacing: { before: 100, after: 30 },
@@ -120,7 +122,7 @@ export async function exportResumeToDocx(
                         color: '1F2937',
                       }),
                       new TextRun({
-                        text: `   (${exp.startDate} – ${exp.current ? 'Present' : exp.endDate})`,
+                        text: `   (${exp.startDate} – ${exp.current ? h.present : exp.endDate})`,
                         bold: true,
                         size: 20,
                         color: '6B7280',
@@ -164,7 +166,7 @@ export async function exportResumeToDocx(
           // 6. Core Skills
           ...(skills.length > 0
             ? [
-                createSectionHeading('SKILLS & CORE COMPETENCIES', accentHex),
+                createSectionHeading(h.skills.toUpperCase(), accentHex),
                 new Paragraph({
                   spacing: { after: 180 },
                   children: [
@@ -181,7 +183,7 @@ export async function exportResumeToDocx(
           // 7. Education
           ...(education.length > 0
             ? [
-                createSectionHeading('EDUCATION', accentHex),
+                createSectionHeading(h.education.toUpperCase(), accentHex),
                 ...education.flatMap((edu) => [
                   new Paragraph({
                     spacing: { before: 90, after: 30 },
@@ -203,7 +205,7 @@ export async function exportResumeToDocx(
                     spacing: { after: 80 },
                     children: [
                       new TextRun({
-                        text: edu.institution + (edu.gpa ? `   •   GPA: ${edu.gpa}` : ''),
+                        text: edu.institution + (edu.gpa ? `   •   ${h.gpa}: ${edu.gpa}` : ''),
                         italics: true,
                         size: 20,
                         color: '4B5563',
@@ -217,7 +219,7 @@ export async function exportResumeToDocx(
           // 8. Key Projects
           ...(projects.length > 0
             ? [
-                createSectionHeading('KEY PROJECTS', accentHex),
+                createSectionHeading(h.projects.toUpperCase(), accentHex),
                 ...projects.flatMap((proj) => [
                   new Paragraph({
                     spacing: { before: 90, after: 30 },
@@ -270,7 +272,7 @@ export async function exportResumeToDocx(
           // 9. Certifications
           ...(certifications.length > 0
             ? [
-                createSectionHeading('CERTIFICATIONS & HONORS', accentHex),
+                createSectionHeading(h.certifications.toUpperCase(), accentHex),
                 ...certifications.map(
                   (cert) =>
                     new Paragraph({

@@ -64,8 +64,12 @@ export type TemplateId =
   | 'classic'      // Standard Ivy League
   | 'modern';      // Best for Engineers
 
+import { DocumentLanguage } from '../lib/documentI18n';
+export type { DocumentLanguage };
+
 export interface ThemeConfig {
   accentColor: string;
   fontFamily: string;
   fontSize: 'sm' | 'base' | 'lg';
+  documentLanguage?: DocumentLanguage;
 }

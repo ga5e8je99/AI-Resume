@@ -1,5 +1,6 @@
 import React from 'react';
 import { CvData, CvThemeConfig } from '../types';
+import { getDocumentHeadings } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: CvData;
@@ -31,10 +32,12 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
     referencesAvailableUponRequest,
   } = data;
 
+  const h = getDocumentHeadings(theme.documentLanguage);
   const accent = theme.accentColor || '#0284c7';
 
   return (
     <div
+      dir={h.dir}
       className="bg-white text-slate-900 w-full min-h-[1123px] font-sans text-[12px] leading-relaxed print:p-0"
       style={{ fontFamily: theme.fontFamily }}
     >
@@ -70,43 +73,43 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
       {/* Two Column Layout Grid */}
       <div className="grid grid-cols-12 min-h-[1000px]">
         {/* LEFT SIDEBAR (Col 1-4: 33%) */}
-        <div className="col-span-4 bg-slate-50/90 border-r border-slate-200 p-6 space-y-6">
+        <div className={`col-span-4 bg-slate-50/90 ${h.isRtl ? 'border-l' : 'border-r'} border-slate-200 p-6 space-y-6`}>
           {/* Contact Details */}
           <div>
             <h3
               className="text-[11px] font-bold uppercase tracking-wider pb-1 mb-2 border-b"
               style={{ color: accent, borderColor: accent }}
             >
-              Contact Information
+              {h.contact}
             </h3>
             <div className="space-y-1.5 text-[11px] text-slate-700 break-words">
               {personalInfo.email && (
                 <div>
-                  <span className="font-semibold text-slate-900 block text-[10px]">Email:</span>
+                  <span className="font-semibold text-slate-900 block text-[10px]">{h.email}:</span>
                   <span>{personalInfo.email}</span>
                 </div>
               )}
               {personalInfo.phone && (
                 <div>
-                  <span className="font-semibold text-slate-900 block text-[10px]">Phone:</span>
+                  <span className="font-semibold text-slate-900 block text-[10px]">{h.phone}:</span>
                   <span>{personalInfo.phone}</span>
                 </div>
               )}
               {personalInfo.location && (
                 <div>
-                  <span className="font-semibold text-slate-900 block text-[10px]">Location:</span>
+                  <span className="font-semibold text-slate-900 block text-[10px]">{h.location}:</span>
                   <span>{personalInfo.location}</span>
                 </div>
               )}
               {personalInfo.address && (
                 <div>
-                  <span className="font-semibold text-slate-900 block text-[10px]">Address:</span>
+                  <span className="font-semibold text-slate-900 block text-[10px]">{h.location}:</span>
                   <span>{personalInfo.address}</span>
                 </div>
               )}
               {personalInfo.website && (
                 <div>
-                  <span className="font-semibold text-slate-900 block text-[10px]">Website:</span>
+                  <span className="font-semibold text-slate-900 block text-[10px]">{h.website}:</span>
                   <span>{personalInfo.website.replace(/^https?:\/\//, '')}</span>
                 </div>
               )}
@@ -136,36 +139,36 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-[11px] font-bold uppercase tracking-wider pb-1 mb-2 border-b"
                 style={{ color: accent, borderColor: accent }}
               >
-                Personal Details
+                {h.personalDetails}
               </h3>
               <div className="space-y-1.5 text-[11px] text-slate-700">
                 {personalInfo.nationality && (
                   <div>
-                    <span className="font-semibold text-slate-900 block text-[10px]">Nationality:</span>
+                    <span className="font-semibold text-slate-900 block text-[10px]">{h.nationality}:</span>
                     <span>{personalInfo.nationality}</span>
                   </div>
                 )}
                 {personalInfo.dateOfBirth && (
                   <div>
-                    <span className="font-semibold text-slate-900 block text-[10px]">Date of Birth:</span>
+                    <span className="font-semibold text-slate-900 block text-[10px]">{h.dateOfBirth}:</span>
                     <span>{personalInfo.dateOfBirth}</span>
                   </div>
                 )}
                 {personalInfo.maritalStatus && (
                   <div>
-                    <span className="font-semibold text-slate-900 block text-[10px]">Civil Status:</span>
+                    <span className="font-semibold text-slate-900 block text-[10px]">{h.maritalStatus}:</span>
                     <span>{personalInfo.maritalStatus}</span>
                   </div>
                 )}
                 {personalInfo.drivingLicense && (
                   <div>
-                    <span className="font-semibold text-slate-900 block text-[10px]">Driving License:</span>
+                    <span className="font-semibold text-slate-900 block text-[10px]">{h.drivingLicense}:</span>
                     <span>{personalInfo.drivingLicense}</span>
                   </div>
                 )}
                 {personalInfo.visaOrMilitaryStatus && (
                   <div>
-                    <span className="font-semibold text-slate-900 block text-[10px]">Visa / Military:</span>
+                    <span className="font-semibold text-slate-900 block text-[10px]">{h.militaryStatus}:</span>
                     <span>{personalInfo.visaOrMilitaryStatus}</span>
                   </div>
                 )}
@@ -180,7 +183,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-[11px] font-bold uppercase tracking-wider pb-1 mb-2 border-b"
                 style={{ color: accent, borderColor: accent }}
               >
-                Languages
+                {h.languages}
               </h3>
               <div className="space-y-2">
                 {languages.map((lang) => (
@@ -213,7 +216,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-[11px] font-bold uppercase tracking-wider pb-1 mb-2 border-b"
                 style={{ color: accent, borderColor: accent }}
               >
-                Technical Skills
+                {h.technicalSkills}
               </h3>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map((skill, idx) => (
@@ -235,7 +238,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-[11px] font-bold uppercase tracking-wider pb-1 mb-2 border-b"
                 style={{ color: accent, borderColor: accent }}
               >
-                Leadership & Soft Skills
+                {h.softSkills}
               </h3>
               <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-700">
                 {softSkills.map((s, idx) => (
@@ -252,7 +255,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-[11px] font-bold uppercase tracking-wider pb-1 mb-2 border-b"
                 style={{ color: accent, borderColor: accent }}
               >
-                Tools & Technologies
+                {h.skills}
               </h3>
               <p className="text-[11px] text-slate-700 leading-normal">
                 {tools.join(' • ')}
@@ -266,11 +269,11 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
               className="text-[11px] font-bold uppercase tracking-wider pb-1 mb-2 border-b"
               style={{ color: accent, borderColor: accent }}
             >
-              References
+              {h.references}
             </h3>
             {referencesAvailableUponRequest || !references || references.length === 0 ? (
               <p className="text-[10px] italic text-slate-500">
-                Available upon request.
+                {h.referencesAvailable}
               </p>
             ) : (
               <div className="space-y-3">
@@ -297,7 +300,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-xs font-bold uppercase tracking-wider pb-1 mb-2 border-b-2 flex items-center gap-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                <span>Executive Summary & Profile</span>
+                <span>{h.summary}</span>
               </h2>
               <p className="text-slate-700 text-[11.5px] leading-relaxed text-justify">
                 {personalInfo.summary}
@@ -312,22 +315,22 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-xs font-bold uppercase tracking-wider pb-1 mb-3 border-b-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Professional Work Experience
+                {h.experience}
               </h2>
               <div className="space-y-4">
                 {experience.map((exp) => (
-                  <div key={exp.id} className="relative pl-3 border-l-2 border-slate-300">
+                  <div key={exp.id} className={`relative ${h.isRtl ? 'pr-3 border-r-2' : 'pl-3 border-l-2'} border-slate-300`}>
                     <div className="flex justify-between items-baseline mb-0.5">
                       <h4 className="font-bold text-slate-900 text-xs">{exp.position}</h4>
                       <span className="text-[10px] font-medium text-slate-500">
-                        {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                        {exp.startDate} – {exp.current ? h.present : exp.endDate}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-slate-600 text-[11px] mb-1 font-medium">
                       <span>{exp.company}</span>
                       {exp.location && <span>{exp.location}</span>}
                     </div>
-                    <ul className="list-disc list-outside ml-3.5 space-y-1 text-slate-700 text-[11px]">
+                    <ul className={`list-disc list-outside ${h.isRtl ? 'mr-3.5' : 'ml-3.5'} space-y-1 text-slate-700 text-[11px]`}>
                       {exp.description
                         .filter((d) => d.trim())
                         .map((b, i) => (
@@ -349,21 +352,21 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-xs font-bold uppercase tracking-wider pb-1 mb-3 border-b-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Education & Academic Qualifications
+                {h.education}
               </h2>
               <div className="space-y-3">
                 {education.map((edu) => (
-                  <div key={edu.id} className="relative pl-3 border-l-2 border-slate-300">
+                  <div key={edu.id} className={`relative ${h.isRtl ? 'pr-3 border-r-2' : 'pl-3 border-l-2'} border-slate-300`}>
                     <div className="flex justify-between items-baseline mb-0.5">
                       <h4 className="font-bold text-slate-900 text-xs">
-                        {edu.degree} in {edu.fieldOfStudy}
+                        {edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}
                       </h4>
                       <span className="text-[10px] font-medium text-slate-500">
                         {edu.startDate} – {edu.endDate}
                       </span>
                     </div>
                     <div className="text-slate-600 text-[11px] italic">
-                      {edu.institution} {edu.gpa && `• GPA: ${edu.gpa}`}
+                      {edu.institution} {edu.gpa && `• ${h.gpa}: ${edu.gpa}`}
                     </div>
                   </div>
                 ))}
@@ -378,7 +381,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-xs font-bold uppercase tracking-wider pb-1 mb-3 border-b-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Publications & Scientific Research
+                {h.publications}
               </h2>
               <div className="space-y-2.5">
                 {publications.map((pub) => (
@@ -403,7 +406,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-xs font-bold uppercase tracking-wider pb-1 mb-2 border-b-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Certifications & Accreditations
+                {h.certifications}
               </h2>
               <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-700">
                 {certifications.map((c, idx) => (
@@ -422,7 +425,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-xs font-bold uppercase tracking-wider pb-1 mb-2 border-b-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Specialized Courses & Training
+                {h.courses}
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                 {courses.map((c) => (
@@ -444,7 +447,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-xs font-bold uppercase tracking-wider pb-1 mb-3 border-b-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Key Projects & Technical Initiatives
+                {h.projects}
               </h2>
               <div className="space-y-3">
                 {projects.map((proj) => (
@@ -458,7 +461,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                     {proj.link && (
                       <p className="text-[10px] text-sky-600 mb-0.5">{proj.link.replace(/^https?:\/\//, '')}</p>
                     )}
-                    <ul className="list-disc list-outside ml-3.5 space-y-0.5 text-slate-700">
+                    <ul className={`list-disc list-outside ${h.isRtl ? 'mr-3.5' : 'ml-3.5'} space-y-0.5 text-slate-700`}>
                       {proj.description
                         .filter((d) => d.trim())
                         .map((b, i) => (
@@ -480,7 +483,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-xs font-bold uppercase tracking-wider pb-1 mb-2 border-b-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Honors & Scientific Awards
+                {h.awards}
               </h2>
               <div className="space-y-2">
                 {awards.map((award) => (
@@ -506,7 +509,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                 className="text-xs font-bold uppercase tracking-wider pb-1 mb-2 border-b-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Volunteering & Community Leadership
+                {h.volunteering}
               </h2>
               <div className="space-y-2">
                 {volunteering.map((v) => (
@@ -514,13 +517,13 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                     <div className="flex justify-between font-bold text-slate-900">
                       <span>{v.role}</span>
                       <span className="text-[10px] text-slate-500 font-normal">
-                        {v.startDate} – {v.current ? 'Present' : v.endDate}
+                        {v.startDate} – {v.current ? h.present : v.endDate}
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-600 italic">
                       {v.organization} {v.location && `• ${v.location}`}
                     </p>
-                    <ul className="list-disc list-outside ml-3.5 space-y-0.5 text-slate-700 mt-1">
+                    <ul className={`list-disc list-outside ${h.isRtl ? 'mr-3.5' : 'ml-3.5'} space-y-0.5 text-slate-700 mt-1`}>
                       {v.description
                         .filter((d) => d.trim())
                         .map((b, i) => (

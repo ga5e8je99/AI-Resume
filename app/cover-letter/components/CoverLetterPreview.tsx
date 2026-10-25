@@ -14,6 +14,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { CoverLetterService } from '@/app/lib/coverLetterService';
+import { getDocumentHeadings, DOCUMENT_LANGUAGE_OPTIONS, DocumentLanguage } from '@/app/lib/documentI18n';
 
 interface CoverLetterPreviewProps {
   coverLetter: CoverLetterData;
@@ -38,7 +39,10 @@ export function CoverLetterPreview({
   const [isCopied, setIsCopied] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  const isAr = coverLetter.language === 'ar';
+  const docLang = (coverLetter.language || 'ar') as DocumentLanguage;
+  const h = getDocumentHeadings(docLang);
+  const isAr = docLang === 'ar';
+  const langOption = DOCUMENT_LANGUAGE_OPTIONS.find((o) => o.id === docLang);
 
   const handleCopy = async () => {
     if (isCopied) return;
@@ -102,7 +106,7 @@ export function CoverLetterPreview({
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2.5 shadow-lg">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            {isAr ? 'العربية' : 'English'}
+            {langOption?.nativeName || (isAr ? 'العربية' : 'English')}
           </span>
           <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-300">
             {coverLetter.tone}
@@ -267,7 +271,7 @@ export function CoverLetterPreview({
       {/* A4 Sheet Preview Container matching Resume template style */}
       <div
         id="cover-letter-sheet"
-        dir={isAr ? 'rtl' : 'ltr'}
+        dir={h.dir}
         className={`bg-white text-slate-900 rounded-2xl p-8 sm:p-12 shadow-2xl border min-h-[700px] relative transition-all ${
           templateId === 'modern'
             ? 'border-t-8 border-t-indigo-600 font-sans'
@@ -314,11 +318,14 @@ export function CoverLetterPreview({
                 </p>
               </div>
               <div className="text-xs text-slate-500 font-medium">
-                {new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                {new Date().toLocaleDateString(
+                  docLang === 'ar' ? 'ar-EG' : docLang === 'fr' ? 'fr-FR' : docLang === 'de' ? 'de-DE' : docLang === 'es' ? 'es-ES' : docLang === 'tr' ? 'tr-TR' : 'en-US',
+                  {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  }
+                )}
               </div>
             </div>
 
@@ -327,7 +334,18 @@ export function CoverLetterPreview({
               <p className="font-bold text-slate-900">{coverLetter.recipient.hiringManager}</p>
               <p className="text-slate-800">{coverLetter.recipient.companyName}</p>
               <p className="text-slate-500 font-medium mt-0.5">
-                {isAr ? 'بخصوص وظيفة:' : 'Re:'} {coverLetter.recipient.jobTitle}
+                {docLang === 'ar'
+                  ? 'بخصوص وظيفة:'
+                  : docLang === 'fr'
+                  ? 'Objet : Poste de'
+                  : docLang === 'de'
+                  ? 'Betreff: Bewerbung als'
+                  : docLang === 'es'
+                  ? 'Asunto: Puesto de'
+                  : docLang === 'tr'
+                  ? 'Konu: Pozisyon:'
+                  : 'Re:'}{' '}
+                {coverLetter.recipient.jobTitle}
               </p>
             </div>
 

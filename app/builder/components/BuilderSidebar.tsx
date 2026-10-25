@@ -22,7 +22,9 @@ import {
   CheckCircle2,
   Cloud,
   Loader2,
+  Globe,
 } from 'lucide-react';
+import { DOCUMENT_LANGUAGE_OPTIONS, DocumentLanguage } from '@/app/lib/documentI18n';
 
 interface BuilderSidebarProps {
   selectedTemplate: TemplateId;
@@ -353,6 +355,48 @@ export default function BuilderSidebar({
         {/* TAB 2: STYLE & DESIGN */}
         {activeTab === 'style' && (
           <div className="space-y-4">
+            {/* Document Language Section (CV / Resume Document Language) */}
+            <div className="p-3.5 rounded-xl bg-slate-950/40 border border-slate-800/80 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Document Language</span>
+                </label>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
+                  {DOCUMENT_LANGUAGE_OPTIONS.find((l) => l.id === (theme.documentLanguage || 'en'))?.nativeName || 'English'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-snug">
+                Sets headings, dates, and text flow (LTR/RTL) for this document.
+              </p>
+
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                {DOCUMENT_LANGUAGE_OPTIONS.map((lang) => {
+                  const isLangActive = (theme.documentLanguage || 'en') === lang.id;
+                  return (
+                    <button
+                      key={lang.id}
+                      type="button"
+                      onClick={() => setTheme((prev) => ({ ...prev, documentLanguage: lang.id }))}
+                      className={`flex items-center justify-between px-2.5 py-2 rounded-lg border text-xs transition-all ${
+                        isLangActive
+                          ? 'border-cyan-500 bg-cyan-500/15 text-white font-bold shadow-sm shadow-cyan-500/10'
+                          : 'border-slate-800/80 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300">
+                          {lang.code}
+                        </span>
+                        <span className="truncate">{lang.nativeName}</span>
+                      </div>
+                      {isLangActive && <Check className="w-3 h-3 text-cyan-400 shrink-0 stroke-[3]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Accent Colors Section */}
             <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/80 space-y-2.5">
               <div className="flex items-center justify-between">

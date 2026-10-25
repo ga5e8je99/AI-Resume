@@ -1,5 +1,6 @@
 import React from 'react';
 import { CvData, CvThemeConfig } from '../types';
+import { getDocumentHeadings } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: CvData;
@@ -30,10 +31,12 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
     referencesAvailableUponRequest,
   } = data;
 
+  const h = getDocumentHeadings(theme.documentLanguage);
   const accent = theme.accentColor || '#0f172a';
 
   return (
     <div
+      dir={h.dir}
       className="bg-white text-slate-900 w-full min-h-[1123px] p-10 font-sans text-[12px] leading-relaxed print:p-8"
       style={{ fontFamily: theme.fontFamily }}
     >
@@ -59,9 +62,9 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
               {personalInfo.email && <span>{personalInfo.email}</span>}
               {personalInfo.phone && <span>• {personalInfo.phone}</span>}
               {personalInfo.location && <span>• {personalInfo.location}</span>}
-              {personalInfo.nationality && <span>• Nationality: {personalInfo.nationality}</span>}
-              {personalInfo.dateOfBirth && <span>• DOB: {personalInfo.dateOfBirth}</span>}
-              {personalInfo.drivingLicense && <span>• License: {personalInfo.drivingLicense}</span>}
+              {personalInfo.nationality && <span>• {h.nationality}: {personalInfo.nationality}</span>}
+              {personalInfo.dateOfBirth && <span>• {h.dateOfBirth}: {personalInfo.dateOfBirth}</span>}
+              {personalInfo.drivingLicense && <span>• {h.drivingLicense}: {personalInfo.drivingLicense}</span>}
               {personalInfo.linkedin && (
                 <span>• {personalInfo.linkedin.replace(/^https?:\/\//, '')}</span>
               )}
@@ -72,7 +75,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
           </div>
 
           {personalInfo.showPhoto && personalInfo.photoUrl && (
-            <div className="ml-6 shrink-0">
+            <div className={`${h.isRtl ? 'mr-6' : 'ml-6'} shrink-0`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={personalInfo.photoUrl}
@@ -91,7 +94,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
             className="text-[11px] font-bold uppercase tracking-widest border-b pb-1 mb-2.5"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Executive Profile & Career Statement
+            {h.summary}
           </h2>
           <p className="text-slate-700 text-[11.5px] leading-relaxed text-justify">
             {personalInfo.summary}
@@ -106,7 +109,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
             className="text-[10.5px] font-bold uppercase tracking-widest mb-2"
             style={{ color: accent }}
           >
-            Core Competencies & Strategic Domains
+            {h.skills}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-800 font-medium">
             {skills.concat(softSkills || []).slice(0, 12).map((item, idx) => (
@@ -126,7 +129,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
             className="text-[11px] font-bold uppercase tracking-widest border-b pb-1 mb-3"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Professional Executive Career
+            {h.experience}
           </h2>
           <div className="space-y-4">
             {experience.map((exp) => (
@@ -134,14 +137,14 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-bold text-slate-900 text-[12.5px]">{exp.position}</span>
                   <span className="text-[11px] font-semibold text-slate-500">
-                    {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-700 italic font-medium mb-1.5 text-[11px]">
                   <span>{exp.company}</span>
                   {exp.location && <span>{exp.location}</span>}
                 </div>
-                <ul className="list-disc list-outside ml-4 space-y-1 text-slate-700">
+                <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4' : 'ml-4'} space-y-1 text-slate-700`}>
                   {exp.description
                     .filter((d) => d.trim())
                     .map((b, idx) => (
@@ -163,17 +166,17 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
             className="text-[11px] font-bold uppercase tracking-widest border-b pb-1 mb-3"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Education & Academic Credentials
+            {h.education}
           </h2>
           <div className="space-y-2.5">
             {education.map((edu) => (
               <div key={edu.id} className="flex justify-between items-baseline text-[11.5px]">
                 <div>
                   <span className="font-bold text-slate-900">
-                    {edu.degree} in {edu.fieldOfStudy}
+                    {edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}
                   </span>
                   <div className="text-slate-600 italic text-[11px]">
-                    {edu.institution} {edu.gpa && `• GPA: ${edu.gpa}`}
+                    {edu.institution} {edu.gpa && `• ${h.gpa}: ${edu.gpa}`}
                   </div>
                 </div>
                 <span className="text-slate-500 font-medium text-[11px]">
@@ -192,7 +195,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
             className="text-[11px] font-bold uppercase tracking-widest border-b pb-1 mb-2.5"
             style={{ color: accent, borderColor: '#cbd5e1' }}
           >
-            Publications & Thought Leadership
+            {h.publications}
           </h2>
           <div className="space-y-2 text-[11px]">
             {publications.map((p) => (
@@ -215,7 +218,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
           {languages && languages.length > 0 && (
             <div>
               <h3 className="text-[10.5px] font-bold uppercase tracking-wider mb-2 text-slate-800">
-                Languages & Multilingual Fluency
+                {h.languages}
               </h3>
               <div className="flex flex-wrap gap-2 text-[11px]">
                 {languages.map((l) => (
@@ -233,7 +236,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
           {certifications && certifications.length > 0 && (
             <div>
               <h3 className="text-[10.5px] font-bold uppercase tracking-wider mb-1.5 text-slate-800">
-                Certifications & Executive Licenses
+                {h.certifications}
               </h3>
               <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-700">
                 {certifications.map((c, idx) => (
@@ -249,7 +252,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
           {awards && awards.length > 0 && (
             <div>
               <h3 className="text-[10.5px] font-bold uppercase tracking-wider mb-1.5 text-slate-800">
-                Key Recognitions & Awards
+                {h.awards}
               </h3>
               <div className="space-y-1.5 text-[11px]">
                 {awards.map((a) => (
@@ -264,11 +267,11 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
 
           <div>
             <h3 className="text-[10.5px] font-bold uppercase tracking-wider mb-1.5 text-slate-800">
-              Professional Endorsements
+              {h.references}
             </h3>
             {referencesAvailableUponRequest || !references || references.length === 0 ? (
               <p className="text-[10.5px] italic text-slate-500">
-                Executive references available upon confidential request.
+                {h.referencesAvailable}
               </p>
             ) : (
               <div className="space-y-2 text-[10.5px] text-slate-700">

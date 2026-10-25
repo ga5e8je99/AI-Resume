@@ -1,5 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
+import { getDocumentHeadings } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -17,6 +18,7 @@ interface TemplateProps {
 export default function SimpleTemplate({ data, theme }: TemplateProps) {
   const { personalInfo, experience, education, projects, skills, certifications } = data;
   const accent = theme.accentColor || '#1d4ed8';
+  const h = getDocumentHeadings(theme.documentLanguage);
 
   const contactItems: string[] = [];
   if (personalInfo.location) contactItems.push(personalInfo.location);
@@ -29,6 +31,7 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
     <div
       className="bg-white text-gray-900 w-full min-h-[1100px] font-sans p-10 print:p-6 text-[12px] leading-relaxed shadow-sm"
       style={{ fontFamily: theme.fontFamily }}
+      dir={h.dir}
     >
       {/* 1. Header (Centered Academic Style) */}
       <header className="text-center mb-4">
@@ -54,7 +57,7 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900">
-                Profile
+                {h.summary}
               </h2>
             </div>
             <div className="col-span-9">
@@ -73,7 +76,7 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900">
-                Education
+                {h.education}
               </h2>
             </div>
             <div className="col-span-9 space-y-3">
@@ -87,14 +90,14 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
                         {edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ''}
                       </span>
                       {(edu.startDate || edu.endDate) && (
-                        <span className="text-gray-600 font-medium text-[11px] shrink-0 ml-2">
+                        <span className={`text-gray-600 font-medium text-[11px] shrink-0 ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
                           {edu.startDate} – {edu.endDate}
                         </span>
                       )}
                     </div>
                     <div className="text-gray-700 text-[11px]">
                       {edu.institution}
-                      {edu.gpa ? ` (GPA: ${edu.gpa})` : ''}
+                      {edu.gpa ? ` (${h.gpa}: ${edu.gpa})` : ''}
                     </div>
                   </div>
                 ))}
@@ -110,7 +113,7 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900">
-                Experience
+                {h.experience}
               </h2>
             </div>
             <div className="col-span-9 space-y-3.5">
@@ -123,8 +126,8 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
                         {exp.position}{exp.company ? ` | ${exp.company}` : ''}
                       </span>
                       {(exp.startDate || exp.endDate) && (
-                        <span className="text-gray-600 font-medium text-[11px] shrink-0 ml-2">
-                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                        <span className={`text-gray-600 font-medium text-[11px] shrink-0 ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
+                          {exp.startDate} – {exp.current ? h.present : exp.endDate}
                         </span>
                       )}
                     </div>
@@ -134,7 +137,7 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
                       </div>
                     )}
                     {exp.description && exp.description.length > 0 && (
-                      <ul className="list-disc pl-4 space-y-0.5 text-gray-700">
+                      <ul className={`list-disc ${h.isRtl ? 'pr-4' : 'pl-4'} space-y-0.5 text-gray-700`}>
                         {exp.description
                           .filter(Boolean)
                           .map((point, idx) => (
@@ -158,7 +161,7 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900">
-                Projects
+                {h.projects}
               </h2>
             </div>
             <div className="col-span-9 space-y-3">
@@ -170,7 +173,7 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
                       <span className="font-bold text-gray-900">
                         {proj.title}
                         {proj.techStack ? (
-                          <span className="font-normal text-gray-600 ml-1.5">
+                          <span className={`font-normal text-gray-600 ${h.isRtl ? 'mr-1.5' : 'ml-1.5'}`}>
                             ({proj.techStack})
                           </span>
                         ) : null}
@@ -180,15 +183,15 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
                           href={proj.link.startsWith('http') ? proj.link : `https://${proj.link}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[11px] font-medium hover:underline shrink-0 ml-2"
+                          className={`text-[11px] font-medium hover:underline shrink-0 ${h.isRtl ? 'mr-2' : 'ml-2'}`}
                           style={{ color: accent }}
                         >
-                          View ↗
+                          {h.isRtl ? 'عرض ↗' : 'View ↗'}
                         </a>
                       )}
                     </div>
                     {proj.description && proj.description.length > 0 && (
-                      <ul className="list-disc pl-4 space-y-0.5 text-gray-700">
+                      <ul className={`list-disc ${h.isRtl ? 'pr-4' : 'pl-4'} space-y-0.5 text-gray-700`}>
                         {proj.description
                           .filter(Boolean)
                           .map((point, idx) => (
@@ -212,7 +215,7 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900">
-                Skills
+                {h.skills}
               </h2>
             </div>
             <div className="col-span-9">
@@ -231,11 +234,11 @@ export default function SimpleTemplate({ data, theme }: TemplateProps) {
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900">
-                Certificates
+                {h.certifications}
               </h2>
             </div>
             <div className="col-span-9">
-              <ul className="list-disc pl-4 space-y-0.5 text-[11.5px] text-gray-700">
+              <ul className={`list-disc ${h.isRtl ? 'pr-4' : 'pl-4'} space-y-0.5 text-[11.5px] text-gray-700`}>
                 {certifications.map((cert, idx) => (
                   <li key={idx} className="leading-snug">
                     {cert}

@@ -717,14 +717,14 @@ export default function CoverLetterPage() {
                     <Globe className="w-3.5 h-3.5 text-cyan-400" />
                     <span>لغة الخطاب</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                     {LANGUAGE_OPTIONS.map((lang) => (
                       <button
                         key={lang.id}
                         type="button"
                         disabled={isGenerating}
                         onClick={() => setLanguage(lang.id)}
-                        className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer disabled:opacity-50 ${
+                        className={`py-1.5 px-2 text-xs font-bold rounded-lg border transition-all cursor-pointer disabled:opacity-50 truncate ${
                           language === lang.id
                             ? 'bg-amber-500/20 border-amber-500 text-amber-300'
                             : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'

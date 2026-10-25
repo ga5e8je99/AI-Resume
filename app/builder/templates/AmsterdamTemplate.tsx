@@ -1,5 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
+import { getDocumentHeadings } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -13,11 +14,13 @@ interface TemplateProps {
 export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
   const { personalInfo, experience, education, projects, skills, certifications } = data;
   const accent = theme.accentColor || '#0284c7';
+  const h = getDocumentHeadings(theme.documentLanguage);
 
   return (
     <div 
       className="bg-white text-slate-900 w-full min-h-[1050px] p-10 font-sans leading-relaxed text-[13px] print:p-8"
       style={{ fontFamily: theme.fontFamily }}
+      dir={h.dir}
     >
       {/* Amsterdam Header */}
       <div className="flex items-center gap-6 pb-6 mb-6 border-b-2" style={{ borderColor: accent }}>
@@ -63,10 +66,10 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
           <div className="flex items-center gap-2 mb-2">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: accent }} />
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              Professional Summary
+              {h.summary}
             </h2>
           </div>
-          <p className="text-slate-700 text-xs leading-relaxed pl-4 border-l-2 border-slate-200">
+          <p className={`text-slate-700 text-xs leading-relaxed ${h.isRtl ? 'pr-4 border-r-2' : 'pl-4 border-l-2'} border-slate-200`}>
             {personalInfo.summary}
           </p>
         </div>
@@ -78,22 +81,22 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: accent }} />
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              Employment History
+              {h.experience}
             </h2>
           </div>
-          <div className="space-y-4 pl-4 border-l-2 border-slate-200">
+          <div className={`space-y-4 ${h.isRtl ? 'pr-4 border-r-2' : 'pl-4 border-l-2'} border-slate-200`}>
             {experience.map((exp) => (
               <div key={exp.id} className="text-xs">
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-bold text-slate-900 text-sm">{exp.position}</span>
-                  <span className="text-slate-500 font-medium text-[11px]">
-                    {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                  <span className={`text-slate-500 font-medium text-[11px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
+                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
                   </span>
                 </div>
                 <div className="text-slate-600 font-semibold mb-1.5">
                   {exp.company} {exp.location && `• ${exp.location}`}
                 </div>
-                <ul className="list-disc list-outside ml-4 space-y-1 text-slate-700">
+                <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-1 text-slate-700`}>
                   {exp.description.filter(d => d.trim()).map((bullet, idx) => (
                     <li key={idx} className="leading-snug">{bullet}</li>
                   ))}
@@ -110,10 +113,10 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
           <div className="flex items-center gap-2 mb-2.5">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: accent }} />
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              Core Competencies & Skills
+              {h.skills}
             </h2>
           </div>
-          <div className="pl-4 border-l-2 border-slate-200 flex flex-wrap gap-2 text-xs">
+          <div className={`${h.isRtl ? 'pr-4 border-r-2' : 'pl-4 border-l-2'} border-slate-200 flex flex-wrap gap-2 text-xs`}>
             {skills.map((skill, idx) => (
               <span
                 key={idx}
@@ -132,10 +135,10 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
           <div className="flex items-center gap-2 mb-2.5">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: accent }} />
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              Education
+              {h.education}
             </h2>
           </div>
-          <div className="space-y-2.5 pl-4 border-l-2 border-slate-200">
+          <div className={`space-y-2.5 ${h.isRtl ? 'pr-4 border-r-2' : 'pl-4 border-l-2'} border-slate-200`}>
             {education.map((edu) => (
               <div key={edu.id} className="text-xs flex justify-between items-baseline">
                 <div>
@@ -143,10 +146,10 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
                     {edu.degree} in {edu.fieldOfStudy}
                   </span>
                   <div className="text-slate-600">
-                    {edu.institution} {edu.gpa && `| GPA: ${edu.gpa}`}
+                    {edu.institution} {edu.gpa && `| ${h.gpa}: ${edu.gpa}`}
                   </div>
                 </div>
-                <span className="text-slate-500 font-medium text-[11px]">
+                <span className={`text-slate-500 font-medium text-[11px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
                   {edu.startDate} – {edu.endDate}
                 </span>
               </div>
@@ -161,10 +164,10 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: accent }} />
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              Projects
+              {h.projects}
             </h2>
           </div>
-          <div className="space-y-3 pl-4 border-l-2 border-slate-200">
+          <div className={`space-y-3 ${h.isRtl ? 'pr-4 border-r-2' : 'pl-4 border-l-2'} border-slate-200`}>
             {projects.map((proj) => (
               <div key={proj.id} className="text-xs">
                 <div className="flex justify-between items-baseline mb-0.5">
@@ -175,10 +178,10 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
                 </div>
                 {proj.techStack && (
                   <p className="text-slate-500 text-[11px] mb-1">
-                    Stack: {proj.techStack}
+                    {proj.techStack}
                   </p>
                 )}
-                <ul className="list-disc list-outside ml-4 space-y-0.5 text-slate-700">
+                <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-0.5 text-slate-700`}>
                   {proj.description.filter(d => d.trim()).map((b, idx) => (
                     <li key={idx} className="leading-snug">{b}</li>
                   ))}
@@ -195,10 +198,10 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
           <div className="flex items-center gap-2 mb-2">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: accent }} />
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              Certifications
+              {h.certifications}
             </h2>
           </div>
-          <ul className="list-disc list-outside ml-8 space-y-0.5 text-xs text-slate-700">
+          <ul className={`list-disc list-outside ${h.isRtl ? 'mr-8 pr-1' : 'ml-8'} space-y-0.5 text-xs text-slate-700`}>
             {certifications.map((cert, idx) => (
               <li key={idx}>{cert}</li>
             ))}

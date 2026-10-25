@@ -1,5 +1,6 @@
 import React from 'react';
 import { CvData, CvThemeConfig } from '../types';
+import { getDocumentHeadings } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: CvData;
@@ -25,10 +26,12 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
     referencesAvailableUponRequest,
   } = data;
 
+  const h = getDocumentHeadings(theme.documentLanguage);
   const accent = theme.accentColor || '#059669'; // Emerald default
 
   return (
     <div
+      dir={h.dir}
       className="bg-white text-slate-900 w-full min-h-[1123px] font-sans text-[12px] leading-relaxed print:p-0"
       style={{ fontFamily: theme.fontFamily }}
     >
@@ -63,7 +66,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
             {/* Contact */}
             <div>
               <h3 className="text-[11px] font-bold uppercase tracking-wider text-white/90 border-b border-white/20 pb-1 mb-2">
-                Contact
+                {h.contact}
               </h3>
               <div className="space-y-1.5 text-[11px] text-white/90 break-words">
                 {personalInfo.email && <p>{personalInfo.email}</p>}
@@ -88,20 +91,20 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
               personalInfo.maritalStatus) && (
               <div>
                 <h3 className="text-[11px] font-bold uppercase tracking-wider text-white/90 border-b border-white/20 pb-1 mb-2">
-                  Personal Details
+                  {h.personalDetails}
                 </h3>
                 <div className="space-y-1 text-[10.5px] text-white/80">
                   {personalInfo.nationality && (
-                    <p>Nationality: <strong>{personalInfo.nationality}</strong></p>
+                    <p>{h.nationality}: <strong>{personalInfo.nationality}</strong></p>
                   )}
                   {personalInfo.dateOfBirth && (
-                    <p>DOB: <strong>{personalInfo.dateOfBirth}</strong></p>
+                    <p>{h.dateOfBirth}: <strong>{personalInfo.dateOfBirth}</strong></p>
                   )}
                   {personalInfo.drivingLicense && (
-                    <p>License: <strong>{personalInfo.drivingLicense}</strong></p>
+                    <p>{h.drivingLicense}: <strong>{personalInfo.drivingLicense}</strong></p>
                   )}
                   {personalInfo.maritalStatus && (
-                    <p>Status: <strong>{personalInfo.maritalStatus}</strong></p>
+                    <p>{h.maritalStatus}: <strong>{personalInfo.maritalStatus}</strong></p>
                   )}
                 </div>
               </div>
@@ -111,7 +114,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
             {languages && languages.length > 0 && (
               <div>
                 <h3 className="text-[11px] font-bold uppercase tracking-wider text-white/90 border-b border-white/20 pb-1 mb-2">
-                  Languages
+                  {h.languages}
                 </h3>
                 <div className="space-y-2">
                   {languages.map((l) => (
@@ -138,7 +141,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
             {skills && skills.length > 0 && (
               <div>
                 <h3 className="text-[11px] font-bold uppercase tracking-wider text-white/90 border-b border-white/20 pb-1 mb-2">
-                  Core Skills
+                  {h.skills}
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
                   {skills.map((skill, idx) => (
@@ -157,7 +160,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
             {certifications && certifications.length > 0 && (
               <div>
                 <h3 className="text-[11px] font-bold uppercase tracking-wider text-white/90 border-b border-white/20 pb-1 mb-2">
-                  Certifications
+                  {h.certifications}
                 </h3>
                 <ul className="list-disc list-inside space-y-1 text-[10.5px] text-white/80">
                   {certifications.map((c, idx) => (
@@ -171,10 +174,10 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
           {/* References in left pillar */}
           <div className="pt-4 border-t border-white/20">
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-white/90 mb-1">
-              References
+              {h.references}
             </h3>
             {referencesAvailableUponRequest || !references || references.length === 0 ? (
-              <p className="text-[10px] italic text-white/70">Available upon request</p>
+              <p className="text-[10px] italic text-white/70">{h.referencesAvailable}</p>
             ) : (
               <div className="space-y-2 text-[10px] text-white/80">
                 {references.slice(0, 2).map((r) => (
@@ -197,7 +200,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                 className="text-xs font-bold uppercase tracking-wider border-b-2 pb-1 mb-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Executive Profile
+                {h.summary}
               </h2>
               <p className="text-slate-700 text-[11.5px] leading-relaxed">
                 {personalInfo.summary}
@@ -212,7 +215,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                 className="text-xs font-bold uppercase tracking-wider border-b-2 pb-1 mb-3"
                 style={{ color: accent, borderColor: accent }}
               >
-                Experience & Track Record
+                {h.experience}
               </h2>
               <div className="space-y-4">
                 {experience.map((exp) => (
@@ -220,14 +223,14 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                     <div className="flex justify-between items-baseline">
                       <span className="font-bold text-slate-900">{exp.position}</span>
                       <span className="text-[10.5px] text-slate-500 font-medium">
-                        {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                        {exp.startDate} – {exp.current ? h.present : exp.endDate}
                       </span>
                     </div>
                     <div className="flex justify-between text-slate-600 text-[11px] italic mb-1">
                       <span>{exp.company}</span>
                       {exp.location && <span>{exp.location}</span>}
                     </div>
-                    <ul className="list-disc list-outside ml-4 space-y-1 text-slate-700">
+                    <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4' : 'ml-4'} space-y-1 text-slate-700`}>
                       {exp.description
                         .filter((d) => d.trim())
                         .map((b, idx) => (
@@ -249,17 +252,17 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                 className="text-xs font-bold uppercase tracking-wider border-b-2 pb-1 mb-3"
                 style={{ color: accent, borderColor: accent }}
               >
-                Education
+                {h.education}
               </h2>
               <div className="space-y-2.5">
                 {education.map((edu) => (
                   <div key={edu.id} className="text-[11.5px] flex justify-between items-baseline">
                     <div>
                       <p className="font-bold text-slate-900">
-                        {edu.degree} in {edu.fieldOfStudy}
+                        {edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}
                       </p>
                       <p className="text-slate-600 italic text-[11px]">
-                        {edu.institution} {edu.gpa && `• GPA: ${edu.gpa}`}
+                        {edu.institution} {edu.gpa && `• ${h.gpa}: ${edu.gpa}`}
                       </p>
                     </div>
                     <span className="text-[10.5px] text-slate-500">{edu.startDate} – {edu.endDate}</span>
@@ -276,7 +279,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                 className="text-xs font-bold uppercase tracking-wider border-b-2 pb-1 mb-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Key Publications & Articles
+                {h.publications}
               </h2>
               <div className="space-y-2 text-[11px]">
                 {publications.map((p) => (
@@ -296,7 +299,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                 className="text-xs font-bold uppercase tracking-wider border-b-2 pb-1 mb-2"
                 style={{ color: accent, borderColor: accent }}
               >
-                Courses & Development
+                {h.courses}
               </h2>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 {courses.map((c) => (
@@ -316,7 +319,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                 className="text-xs font-bold uppercase tracking-wider border-b-2 pb-1 mb-3"
                 style={{ color: accent, borderColor: accent }}
               >
-                Key Initiatives & Projects
+                {h.projects}
               </h2>
               <div className="space-y-3">
                 {projects.map((proj) => (
@@ -329,7 +332,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                         </span>
                       )}
                     </div>
-                    <ul className="list-disc list-outside ml-4 space-y-0.5 text-slate-700 mt-1">
+                    <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4' : 'ml-4'} space-y-0.5 text-slate-700 mt-1`}>
                       {proj.description
                         .filter((d) => d.trim())
                         .map((b, i) => (

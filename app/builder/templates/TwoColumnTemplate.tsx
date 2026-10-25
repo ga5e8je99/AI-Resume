@@ -1,6 +1,7 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
 import { Mail, Phone, MapPin, Globe, Linkedin, Github, ExternalLink } from 'lucide-react';
+import { getDocumentHeadings } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -16,11 +17,13 @@ interface TemplateProps {
 export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
   const { personalInfo, experience, education, projects, skills, certifications } = data;
   const accent = theme.accentColor || '#1d4ed8';
+  const h = getDocumentHeadings(theme.documentLanguage);
 
   return (
     <div
       className="bg-white text-gray-900 w-full min-h-[1100px] font-sans p-8 print:p-6 text-[12px] leading-relaxed shadow-sm"
       style={{ fontFamily: theme.fontFamily }}
+      dir={h.dir}
     >
       {/* 1. Header (Spans full width) */}
       <header className="border-b border-gray-200 pb-4 mb-5">
@@ -58,7 +61,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
           {personalInfo.summary && (
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 border-b border-gray-200 pb-1 mb-2">
-                Profile
+                {h.summary}
               </h2>
               <p className="text-[11.5px] text-gray-700 leading-relaxed">
                 {personalInfo.summary}
@@ -70,7 +73,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
           {experience.length > 0 && experience.some((e) => e.company || e.position) && (
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 border-b border-gray-200 pb-1 mb-2.5">
-                Work Experience
+                {h.experience}
               </h2>
               <div className="space-y-3.5">
                 {experience
@@ -82,8 +85,8 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
                           {exp.position}
                         </span>
                         {(exp.startDate || exp.endDate) && (
-                          <span className="text-gray-500 font-medium text-[10.5px]">
-                            {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                          <span className={`text-gray-500 font-medium text-[10.5px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
+                            {exp.startDate} – {exp.current ? h.present : exp.endDate}
                           </span>
                         )}
                       </div>
@@ -91,7 +94,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
                         {exp.company}{exp.location ? ` • ${exp.location}` : ''}
                       </div>
                       {exp.description && exp.description.length > 0 && (
-                        <ul className="list-disc pl-4 space-y-0.5 text-gray-700">
+                        <ul className={`list-disc ${h.isRtl ? 'pr-4' : 'pl-4'} space-y-0.5 text-gray-700`}>
                           {exp.description
                             .filter(Boolean)
                             .map((bullet, idx) => (
@@ -111,7 +114,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
           {education.length > 0 && education.some((edu) => edu.institution || edu.degree) && (
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 border-b border-gray-200 pb-1 mb-2.5">
-                Education
+                {h.education}
               </h2>
               <div className="space-y-3">
                 {education
@@ -124,14 +127,14 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
                           {edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ''}
                         </span>
                         {(edu.startDate || edu.endDate) && (
-                          <span className="text-gray-500 font-medium text-[10.5px]">
+                          <span className={`text-gray-500 font-medium text-[10.5px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
                             {edu.startDate} – {edu.endDate}
                           </span>
                         )}
                       </div>
                       <div className="text-gray-700 text-[11px]">
                         {edu.institution}
-                        {edu.gpa ? ` • GPA: ${edu.gpa}` : ''}
+                        {edu.gpa ? ` • ${h.gpa}: ${edu.gpa}` : ''}
                       </div>
                     </div>
                   ))}
@@ -143,7 +146,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
           {projects.length > 0 && projects.some((p) => p.title) && (
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 border-b border-gray-200 pb-1 mb-2.5">
-                Projects
+                {h.projects}
               </h2>
               <div className="space-y-3">
                 {projects
@@ -172,7 +175,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
                         )}
                       </div>
                       {proj.description && proj.description.length > 0 && (
-                        <ul className="list-disc pl-4 space-y-0.5 text-gray-700">
+                        <ul className={`list-disc ${h.isRtl ? 'pr-4' : 'pl-4'} space-y-0.5 text-gray-700`}>
                           {proj.description
                             .filter(Boolean)
                             .map((bullet, idx) => (
@@ -190,11 +193,11 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
         </div>
 
         {/* Right Column (Sidebar: 4 cols = ~33%) */}
-        <div className="col-span-4 space-y-5 border-l border-gray-100 pl-5">
+        <div className={`col-span-4 space-y-5 ${h.isRtl ? 'border-r border-gray-100 pr-5' : 'border-l border-gray-100 pl-5'}`}>
           {/* Contact Details */}
           <section>
             <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 border-b border-gray-200 pb-1 mb-2.5">
-              Contact
+              {h.contact}
             </h2>
             <div className="space-y-1.5 text-[11px] text-gray-700">
               {personalInfo.email && (
@@ -253,7 +256,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
                     className="hover:underline font-medium"
                     style={{ color: accent }}
                   >
-                    Portfolio
+                    {h.website}
                   </a>
                 </div>
               )}
@@ -264,7 +267,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
           {skills.length > 0 && (
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 border-b border-gray-200 pb-1 mb-2.5">
-                Skills
+                {h.skills}
               </h2>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map((skill, idx) => (
@@ -283,7 +286,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
           {certifications.length > 0 && (
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-900 border-b border-gray-200 pb-1 mb-2.5">
-                Certificates
+                {h.certifications}
               </h2>
               <ul className="space-y-1 text-[11px] text-gray-700">
                 {certifications.map((cert, idx) => (
