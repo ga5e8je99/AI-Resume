@@ -10,3 +10,4 @@ if ($Message) {
 } else {
     node scripts/git-push.mjs
 }
+
