@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { CoverLetterData } from '../types';
 import {
   Edit3,
@@ -8,13 +8,35 @@ import {
   Check,
   Printer,
   Save,
-  Sparkles,
-  AlertCircle,
-  Loader2,
   RotateCcw,
+  Loader2,
+  FileText,
+  FileDown,
+  Sparkles,
+  Languages,
+  Bold,
+  Italic,
+  List,
+  Eye,
+  Undo2,
 } from 'lucide-react';
 import { CoverLetterService } from '@/app/lib/coverLetterService';
-import { getDocumentHeadings, DOCUMENT_LANGUAGE_OPTIONS, DocumentLanguage } from '@/app/lib/documentI18n';
+import { exportCoverLetterToDocx } from '../utils/exportCoverLetterWord';
+import {
+  DOCUMENT_LANGUAGE_OPTIONS,
+  DocumentLanguage,
+  setStoredDocumentLanguage,
+} from '@/app/lib/documentI18n';
+
+function sanitizePreview(val?: string | null): string {
+  if (!val || typeof val !== 'string') return '';
+  return val
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/javascript:/gi, '')
+    .trim();
+}
 
 interface CoverLetterPreviewProps {
   coverLetter: CoverLetterData;
@@ -23,6 +45,8 @@ interface CoverLetterPreviewProps {
   isSaving: boolean;
   isDirty?: boolean;
   onResetRequest?: () => void;
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }
 
@@ -33,54 +57,82 @@ export function CoverLetterPreview({
   isSaving,
   isDirty = false,
   onResetRequest,
+  onRegenerate,
+  isRegenerating = false,
   showToast,
 }: CoverLetterPreviewProps) {
+  // Start in direct edit mode or view mode
   const [isEditing, setIsEditing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isExportingDocx, setIsExportingDocx] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const docLang = (coverLetter.language || 'ar') as DocumentLanguage;
-  const h = getDocumentHeadings(docLang);
-  const isAr = docLang === 'ar';
-  const langOption = DOCUMENT_LANGUAGE_OPTIONS.find((o) => o.id === docLang);
+  const isAr = (coverLetter.language || 'ar') === 'ar';
 
+  // Live word & character count
+  const { wordCount, charCount } = React.useMemo(() => {
+    const text = coverLetter.content?.fullText || '';
+    return {
+      wordCount: text.trim().split(/\s+/).filter(Boolean).length,
+      charCount: text.length,
+    };
+  }, [coverLetter.content?.fullText]);
+
+  // Copy letter to clipboard
   const handleCopy = async () => {
     if (isCopied) return;
     try {
       const cleaned = CoverLetterService.cleanDisplayText(coverLetter.content.fullText);
       await navigator.clipboard.writeText(cleaned);
       setIsCopied(true);
-      showToast(isAr ? 'تم نسخ الخطاب بنجاح إلى الحافظة' : 'Cover letter copied to clipboard!');
+      showToast(isAr ? 'تم نسخ نص الخطاب إلى الحافظة' : 'Cover letter copied to clipboard');
       setTimeout(() => setIsCopied(false), 2000);
     } catch {
       showToast(isAr ? 'تعذر النسخ التلقائي' : 'Failed to copy', 'error');
     }
   };
 
-  const handleToggleEdit = () => {
-    if (isEditing) {
-      // Clean and normalize text upon leaving edit mode
-      onUpdate({
-        ...coverLetter,
-        content: {
-          ...coverLetter.content,
-          fullText: CoverLetterService.cleanDisplayText(coverLetter.content.fullText),
-        },
-      });
+  // Export to Word (.docx)
+  const handleExportDocx = async () => {
+    if (isExportingDocx) return;
+    setIsExportingDocx(true);
+    try {
+      await exportCoverLetterToDocx(coverLetter);
+      showToast(isAr ? 'تم تنزيل مستند Word بنجاح' : 'Cover letter downloaded as Word (.docx)');
+    } catch {
+      showToast(isAr ? 'تعذر تصدير ملف Word' : 'Failed to export Word document', 'error');
+    } finally {
+      setIsExportingDocx(false);
     }
-    setIsEditing(!isEditing);
   };
 
+  // Export to PDF via clean browser print
   const handlePrint = () => {
     if (isPrinting) return;
     setIsPrinting(true);
-    showToast(isAr ? 'جاري تجهيز الخطاب للطباعة / تصدير PDF...' : 'Preparing for print / PDF export...');
+    showToast(isAr ? 'جاري فتح نافذة الطباعة / تصدير PDF...' : 'Opening print preview / PDF export...');
     setTimeout(() => {
       window.print();
       setIsPrinting(false);
-    }, 400);
+    }, 350);
   };
 
+  // Switch document language across all 6 supported locales
+  const handleSelectLanguage = (newLang: DocumentLanguage) => {
+    setStoredDocumentLanguage(newLang);
+    onUpdate({
+      ...coverLetter,
+      language: newLang,
+    });
+    showToast(
+      newLang === 'ar'
+        ? 'تم تحويل اتجاه الخطاب إلى العربية (RTL)'
+        : `Switched layout language to ${newLang.toUpperCase()} (LTR)`
+    );
+  };
+
+  // Handle direct text changes in the editable area
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onUpdate({
       ...coverLetter,
@@ -91,109 +143,220 @@ export function CoverLetterPreview({
     });
   };
 
-  const templateId = coverLetter.templateId || 'compact';
-  const { wordCount, charCount } = React.useMemo(() => {
-    const text = coverLetter.content?.fullText || '';
-    return {
-      wordCount: text.trim().split(/\s+/).filter(Boolean).length,
-      charCount: text.length,
-    };
-  }, [coverLetter.content?.fullText]);
+  // Rich formatting helpers for the editable area
+  const applyTextFormat = (prefix: string, suffix: string = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = coverLetter.content.fullText || '';
+    const selected = text.substring(start, end);
+
+    let replacement = '';
+    if (selected) {
+      replacement = `${prefix}${selected}${suffix}`;
+    } else {
+      replacement = `${prefix}${isAr ? 'نص مخصص' : 'formatted text'}${suffix}`;
+    }
+
+    const updated = text.substring(0, start) + replacement + text.substring(end);
+    onUpdate({
+      ...coverLetter,
+      content: {
+        ...coverLetter.content,
+        fullText: updated,
+      },
+    });
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + replacement.length - suffix.length);
+    }, 0);
+  };
+
+  const insertBulletItem = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const text = coverLetter.content.fullText || '';
+    const bullet = '\n• ';
+    const updated = text.substring(0, start) + bullet + text.substring(start);
+
+    onUpdate({
+      ...coverLetter,
+      content: {
+        ...coverLetter.content,
+        fullText: updated,
+      },
+    });
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + bullet.length, start + bullet.length);
+    }, 0);
+  };
 
   return (
     <div className="space-y-4">
-      {/* Actions Toolbar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2.5 shadow-lg">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            {langOption?.nativeName || (isAr ? 'العربية' : 'English')}
-          </span>
-          <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-300">
-            {coverLetter.tone}
-          </span>
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
-            {templateId}
+      {/* Primary Actions Toolbar */}
+      <div className="bg-surface border border-line rounded-[12px] p-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+        {/* Left Toolbar Items: Status, Direction, Word Count */}
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          {/* Output Language Selector (6 Languages) */}
+          <div className="flex items-center gap-1.5">
+            <Languages className="w-3.5 h-3.5 text-accent shrink-0" />
+            <select
+              id="cover-letter-preview-output-language"
+              aria-label="Cover letter output language"
+              value={coverLetter.language || 'en'}
+              onChange={(e) => handleSelectLanguage(e.target.value as DocumentLanguage)}
+              className="px-2 py-1 rounded-[6px] bg-accent-soft hover:bg-accent/20 text-accent font-semibold text-xs border border-accent/25 focus:outline-none cursor-pointer"
+            >
+              {DOCUMENT_LANGUAGE_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.nativeName} ({opt.dir === 'rtl' ? 'RTL' : 'LTR'})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tone Indicator Badge */}
+          <span className="px-2 py-1 rounded-[4px] bg-surface-2 text-ink-2 border border-line font-medium capitalize text-[11px]">
+            {coverLetter.tone === 'formal'
+              ? isAr ? 'احترافي' : 'Professional'
+              : coverLetter.tone === 'enthusiastic'
+              ? isAr ? 'ودي' : 'Friendly'
+              : coverLetter.tone === 'leadership'
+              ? isAr ? 'واثق' : 'Confident'
+              : isAr ? 'تقني' : 'Technical'}
           </span>
 
-          {/* Unsaved Changes Indicator */}
+          {/* Real-time Word & Char Count */}
+          <span
+            className="px-2 py-1 rounded-[4px] bg-surface-2 text-ink-3 font-mono text-[11px] border border-line flex items-center gap-1"
+            title={`${charCount} ${isAr ? 'حرف' : 'characters'}`}
+          >
+            <FileText className="w-3 h-3 text-ink-3" />
+            <span>{wordCount} {isAr ? 'كلمة' : 'words'}</span>
+          </span>
+
+          {/* Saved / Unsaved Indicator */}
           {isDirty ? (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 border border-amber-500/30 text-amber-300 animate-pulse flex items-center gap-1">
-              <AlertCircle className="w-3 h-3 text-amber-400" />
-              <span>{isAr ? 'تعديلات غير محفوظة' : 'Unsaved changes'}</span>
+            <span className="px-2 py-0.5 rounded-[4px] bg-amber-500/10 border border-amber-500/30 text-amber-700 text-[11px] font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span>{isAr ? 'تعديل غير محفوظ' : 'Unsaved edits'}</span>
             </span>
           ) : coverLetter.id ? (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center gap-1">
-              <Check className="w-3 h-3" />
-              <span>{isAr ? 'محفوظ بالمسودات' : 'Saved to drafts'}</span>
+            <span className="px-2 py-0.5 rounded-[4px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-[11px] font-medium flex items-center gap-1">
+              <Check className="w-3 h-3 text-emerald-600" />
+              <span>{isAr ? 'محفوظ' : 'Saved'}</span>
             </span>
           ) : null}
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {/* Reset / New Letter */}
-          {onResetRequest && (
+        {/* Right Toolbar Items: Actions (Regenerate, Edit Toggle, Copy, Download, Save) */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Quick Action: Regenerate */}
+          {onRegenerate && (
             <button
               type="button"
-              onClick={onResetRequest}
-              disabled={isSaving}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 text-xs text-slate-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-              title={isAr ? 'البدء من جديد' : 'New letter'}
+              onClick={onRegenerate}
+              disabled={isRegenerating || isSaving}
+              className="px-2.5 py-1.5 rounded-[6px] bg-surface hover:bg-surface-2 border border-line text-xs text-ink-2 hover:text-accent transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title={isAr ? 'إعادة توليد الخطاب بنفس المعطيات' : 'Regenerate cover letter'}
             >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-              <span className="hidden sm:inline">{isAr ? 'جديد' : 'New'}</span>
+              {isRegenerating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 text-accent" strokeWidth={1.75} />
+              )}
+              <span className="hidden sm:inline font-medium">{isAr ? 'إعادة التوليد' : 'Regenerate'}</span>
             </button>
           )}
 
-          {/* Live Edit Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleEdit}
-            disabled={isSaving}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
-              isEditing
-                ? 'bg-amber-500 text-slate-950 border-amber-500 font-bold'
-                : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
-            }`}
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>{isEditing ? (isAr ? 'إنهاء التعديل' : 'Done') : (isAr ? 'تعديل النص' : 'Edit')}</span>
-          </button>
+          {/* View / Edit Mode Toggle */}
+          <div className="flex items-center p-0.5 bg-surface-2 rounded-[6px] border border-line">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className={`px-2.5 py-1 text-xs font-medium rounded-[4px] transition-colors flex items-center gap-1 cursor-pointer ${
+                !isEditing
+                  ? 'bg-surface text-ink shadow-xs font-semibold'
+                  : 'text-ink-2 hover:text-ink'
+              }`}
+              title={isAr ? 'معاينة المستند المطبوع' : 'Document layout preview'}
+            >
+              <Eye className="w-3 h-3" />
+              <span>{isAr ? 'المعاينة' : 'Preview'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className={`px-2.5 py-1 text-xs font-medium rounded-[4px] transition-colors flex items-center gap-1 cursor-pointer ${
+                isEditing
+                  ? 'bg-surface text-accent shadow-xs font-semibold'
+                  : 'text-ink-2 hover:text-ink'
+              }`}
+              title={isAr ? 'تحرير النص المباشر' : 'Direct text editing'}
+            >
+              <Edit3 className="w-3 h-3" />
+              <span>{isAr ? 'تحرير' : 'Edit'}</span>
+            </button>
+          </div>
 
-          {/* Copy Button */}
+          {/* Copy Button with Feedback */}
           <button
             type="button"
             onClick={handleCopy}
             disabled={isCopied}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-75"
-            title="نسخ النص كاملاً"
+            className="px-2.5 py-1.5 rounded-[6px] bg-surface hover:bg-surface-2 border border-line text-xs text-ink font-medium transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-80"
+            title={isAr ? 'نسخ النص كاملاً' : 'Copy letter text'}
           >
             {isCopied ? (
               <>
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400 font-bold">{isAr ? 'تم النسخ' : 'Copied'}</span>
+                <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
+                <span className="text-emerald-600 font-semibold">{isAr ? 'تم النسخ' : 'Copied'}</span>
               </>
             ) : (
               <>
-                <Copy className="w-3.5 h-3.5 text-slate-400" />
+                <Copy className="w-3.5 h-3.5 text-ink-2" strokeWidth={1.5} />
                 <span>{isAr ? 'نسخ' : 'Copy'}</span>
               </>
             )}
           </button>
 
-          {/* Print / Export PDF */}
+          {/* Download Word (.docx) */}
+          <button
+            type="button"
+            onClick={handleExportDocx}
+            disabled={isExportingDocx || isSaving}
+            className="px-2.5 py-1.5 rounded-[6px] bg-surface hover:bg-surface-2 border border-line text-xs text-ink font-medium transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title={isAr ? 'تنزيل بصيغة Word (.docx)' : 'Download Word document'}
+          >
+            {isExportingDocx ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
+            ) : (
+              <FileDown className="w-3.5 h-3.5 text-blue-500" strokeWidth={1.75} />
+            )}
+            <span className="hidden sm:inline">Word</span>
+          </button>
+
+          {/* Download PDF / Print */}
           <button
             type="button"
             onClick={handlePrint}
             disabled={isPrinting}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            title="طباعة أو تصدير PDF مباشر"
+            className="px-2.5 py-1.5 rounded-[6px] bg-surface hover:bg-surface-2 border border-line text-xs text-ink font-medium transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title={isAr ? 'تصدير PDF أو طباعة' : 'Export PDF or print'}
           >
             {isPrinting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
             ) : (
-              <Printer className="w-3.5 h-3.5 text-cyan-400" />
+              <Printer className="w-3.5 h-3.5 text-ink-2" strokeWidth={1.75} />
             )}
-            <span className="hidden sm:inline">{isAr ? 'تصدير PDF' : 'Export PDF'}</span>
+            <span className="hidden sm:inline">PDF</span>
           </button>
 
           {/* Save Draft Button */}
@@ -201,125 +364,150 @@ export function CoverLetterPreview({
             type="button"
             onClick={onSaveDraft}
             disabled={isSaving}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-              isDirty
-                ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-emerald-600/30 ring-2 ring-emerald-400/40'
-                : 'bg-emerald-600/80 hover:bg-emerald-600 text-white shadow-emerald-600/20'
-            }`}
+            className="px-3 py-1.5 rounded-[6px] text-xs font-semibold bg-accent hover:bg-accent-hover text-white transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent shadow-xs"
           >
             {isSaving ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
             ) : (
-              <Save className="w-3.5 h-3.5" />
+              <Save className="w-3.5 h-3.5 text-white" strokeWidth={1.75} />
             )}
             <span>
               {isSaving
-                ? isAr
-                  ? 'جاري الحفظ...'
-                  : 'Saving...'
+                ? isAr ? 'جاري الحفظ...' : 'Saving...'
                 : isDirty
-                ? isAr
-                  ? 'حفظ التعديلات'
-                  : 'Save Changes'
+                ? isAr ? 'حفظ التعديلات' : 'Save edits'
                 : coverLetter.id
-                ? isAr
-                  ? 'تحديث المسودة'
-                  : 'Update Draft'
-                : isAr
-                ? 'حفظ كمسودة'
-                : 'Save Draft'}
+                ? isAr ? 'تحديث المسودة' : 'Update draft'
+                : isAr ? 'حفظ كمسودة' : 'Save draft'}
             </span>
           </button>
         </div>
       </div>
 
-      {/* Editing Mode Banner */}
+      {/* Rich Text Editing Helper Toolbar (Active when in edit mode) */}
       {isEditing && (
-        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-200 text-xs flex items-center justify-between gap-2 animate-in fade-in duration-200">
-          <div className="flex items-center gap-2">
-            <Edit3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span>
-              {isAr
-                ? 'وضع التعديل النشط: يمكنك تعديل وحذف أي فقرة بحرية وسيعتمد الخطاب المعدل عند الحفظ أو التصدير.'
-                : 'Live Edit Mode: Edit any text freely. Changes are reflected instantly on save and PDF export.'}
+        <div className="p-2.5 rounded-[8px] bg-surface-2/80 border border-line text-xs flex flex-wrap items-center justify-between gap-2 animate-in fade-in duration-150">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-ink-3 me-1">
+              {isAr ? 'تنسيق سريع:' : 'Formatting:'}
             </span>
+            <button
+              type="button"
+              onClick={() => applyTextFormat('**', '**')}
+              className="p-1.5 rounded-[4px] bg-surface hover:bg-surface-2 border border-line text-ink font-bold cursor-pointer"
+              title={isAr ? 'نص عريض' : 'Bold'}
+            >
+              <Bold className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => applyTextFormat('*', '*')}
+              className="p-1.5 rounded-[4px] bg-surface hover:bg-surface-2 border border-line text-ink italic cursor-pointer"
+              title={isAr ? 'نص مائل' : 'Italic'}
+            >
+              <Italic className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={insertBulletItem}
+              className="p-1.5 rounded-[4px] bg-surface hover:bg-surface-2 border border-line text-ink cursor-pointer"
+              title={isAr ? 'نقطة تعداد' : 'Bullet item'}
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <span className="text-[11px] text-amber-300 font-mono shrink-0">
-            {wordCount} {isAr ? 'كلمة' : 'words'} • {charCount} {isAr ? 'حرف' : 'chars'}
-          </span>
+
+          <div className="text-[11px] text-ink-3 flex items-center gap-2">
+            <span>{isAr ? 'تحرير مباشر: اكتب وعدل الفقرات بحرية' : 'Direct editing: adjust text and phrasing freely'}</span>
+            <span className="font-mono text-accent">({wordCount} {isAr ? 'كلمة' : 'words'})</span>
+          </div>
         </div>
       )}
 
-      {/* Extracted Keywords Chips */}
+      {/* Matched Keywords Pills */}
       {coverLetter.extractedKeywords && coverLetter.extractedKeywords.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 p-3 rounded-2xl bg-slate-900/60 border border-slate-800 text-xs">
-          <span className="text-slate-400 text-[11px] font-semibold ml-1 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-400" />
-            <span>{isAr ? 'الكلمات المفتاحية المدمجة (ATS Keywords):' : 'Embedded ATS Keywords:'}</span>
+        <div className="flex flex-wrap items-center gap-1.5 p-2.5 rounded-[8px] bg-surface border border-line text-xs">
+          <span className="text-ink-3 text-[11px] font-medium ms-1 flex items-center gap-1">
+            <FileText className="w-3.5 h-3.5 text-accent" strokeWidth={1.5} />
+            <span>{isAr ? 'الكلمات المفتاحية المضمنة:' : 'Matched keywords:'}</span>
           </span>
-          {coverLetter.extractedKeywords.map((kw, i) => (
+          {coverLetter.extractedKeywords.slice(0, 10).map((kw, i) => (
             <span
               key={i}
-              className="px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] font-medium"
+              className="px-2 py-0.5 rounded-[4px] bg-surface-2 text-ink-2 border border-line text-[11px] font-mono"
             >
-              ✓ {kw}
+              {kw}
             </span>
           ))}
         </div>
       )}
 
-      {/* A4 Sheet Preview Container matching Resume template style */}
+      {/* A4 Paper Sheet Preview / Editable Rich Text Area with Instant RTL/LTR Direction */}
       <div
         id="cover-letter-sheet"
-        dir={h.dir}
-        className={`bg-white text-slate-900 rounded-2xl p-8 sm:p-12 shadow-2xl border min-h-[700px] relative transition-all ${
-          templateId === 'modern'
-            ? 'border-t-8 border-t-indigo-600 font-sans'
-            : templateId === 'ats-friendly'
-            ? 'border-t-8 border-t-blue-600 font-sans'
-            : templateId === 'classic'
-            ? 'border-t-8 border-t-emerald-700 font-serif'
-            : 'border-t-8 border-t-amber-500 font-sans'
+        dir={isAr ? 'rtl' : 'ltr'}
+        style={{
+          fontFamily: isAr
+            ? 'var(--font-arabic), "IBM Plex Sans Arabic", var(--font-sans), sans-serif'
+            : 'var(--font-sans), sans-serif',
+        }}
+        className={`bg-surface text-ink rounded-[12px] p-6 sm:p-12 shadow-sm border border-line min-h-[640px] relative transition-all ${
+          isAr ? 'font-arabic' : 'font-sans'
         }`}
       >
         {isEditing ? (
-          <textarea
-            rows={22}
-            value={coverLetter.content.fullText}
-            onChange={handleTextChange}
-            aria-label={isAr ? 'نص خطاب التقديم القابل للتعديل' : 'Editable cover letter text'}
-            className="w-full h-full p-4 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm leading-relaxed focus:outline-none focus:border-amber-500 font-sans resize-none"
-          />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-xs text-ink-3 pb-2 border-b border-line">
+              <span>{isAr ? 'محرر نص خطاب التقديم' : 'Cover Letter Text Editor'}</span>
+              <span className="font-mono">{charCount} {isAr ? 'حرف' : 'chars'}</span>
+            </div>
+            <textarea
+              ref={textareaRef}
+              rows={24}
+              dir={isAr ? 'rtl' : 'ltr'}
+              value={coverLetter.content.fullText}
+              onChange={handleTextChange}
+              aria-label={isAr ? 'نص خطاب التقديم القابل للتعديل' : 'Editable cover letter text'}
+              style={{
+                fontFamily: isAr
+                  ? 'var(--font-arabic), "IBM Plex Sans Arabic", var(--font-sans), sans-serif'
+                  : 'var(--font-sans), sans-serif',
+              }}
+              className="w-full p-4 bg-paper border border-line rounded-[8px] text-ink text-sm sm:text-base leading-relaxed focus:outline-none focus:border-accent resize-y min-h-[500px]"
+              placeholder={isAr ? 'اكتب نص خطاب التقديم هنا...' : 'Enter cover letter text here...'}
+            />
+          </div>
         ) : (
-          <div className="space-y-6 text-sm sm:text-base leading-relaxed whitespace-pre-line text-slate-800">
-            {/* Letter Header matching selected resume template */}
-            <div className="border-b border-slate-200 pb-4 mb-4 flex justify-between items-baseline">
+          <div className="space-y-6 text-sm sm:text-base leading-relaxed text-ink">
+            {/* Header: Sender Info & Date */}
+            <div className="border-b border-line pb-4 mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-2">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2
-                    className={`text-xl sm:text-2xl font-bold tracking-tight ${
-                      templateId === 'modern'
-                        ? 'text-indigo-900'
-                        : templateId === 'ats-friendly'
-                        ? 'text-blue-900'
-                        : templateId === 'classic'
-                        ? 'text-emerald-950 font-serif'
-                        : 'text-slate-950'
-                    }`}
-                  >
-                    {coverLetter.sender.fullName}
-                  </h2>
-                  <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-slate-100 text-slate-500 border border-slate-200">
-                    {templateId}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 mt-1">
-                  {[coverLetter.sender.email, coverLetter.sender.phone].filter(Boolean).join(' • ')}
+                <h2 className="text-2xl font-serif font-bold text-ink tracking-tight">
+                  {sanitizePreview(coverLetter.sender.fullName)}
+                </h2>
+                <p className="text-xs text-ink-2 mt-1">
+                  {[
+                    sanitizePreview(coverLetter.sender.email),
+                    sanitizePreview(coverLetter.sender.phone),
+                    sanitizePreview(coverLetter.sender.location),
+                  ]
+                    .filter(Boolean)
+                    .join(' • ')}
                 </p>
               </div>
-              <div className="text-xs text-slate-500 font-medium">
+              <div className="text-xs text-ink-3 font-mono">
                 {new Date().toLocaleDateString(
-                  docLang === 'ar' ? 'ar-EG' : docLang === 'fr' ? 'fr-FR' : docLang === 'de' ? 'de-DE' : docLang === 'es' ? 'es-ES' : docLang === 'tr' ? 'tr-TR' : 'en-US',
+                  coverLetter.language === 'ar'
+                    ? 'ar-EG'
+                    : coverLetter.language === 'fr'
+                    ? 'fr-FR'
+                    : coverLetter.language === 'de'
+                    ? 'de-DE'
+                    : coverLetter.language === 'es'
+                    ? 'es-ES'
+                    : coverLetter.language === 'tr'
+                    ? 'tr-TR'
+                    : 'en-US',
                   {
                     year: 'numeric',
                     month: 'long',
@@ -329,29 +517,45 @@ export function CoverLetterPreview({
               </div>
             </div>
 
-            {/* Recipient Box */}
-            <div className="text-xs sm:text-sm text-slate-700 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
-              <p className="font-bold text-slate-900">{coverLetter.recipient.hiringManager}</p>
-              <p className="text-slate-800">{coverLetter.recipient.companyName}</p>
-              <p className="text-slate-500 font-medium mt-0.5">
-                {docLang === 'ar'
-                  ? 'بخصوص وظيفة:'
-                  : docLang === 'fr'
-                  ? 'Objet : Poste de'
-                  : docLang === 'de'
-                  ? 'Betreff: Bewerbung als'
-                  : docLang === 'es'
-                  ? 'Asunto: Puesto de'
-                  : docLang === 'tr'
-                  ? 'Konu: Pozisyon:'
-                  : 'Re:'}{' '}
-                {coverLetter.recipient.jobTitle}
-              </p>
+            {/* Recipient Details */}
+            <div className="text-xs sm:text-sm text-ink-2 space-y-0.5">
+              {coverLetter.recipient.hiringManager && (
+                <p className="font-semibold text-ink">{sanitizePreview(coverLetter.recipient.hiringManager)}</p>
+              )}
+              {coverLetter.recipient.jobTitle && (
+                <p>{sanitizePreview(coverLetter.recipient.jobTitle)}</p>
+              )}
+              {coverLetter.recipient.companyName && (
+                <p className="font-medium text-ink">{sanitizePreview(coverLetter.recipient.companyName)}</p>
+              )}
             </div>
 
-            {/* Letter Body Text */}
-            <div className="pt-2 text-slate-800 leading-relaxed text-sm sm:text-base">
-              {CoverLetterService.cleanDisplayText(coverLetter.content.fullText)}
+            {/* Letter Subject */}
+            {coverLetter.content.subject && (
+              <div className="font-semibold text-ink text-sm sm:text-base pt-2">
+                <span className="text-ink-3 font-medium">{isAr ? 'الموضوع' : 'Subject'}: </span>
+                <span>{sanitizePreview(coverLetter.content.subject)}</span>
+              </div>
+            )}
+
+            {/* Main Letter Body */}
+            <div className="space-y-4 pt-2 whitespace-pre-line text-ink leading-relaxed">
+              {coverLetter.content.fullText ? (
+                sanitizePreview(coverLetter.content.fullText)
+              ) : (
+                <>
+                  <p className="font-semibold text-ink">{sanitizePreview(coverLetter.content.salutation)}</p>
+                  <p>{sanitizePreview(coverLetter.content.introduction)}</p>
+                  {coverLetter.content.bodyParagraphs?.map((para, i) => (
+                    <p key={i}>{sanitizePreview(para)}</p>
+                  ))}
+                  <p>{sanitizePreview(coverLetter.content.conclusion)}</p>
+                  <div className="pt-4 space-y-1">
+                    <p className="text-ink-2">{sanitizePreview(coverLetter.content.signOff)}</p>
+                    <p className="font-semibold text-ink">{sanitizePreview(coverLetter.sender.fullName)}</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

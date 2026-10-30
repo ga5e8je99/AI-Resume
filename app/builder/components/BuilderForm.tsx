@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ResumeData,
   PersonalInfo,
   ExperienceItem,
   EducationItem,
   ProjectItem,
+  LanguageItem,
 } from '../types';
 import {
   User,
@@ -15,6 +16,7 @@ import {
   FolderGit2,
   Sparkles,
   Award,
+  Languages as LanguagesIcon,
   Plus,
   Trash2,
   ChevronDown,
@@ -24,31 +26,178 @@ import {
   Lightbulb,
   Camera,
   Image as ImageIcon,
+  Check,
+  CheckCircle2,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink,
+  HelpCircle,
 } from 'lucide-react';
+import { SectionKey } from './BuilderSidebar';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface BuilderFormProps {
   data: ResumeData;
   onChange: (data: ResumeData) => void;
+  sectionOrder?: SectionKey[];
+  activeSection?: SectionKey;
+  onActiveSectionChange?: (section: SectionKey) => void;
 }
 
-export function BuilderForm({ data, onChange }: BuilderFormProps) {
+const ACTION_VERBS_EN = [
+  'Architected',
+  'Optimized',
+  'Spearheaded',
+  'Accelerated',
+  'Engineered',
+  'Delivered',
+  'Reduced',
+  'Scaled',
+];
+
+const ACTION_VERBS_AR = [
+  'طوّر',
+  'حسّن',
+  'قاد',
+  'صمم',
+  'قلّص',
+  'أطلق',
+  'سرّع',
+  'أدار',
+];
+
+const COMMON_LANGUAGES_EN = ['English', 'Arabic', 'French', 'German', 'Spanish', 'Turkish'];
+const COMMON_LANGUAGES_AR = ['الإنجليزية', 'العربية', 'الفرنسية', 'الألمانية', 'الإسبانية', 'التركية'];
+
+const PROFICIENCY_LEVELS_EN = [
+  { value: 'Native', label: 'Native / Bilingual' },
+  { value: 'Fluent', label: 'Fluent / Advanced' },
+  { value: 'Proficient', label: 'Proficient' },
+  { value: 'Intermediate', label: 'Intermediate' },
+  { value: 'Basic', label: 'Basic / Elementary' },
+];
+
+const PROFICIENCY_LEVELS_AR = [
+  { value: 'Native', label: 'اللغة الأم / ثنائي اللغة' },
+  { value: 'Fluent', label: 'طلاقة / متقدم' },
+  { value: 'Proficient', label: 'كفاءة مهنية' },
+  { value: 'Intermediate', label: 'متوسط' },
+  { value: 'Basic', label: 'مبتدئ / أساسي' },
+];
+
+export function BuilderForm({
+  data,
+  onChange,
+  sectionOrder = [
+    'personal',
+    'summary',
+    'experience',
+    'education',
+    'skills',
+    'projects',
+    'languages',
+    'certifications',
+  ],
+  activeSection,
+  onActiveSectionChange,
+}: BuilderFormProps) {
+  const { isRtl } = useLanguage();
+
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     personal: true,
     summary: true,
     experience: true,
-    education: false,
-    projects: false,
-    skills: false,
+    education: true,
+    skills: true,
+    projects: true,
+    languages: true,
     certifications: false,
   });
 
   const [newSkillInput, setNewSkillInput] = useState('');
   const [newCertInput, setNewCertInput] = useState('');
-  const photoInputRef = React.useRef<HTMLInputElement>(null);
+  const [newLangName, setNewLangName] = useState('');
+  const [newLangProficiency, setNewLangProficiency] = useState('Fluent');
+  const [isAtsTipsOpen, setIsAtsTipsOpen] = useState(false);
+
+  // Active focused bullet tracker for inserting verbs
+  const [activeExpBullet, setActiveExpBullet] = useState<{ expIdx: number; bIdx: number } | null>(null);
+
+  // Drag and drop states for items
+  const [draggedExpIndex, setDraggedExpIndex] = useState<number | null>(null);
+  const [draggedEduIndex, setDraggedEduIndex] = useState<number | null>(null);
+  const [draggedProjIndex, setDraggedProjIndex] = useState<number | null>(null);
+
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-open activeSection if set externally
+  useEffect(() => {
+    if (activeSection) {
+      setOpenSections((prev) => ({ ...prev, [activeSection]: true }));
+      const el = document.getElementById(`section-${activeSection}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [activeSection]);
 
   const toggleSection = (key: string) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  const handleSelectStep = (key: SectionKey) => {
+    setOpenSections((prev) => ({ ...prev, [key]: true }));
+    onActiveSectionChange?.(key);
+    const el = document.getElementById(`section-${key}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // --- Section Completion Status Calculations ---
+  const isPersonalComplete = Boolean(
+    data.personalInfo.fullName?.trim() && data.personalInfo.email?.trim()
+  );
+  const isSummaryComplete = Boolean((data.personalInfo.summary || '').trim().length >= 20);
+  const isExperienceComplete = Boolean(
+    data.experience?.length > 0 &&
+      data.experience.some((e) => e.company?.trim() || e.position?.trim())
+  );
+  const isEducationComplete = Boolean(
+    data.education?.length > 0 &&
+      data.education.some((e) => e.institution?.trim() || e.degree?.trim())
+  );
+  const isSkillsComplete = Boolean(data.skills?.length >= 3);
+  const isProjectsComplete = Boolean(
+    data.projects?.length > 0 && data.projects.some((p) => p.title?.trim())
+  );
+  const isLanguagesComplete = Boolean(data.languages && data.languages.length > 0);
+  const isCertificationsComplete = Boolean(data.certifications && data.certifications.length > 0);
+
+  const sectionStatus: Record<SectionKey, boolean> = {
+    personal: isPersonalComplete,
+    summary: isSummaryComplete,
+    experience: isExperienceComplete,
+    education: isEducationComplete,
+    skills: isSkillsComplete,
+    projects: isProjectsComplete,
+    languages: isLanguagesComplete,
+    certifications: isCertificationsComplete,
+  };
+
+  const coreSections: SectionKey[] = [
+    'personal',
+    'summary',
+    'experience',
+    'education',
+    'skills',
+    'projects',
+    'languages',
+  ];
+  const completedSectionsCount = coreSections.filter((s) => sectionStatus[s]).length;
+  const resumeScorePercentage = Math.round((completedSectionsCount / coreSections.length) * 100);
 
   // --- Photo Upload Handlers ---
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +243,7 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
   };
 
   // --- Personal Info updates ---
-  const updatePersonalInfo = (field: keyof PersonalInfo, value: string) => {
+  const updatePersonalInfo = (field: keyof PersonalInfo, value: any) => {
     onChange({
       ...data,
       personalInfo: {
@@ -118,8 +267,9 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
     };
     onChange({
       ...data,
-      experience: [...data.experience, newItem],
+      experience: [newItem, ...data.experience],
     });
+    setOpenSections((prev) => ({ ...prev, experience: true }));
   };
 
   const updateExperience = (
@@ -137,6 +287,15 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
       ...data,
       experience: data.experience.filter((_, i) => i !== index),
     });
+  };
+
+  const moveExperience = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= data.experience.length) return;
+    const updated = [...data.experience];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    onChange({ ...data, experience: updated });
   };
 
   const addExperienceBullet = (expIndex: number) => {
@@ -163,6 +322,19 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
     onChange({ ...data, experience: updated });
   };
 
+  const insertActionVerb = (verb: string) => {
+    if (activeExpBullet) {
+      const { expIdx, bIdx } = activeExpBullet;
+      const current = data.experience[expIdx]?.description[bIdx] || '';
+      const updatedText = current ? `${verb} ${current.replace(/^[a-zA-Z\u0600-\u06FF]+ /, '')}` : `${verb} `;
+      updateExperienceBullet(expIdx, bIdx, updatedText);
+    } else if (data.experience.length > 0) {
+      // Default to first experience item's first bullet
+      const current = data.experience[0].description[0] || '';
+      updateExperienceBullet(0, 0, `${verb} ${current}`);
+    }
+  };
+
   // --- Education Handlers ---
   const addEducation = () => {
     const newItem: EducationItem = {
@@ -174,7 +346,8 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
       endDate: '',
       gpa: '',
     };
-    onChange({ ...data, education: [...data.education, newItem] });
+    onChange({ ...data, education: [newItem, ...data.education] });
+    setOpenSections((prev) => ({ ...prev, education: true }));
   };
 
   const updateEducation = (
@@ -194,6 +367,15 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
     });
   };
 
+  const moveEducation = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= data.education.length) return;
+    const updated = [...data.education];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    onChange({ ...data, education: updated });
+  };
+
   // --- Projects Handlers ---
   const addProject = () => {
     const newItem: ProjectItem = {
@@ -203,7 +385,8 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
       link: '',
       description: [''],
     };
-    onChange({ ...data, projects: [...data.projects, newItem] });
+    onChange({ ...data, projects: [newItem, ...data.projects] });
+    setOpenSections((prev) => ({ ...prev, projects: true }));
   };
 
   const updateProject = (index: number, field: keyof ProjectItem, value: any) => {
@@ -217,6 +400,15 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
       ...data,
       projects: data.projects.filter((_, i) => i !== index),
     });
+  };
+
+  const moveProject = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= data.projects.length) return;
+    const updated = [...data.projects];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    onChange({ ...data, projects: updated });
   };
 
   const addProjectBullet = (projIndex: number) => {
@@ -246,14 +438,15 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
   // --- Skills Handlers ---
   const handleAddSkill = () => {
     if (!newSkillInput.trim()) return;
-    const splitSkills = newSkillInput
-      .split(',')
+    const rawSkills = newSkillInput
+      .split(/[,،]+/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0 && !data.skills.includes(s));
-    if (splitSkills.length > 0) {
+
+    if (rawSkills.length > 0) {
       onChange({
         ...data,
-        skills: [...data.skills, ...splitSkills],
+        skills: [...data.skills, ...rawSkills],
       });
     }
     setNewSkillInput('');
@@ -264,6 +457,51 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
       ...data,
       skills: data.skills.filter((s) => s !== skillToRemove),
     });
+  };
+
+  // --- Languages Handlers ---
+  const handleAddLanguage = (name?: string, proficiency?: string) => {
+    const langName = (name || newLangName).trim();
+    if (!langName) return;
+
+    const currentLangs = data.languages || [];
+    if (currentLangs.some((l) => l.name.toLowerCase() === langName.toLowerCase())) {
+      return;
+    }
+
+    const newLangItem: LanguageItem = {
+      id: Date.now().toString(),
+      name: langName,
+      proficiency: proficiency || newLangProficiency || 'Fluent',
+    };
+
+    onChange({
+      ...data,
+      languages: [...currentLangs, newLangItem],
+    });
+    setNewLangName('');
+  };
+
+  const handleUpdateLanguage = (index: number, field: keyof LanguageItem, val: string) => {
+    const currentLangs = [...(data.languages || [])];
+    if (!currentLangs[index]) return;
+    currentLangs[index] = { ...currentLangs[index], [field]: val };
+    onChange({ ...data, languages: currentLangs });
+  };
+
+  const handleRemoveLanguage = (index: number) => {
+    const currentLangs = [...(data.languages || [])];
+    currentLangs.splice(index, 1);
+    onChange({ ...data, languages: currentLangs });
+  };
+
+  const moveLanguage = (index: number, direction: -1 | 1) => {
+    const currentLangs = [...(data.languages || [])];
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= currentLangs.length) return;
+    const [moved] = currentLangs.splice(index, 1);
+    currentLangs.splice(targetIndex, 0, moved);
+    onChange({ ...data, languages: currentLangs });
   };
 
   // --- Certifications Handlers ---
@@ -283,874 +521,1539 @@ export function BuilderForm({ data, onChange }: BuilderFormProps) {
     });
   };
 
-  return (
-    <div className="space-y-4">
-      {/* ATS Tip Banner */}
-      <div className="bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-indigo-950/40 border border-cyan-800/40 rounded-xl p-3.5 flex items-start gap-3">
-        <Lightbulb className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-        <div className="text-xs text-slate-300 leading-relaxed">
-          <span className="font-semibold text-cyan-300">ATS Recommendation:</span>{' '}
-          Keep bullet points concise and action-oriented. Begin each with a strong action verb and highlight measurable outcomes (e.g., &ldquo;Increased conversion by 34%&rdquo;).
-        </div>
-      </div>
+  // --- Step Metadata for Navigation Bar ---
+  const stepNavItems: { key: SectionKey; labelEn: string; labelAr: string; icon: any }[] = [
+    { key: 'personal', labelEn: 'Personal', labelAr: 'البيانات', icon: User },
+    { key: 'summary', labelEn: 'Summary', labelAr: 'الملخص', icon: FileText },
+    { key: 'experience', labelEn: 'Experience', labelAr: 'الخبرات', icon: Briefcase },
+    { key: 'education', labelEn: 'Education', labelAr: 'التعليم', icon: GraduationCap },
+    { key: 'skills', labelEn: 'Skills', labelAr: 'المهارات', icon: Sparkles },
+    { key: 'projects', labelEn: 'Projects', labelAr: 'المشاريع', icon: FolderGit2 },
+    { key: 'languages', labelEn: 'Languages', labelAr: 'اللغات', icon: LanguagesIcon },
+    { key: 'certifications', labelEn: 'Certificates', labelAr: 'الشهادات', icon: Award },
+  ];
 
-      {/* 1. PERSONAL INFORMATION */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
-        <button
-          type="button"
-          onClick={() => toggleSection('personal')}
-          className="w-full flex items-center justify-between p-4 bg-slate-900/60 hover:bg-slate-800/50 text-left transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-              <User className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-100 text-sm">Personal Information</h3>
-              <p className="text-xs text-slate-400">Contact details, title, and links</p>
-            </div>
+  // Character counter for summary
+  const summaryLength = (data.personalInfo.summary || '').length;
+  const isSummaryOptimal = summaryLength >= 200 && summaryLength <= 400;
+
+  // --- Render Sections ---
+
+  const renderPersonalSection = () => (
+    <div
+      key="personal"
+      id="section-personal"
+      className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs transition-all"
+    >
+      <button
+        type="button"
+        onClick={() => toggleSection('personal')}
+        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            isPersonalComplete ? 'bg-success/15 text-success' : 'bg-brand/10 text-brand'
+          }`}>
+            <User className="w-4 h-4" strokeWidth={1.75} />
           </div>
-          {openSections.personal ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          )}
-        </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm">
+                {isRtl ? 'البيانات الشخصية ومعلومات الاتصال' : 'Personal Information'}
+              </h3>
+              {isPersonalComplete && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success bg-success/10 px-1.5 py-0.2 rounded-full">
+                  <Check className="w-3 h-3" />
+                  <span>{isRtl ? 'مكتمل' : 'Complete'}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted">
+              {isRtl ? 'الاسم، المسمى الوظيفي، البريد، الروابط' : 'Full name, job title, email, phone & links'}
+            </p>
+          </div>
+        </div>
+        {openSections.personal ? (
+          <ChevronUp className="w-4 h-4 text-text-muted" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-text-muted" />
+        )}
+      </button>
 
-        {openSections.personal && (
-          <div className="p-4 pt-2 border-t border-slate-800/80 space-y-3">
-            {/* Profile Photo Uploader */}
-            <div className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-              <div className="flex items-center gap-3.5">
-                <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-900 border border-slate-700/80 flex items-center justify-center shrink-0">
-                  {data.personalInfo.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={data.personalInfo.photoUrl}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <ImageIcon className="w-6 h-6 text-slate-500" />
-                  )}
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-200">
-                    Profile Photo (Optional)
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    Popular for Middle East & European CVs.
-                  </p>
-                  <label className="inline-flex items-center gap-1.5 mt-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(data.personalInfo.showPhoto)}
-                      onChange={(e) => handleToggleShowPhoto(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0"
-                    />
-                    <span className="text-[11px] font-medium text-cyan-300">
-                      Show photo on resume
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  ref={photoInputRef}
-                  onChange={handlePhotoUpload}
-                  accept="image/*"
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition-colors flex items-center gap-1.5"
-                >
-                  <Camera className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>{data.personalInfo.photoUrl ? 'Change Photo' : 'Upload Photo'}</span>
-                </button>
-                {data.personalInfo.photoUrl && (
-                  <button
-                    type="button"
-                    onClick={handleRemovePhoto}
-                    className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                    title="Remove Photo"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+      {openSections.personal && (
+        <div className="p-4 pt-2 border-t border-line space-y-4">
+          {/* Profile Photo Uploader */}
+          <div className="p-3.5 bg-surface-2/50 border border-line rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-surface border border-line flex items-center justify-center shrink-0 shadow-xs">
+                {data.personalInfo.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={data.personalInfo.photoUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <ImageIcon className="w-5 h-5 text-text-muted" strokeWidth={1.5} />
                 )}
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  value={data.personalInfo.fullName}
-                  onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Target Job Title *
-                </label>
-                <input
-                  type="text"
-                  value={data.personalInfo.jobTitle}
-                  onChange={(e) => updatePersonalInfo('jobTitle', e.target.value)}
-                  placeholder="e.g. Senior Full-Stack Engineer"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  value={data.personalInfo.email}
-                  onChange={(e) => updatePersonalInfo('email', e.target.value)}
-                  placeholder="e.g. john@example.com"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={data.personalInfo.phone}
-                  onChange={(e) => updatePersonalInfo('phone', e.target.value)}
-                  placeholder="e.g. +1 (555) 123-4567"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Location (City, Country)
-                </label>
-                <input
-                  type="text"
-                  value={data.personalInfo.location}
-                  onChange={(e) => updatePersonalInfo('location', e.target.value)}
-                  placeholder="e.g. San Francisco, CA"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Portfolio / Website
-                </label>
-                <input
-                  type="text"
-                  value={data.personalInfo.website}
-                  onChange={(e) => updatePersonalInfo('website', e.target.value)}
-                  placeholder="e.g. johndoe.dev"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  LinkedIn Profile
-                </label>
-                <input
-                  type="text"
-                  value={data.personalInfo.linkedin}
-                  onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
-                  placeholder="e.g. linkedin.com/in/johndoe"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  GitHub Profile
-                </label>
-                <input
-                  type="text"
-                  value={data.personalInfo.github}
-                  onChange={(e) => updatePersonalInfo('github', e.target.value)}
-                  placeholder="e.g. github.com/johndoe"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 2. PROFESSIONAL SUMMARY */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
-        <button
-          type="button"
-          onClick={() => toggleSection('summary')}
-          className="w-full flex items-center justify-between p-4 bg-slate-900/60 hover:bg-slate-800/50 text-left transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-100 text-sm">Professional Summary</h3>
-              <p className="text-xs text-slate-400">A 2-4 sentence career overview</p>
-            </div>
-          </div>
-          {openSections.summary ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          )}
-        </button>
-
-        {openSections.summary && (
-          <div className="p-4 pt-2 border-t border-slate-800/80">
-            <textarea
-              rows={4}
-              value={data.personalInfo.summary}
-              onChange={(e) => updatePersonalInfo('summary', e.target.value)}
-              placeholder="Results-oriented Software Engineer with 5+ years of experience building performant web applications..."
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors leading-relaxed"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* 3. WORK EXPERIENCE */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
-        <button
-          type="button"
-          onClick={() => toggleSection('experience')}
-          className="w-full flex items-center justify-between p-4 bg-slate-900/60 hover:bg-slate-800/50 text-left transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <Briefcase className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-100 text-sm">Work Experience</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                  {data.experience.length}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">Past roles, achievements & metrics</p>
-            </div>
-          </div>
-          {openSections.experience ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          )}
-        </button>
-
-        {openSections.experience && (
-          <div className="p-4 pt-2 border-t border-slate-800/80 space-y-5">
-            {data.experience.map((exp, expIdx) => (
-              <div
-                key={exp.id || expIdx}
-                className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-lg space-y-3 relative group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-cyan-400">
-                    Position #{expIdx + 1}
+                <div className="text-xs font-semibold text-text-primary">
+                  {isRtl ? 'الصورة الشخصية (اختيارية)' : 'Profile Photograph (Optional)'}
+                </div>
+                <label className="inline-flex items-center gap-1.5 mt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(data.personalInfo.showPhoto)}
+                    onChange={(e) => handleToggleShowPhoto(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-line text-brand focus:ring-brand"
+                  />
+                  <span className="text-xs text-text-secondary">
+                    {isRtl ? 'إظهار الصورة في السيرة الذاتية' : 'Show photo on printable resume'}
                   </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                ref={photoInputRef}
+                onChange={handlePhotoUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="px-3 py-1.5 bg-surface hover:bg-surface-2 text-text-primary text-xs font-medium rounded-md border border-line transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Camera className="w-3.5 h-3.5 text-brand" strokeWidth={1.5} />
+                <span>{data.personalInfo.photoUrl ? (isRtl ? 'تغيير' : 'Change') : (isRtl ? 'رفع صورة' : 'Upload photo')}</span>
+              </button>
+              {data.personalInfo.photoUrl && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 rounded-md transition-colors cursor-pointer"
+                  title="Remove photo"
+                >
+                  <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-semibold text-text-primary mb-1">
+                {isRtl ? 'الاسم الكامل *' : 'Full Name *'}
+              </label>
+              <input
+                type="text"
+                value={data.personalInfo.fullName}
+                onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
+                placeholder={isRtl ? 'مثال: أحمد عبد الله' : 'e.g. Alex Morgan'}
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-primary mb-1">
+                {isRtl ? 'المسمى الوظيفي المستهدف *' : 'Target Job Title *'}
+              </label>
+              <input
+                type="text"
+                value={data.personalInfo.jobTitle}
+                onChange={(e) => updatePersonalInfo('jobTitle', e.target.value)}
+                placeholder={isRtl ? 'مثال: مهندس برمجيات أول' : 'e.g. Senior Full-Stack Engineer'}
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-primary mb-1">
+                {isRtl ? 'البريد الإلكتروني *' : 'Email Address *'}
+              </label>
+              <input
+                type="email"
+                value={data.personalInfo.email}
+                onChange={(e) => updatePersonalInfo('email', e.target.value)}
+                placeholder="alex.morgan@email.com"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-primary mb-1">
+                {isRtl ? 'رقم الهاتف' : 'Phone Number'}
+              </label>
+              <input
+                type="tel"
+                value={data.personalInfo.phone}
+                onChange={(e) => updatePersonalInfo('phone', e.target.value)}
+                placeholder="+1 (555) 349-2041"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-primary mb-1">
+                {isRtl ? 'الموقع الجغرافي (المدينة، الدولة)' : 'Location (City, Country)'}
+              </label>
+              <input
+                type="text"
+                value={data.personalInfo.location}
+                onChange={(e) => updatePersonalInfo('location', e.target.value)}
+                placeholder={isRtl ? 'الرياض، المملكة العربية السعودية' : 'San Francisco, CA'}
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-primary mb-1">
+                {isRtl ? 'الموقع الشخصي / المعرض' : 'Portfolio / Website'}
+              </label>
+              <input
+                type="text"
+                value={data.personalInfo.website}
+                onChange={(e) => updatePersonalInfo('website', e.target.value)}
+                placeholder="https://alexmorgan.dev"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-primary mb-1">
+                {isRtl ? 'حساب لينكد إن (LinkedIn)' : 'LinkedIn Profile'}
+              </label>
+              <input
+                type="text"
+                value={data.personalInfo.linkedin}
+                onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
+                placeholder="linkedin.com/in/alexmorgan"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-primary mb-1">
+                {isRtl ? 'حساب غيت هاب (GitHub)' : 'GitHub Profile'}
+              </label>
+              <input
+                type="text"
+                value={data.personalInfo.github}
+                onChange={(e) => updatePersonalInfo('github', e.target.value)}
+                placeholder="github.com/alexmorgan"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderSummarySection = () => (
+    <div
+      key="summary"
+      id="section-summary"
+      className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs transition-all"
+    >
+      <button
+        type="button"
+        onClick={() => toggleSection('summary')}
+        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            isSummaryComplete ? 'bg-success/15 text-success' : 'bg-brand/10 text-brand'
+          }`}>
+            <FileText className="w-4 h-4" strokeWidth={1.75} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm">
+                {isRtl ? 'الملخص والنبذة المهنية' : 'Professional Summary'}
+              </h3>
+              {isSummaryComplete && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success bg-success/10 px-1.5 py-0.2 rounded-full">
+                  <Check className="w-3 h-3" />
+                  <span>{isRtl ? 'مكتمل' : 'Complete'}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted">
+              {isRtl ? 'نظرة عامة موجزة من 2-4 جمل عن خبراتك' : 'A 2-4 sentence executive elevator pitch'}
+            </p>
+          </div>
+        </div>
+        {openSections.summary ? (
+          <ChevronUp className="w-4 h-4 text-text-muted" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-text-muted" />
+        )}
+      </button>
+
+      {openSections.summary && (
+        <div className="p-4 pt-2 border-t border-line space-y-3">
+          <textarea
+            rows={4}
+            value={data.personalInfo.summary}
+            onChange={(e) => updatePersonalInfo('summary', e.target.value)}
+            placeholder={
+              isRtl
+                ? 'مهندس برمجيات ذو خبرة 5+ سنوات في تصميم وتطوير الأنظمة السحابية والواجهات التفاعلية...'
+                : 'Results-driven Software Engineer with 5+ years of experience designing scalable web applications and cloud architectures...'
+            }
+            className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand leading-relaxed"
+          />
+
+          {/* Character counter & inline helper */}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
+            <div className="flex items-center gap-2">
+              <span className={`font-mono text-xs font-medium ${
+                isSummaryOptimal ? 'text-success' : summaryLength > 400 ? 'text-warning' : 'text-text-muted'
+              }`}>
+                {summaryLength} / 400 {isRtl ? 'حرف' : 'characters'}
+              </span>
+              <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                isSummaryOptimal
+                  ? 'bg-success/10 text-success'
+                  : summaryLength > 400
+                  ? 'bg-warning/10 text-warning'
+                  : 'bg-surface-2 text-text-muted'
+              }`}>
+                {summaryLength === 0
+                  ? isRtl ? 'فارغ' : 'Empty'
+                  : isSummaryOptimal
+                  ? isRtl ? '✓ الطول المثالي لأنظمة ATS' : '✓ Optimal ATS length'
+                  : summaryLength < 200
+                  ? isRtl ? 'قصير نسبياً – يُفضل التوسّع' : 'Brief – expand with key metrics'
+                  : isRtl ? 'طويل – اختصر لصفحة واحدة' : 'Consider condensing'}
+              </span>
+            </div>
+            <p className="text-[11px] text-text-muted">
+              {isRtl ? 'الموصى به لأنظمة ATS: من 200 إلى 400 حرف' : 'Recommended for ATS: 200–400 chars'}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderExperienceSection = () => (
+    <div
+      key="experience"
+      id="section-experience"
+      className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs transition-all"
+    >
+      <button
+        type="button"
+        onClick={() => toggleSection('experience')}
+        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            isExperienceComplete ? 'bg-success/15 text-success' : 'bg-brand/10 text-brand'
+          }`}>
+            <Briefcase className="w-4 h-4" strokeWidth={1.75} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm">
+                {isRtl ? 'الخبرات المهنية وسجل العمل' : 'Work Experience'}
+              </h3>
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+                {data.experience.length}
+              </span>
+              {isExperienceComplete && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success bg-success/10 px-1.5 py-0.2 rounded-full">
+                  <Check className="w-3 h-3" />
+                  <span>{isRtl ? 'مكتمل' : 'Complete'}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted">
+              {isRtl ? 'الأدوار السابقة، الإنجازات والأرقام القياسية' : 'Past roles, quantifiable impact & metrics'}
+            </p>
+          </div>
+        </div>
+        {openSections.experience ? (
+          <ChevronUp className="w-4 h-4 text-text-muted" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-text-muted" />
+        )}
+      </button>
+
+      {openSections.experience && (
+        <div className="p-4 pt-2 border-t border-line space-y-4">
+          {/* Action Verbs Helper Bar */}
+          <div className="p-3 bg-surface-2/60 border border-line rounded-lg space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
+              <Lightbulb className="w-3.5 h-3.5 text-brand shrink-0" />
+              <span>
+                {isRtl
+                  ? '💡 نصيحة ATS: ابدأ كل نقطة بفعل إنجاز قوي وأرفقه بنسبة مئوية أو أرقام:'
+                  : '💡 ATS Pro-Tip: Start bullets with a power action verb and include metrics:'}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(isRtl ? ACTION_VERBS_AR : ACTION_VERBS_EN).map((verb) => (
+                <button
+                  key={verb}
+                  type="button"
+                  onClick={() => insertActionVerb(verb)}
+                  className="px-2 py-0.5 rounded-md bg-surface border border-line hover:border-brand text-[11px] font-medium text-text-primary hover:text-brand transition-colors cursor-pointer"
+                  title={isRtl ? `إدراج الفعل "${verb}"` : `Insert action verb "${verb}"`}
+                >
+                  + {verb}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* List of Experience Items */}
+          {data.experience.map((exp, expIdx) => (
+            <div
+              key={exp.id || expIdx}
+              draggable
+              onDragStart={() => setDraggedExpIndex(expIdx)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (draggedExpIndex === null || draggedExpIndex === expIdx) return;
+                const updated = [...data.experience];
+                const [moved] = updated.splice(draggedExpIndex, 1);
+                updated.splice(expIdx, 0, moved);
+                setDraggedExpIndex(expIdx);
+                onChange({ ...data, experience: updated });
+              }}
+              onDragEnd={() => setDraggedExpIndex(null)}
+              className="p-4 bg-surface-2/30 border border-line hover:border-line-strong rounded-xl space-y-3.5 relative transition-all duration-200"
+            >
+              {/* Header with Drag Handle, Order Controls & Delete */}
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-line">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="p-1 text-text-muted hover:text-text-primary cursor-grab active:cursor-grabbing"
+                    title={isRtl ? 'اسحب لإعادة الترتيب' : 'Drag to reorder'}
+                  >
+                    <GripVertical className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-semibold text-brand font-mono">
+                    #{expIdx + 1} {exp.position || (isRtl ? 'وظيفة جديدة' : 'New Role')}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {/* Up / Down buttons as accessible reordering */}
+                  <button
+                    type="button"
+                    onClick={() => moveExperience(expIdx, -1)}
+                    disabled={expIdx === 0}
+                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title={isRtl ? 'تحريك للأعلى' : 'Move up'}
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveExperience(expIdx, 1)}
+                    disabled={expIdx === data.experience.length - 1}
+                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title={isRtl ? 'تحريك للأسفل' : 'Move down'}
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+
+                  <div className="w-px h-3.5 bg-line mx-1" />
+
                   <button
                     type="button"
                     onClick={() => removeExperience(expIdx)}
-                    className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                    title="Delete Position"
+                    className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
+                    title={isRtl ? 'حذف هذه الوظيفة' : 'Delete role'}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                    {isRtl ? 'المسمى الوظيفي' : 'Job Title'}
+                  </label>
+                  <input
+                    type="text"
+                    value={exp.position}
+                    onChange={(e) => updateExperience(expIdx, 'position', e.target.value)}
+                    placeholder={isRtl ? 'مهندس برمجيات أول' : 'Senior Full-Stack Engineer'}
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                    {isRtl ? 'اسم الشركة أو المنظمة' : 'Company Name'}
+                  </label>
+                  <input
+                    type="text"
+                    value={exp.company}
+                    onChange={(e) => updateExperience(expIdx, 'company', e.target.value)}
+                    placeholder="TechNova Solutions"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                    {isRtl ? 'موقع العمل (مدينة أو عن بعد)' : 'Location'}
+                  </label>
+                  <input
+                    type="text"
+                    value={exp.location}
+                    onChange={(e) => updateExperience(expIdx, 'location', e.target.value)}
+                    placeholder={isRtl ? 'الرياض (أو عن بُعد)' : 'San Francisco, CA (or Remote)'}
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                      Job Title
+                    <label className="block text-xs font-semibold text-text-primary mb-1">
+                      {isRtl ? 'تاريخ البدء' : 'Start Date'}
                     </label>
                     <input
                       type="text"
-                      value={exp.position}
-                      onChange={(e) => updateExperience(expIdx, 'position', e.target.value)}
-                      placeholder="Senior Full Stack Engineer"
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
+                      value={exp.startDate}
+                      onChange={(e) => updateExperience(expIdx, 'startDate', e.target.value)}
+                      placeholder="2023-01"
+                      className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                      Company
+                    <label className="block text-xs font-semibold text-text-primary mb-1">
+                      {isRtl ? 'تاريخ الانتهاء' : 'End Date'}
                     </label>
                     <input
                       type="text"
-                      value={exp.company}
-                      onChange={(e) => updateExperience(expIdx, 'company', e.target.value)}
-                      placeholder="TechCorp Inc."
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
+                      disabled={exp.current}
+                      value={exp.current ? (isRtl ? 'حتى الآن' : 'Present') : exp.endDate}
+                      onChange={(e) => updateExperience(expIdx, 'endDate', e.target.value)}
+                      placeholder={isRtl ? 'حتى الآن' : 'Present'}
+                      className={`w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand ${
+                        exp.current ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      value={exp.location}
-                      onChange={(e) => updateExperience(expIdx, 'location', e.target.value)}
-                      placeholder="San Francisco, CA (or Remote)"
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                        Start Date
-                      </label>
-                      <input
-                        type="text"
-                        value={exp.startDate}
-                        onChange={(e) => updateExperience(expIdx, 'startDate', e.target.value)}
-                        placeholder="Jan 2022"
-                        className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                        End Date
-                      </label>
-                      <input
-                        type="text"
-                        disabled={exp.current}
-                        value={exp.current ? 'Present' : exp.endDate}
-                        onChange={(e) => updateExperience(expIdx, 'endDate', e.target.value)}
-                        placeholder="Present"
-                        className={`w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 ${
-                          exp.current ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      />
-                    </div>
                   </div>
                 </div>
+              </div>
 
-                <label className="inline-flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={exp.current}
-                    onChange={(e) => updateExperience(expIdx, 'current', e.target.checked)}
-                    className="w-3.5 h-3.5 rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0 focus:ring-offset-0"
-                  />
-                  <span>I currently work here</span>
+              <label className="inline-flex items-center gap-2 cursor-pointer text-xs text-text-secondary">
+                <input
+                  type="checkbox"
+                  checked={exp.current}
+                  onChange={(e) => updateExperience(expIdx, 'current', e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-line text-brand focus:ring-brand"
+                />
+                <span>{isRtl ? 'أعمل هنا حالياً' : 'I currently work here'}</span>
+              </label>
+
+              {/* Bullet Points with Action Verb Insertion */}
+              <div className="space-y-2 pt-2 border-t border-line">
+                <label className="block text-xs font-semibold text-text-primary">
+                  {isRtl ? 'أبرز الإنجازات والمسؤوليات (نقاط نقطية)' : 'Key Achievements & Measurable Responsibilities'}
                 </label>
+                {exp.description.map((bullet, bIdx) => (
+                  <div key={bIdx} className="flex items-start gap-2">
+                    <span className="text-brand text-xs mt-2">•</span>
+                    <textarea
+                      rows={2}
+                      value={bullet}
+                      onFocus={() => setActiveExpBullet({ expIdx, bIdx })}
+                      onChange={(e) => updateExperienceBullet(expIdx, bIdx, e.target.value)}
+                      placeholder={
+                        isRtl
+                          ? 'قاد فريقاً مكوناً من 6 مهندسين وطوّر منصة رقمية خفضت وقت التحميل بنسبة 35%...'
+                          : 'Architected and deployed high-performance platforms, decreasing latency by 42%...'
+                      }
+                      className="flex-1 px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand leading-relaxed"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeExperienceBullet(expIdx, bIdx)}
+                      disabled={exp.description.length <= 1}
+                      className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors mt-1 cursor-pointer"
+                      title={isRtl ? 'حذف النقطة' : 'Remove bullet'}
+                    >
+                      <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                ))}
 
-                {/* Bullet Points */}
-                <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <label className="block text-[11px] font-medium text-slate-400">
-                    Key Achievements & Responsibilities (Bullet Points)
-                  </label>
-                  {exp.description.map((bullet, bIdx) => (
-                    <div key={bIdx} className="flex items-start gap-2">
-                      <span className="text-cyan-400 text-xs mt-2">•</span>
-                      <textarea
-                        rows={2}
-                        value={bullet}
-                        onChange={(e) => updateExperienceBullet(expIdx, bIdx, e.target.value)}
-                        placeholder="Architected and deployed scalable microservices reducing p99 latency by 45%..."
-                        className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 leading-relaxed"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeExperienceBullet(expIdx, bIdx)}
-                        disabled={exp.description.length <= 1}
-                        className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors mt-1"
-                        title="Remove bullet"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                <button
+                  type="button"
+                  onClick={() => addExperienceBullet(expIdx)}
+                  className="inline-flex items-center gap-1.5 text-xs text-brand hover:opacity-80 font-medium py-1 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>{isRtl ? 'إضافة نقطة إنجاز' : 'Add bullet point'}</span>
+                </button>
+              </div>
+            </div>
+          ))}
 
+          <button
+            type="button"
+            onClick={addExperience}
+            className="w-full py-2.5 px-3 border border-dashed border-line hover:border-brand rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary flex items-center justify-center gap-2 hover:bg-surface-2 transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-brand" strokeWidth={1.75} />
+            <span>{isRtl ? 'إضافة خبرة مهنية جديدة' : 'Add Work Experience'}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderEducationSection = () => (
+    <div
+      key="education"
+      id="section-education"
+      className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs transition-all"
+    >
+      <button
+        type="button"
+        onClick={() => toggleSection('education')}
+        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            isEducationComplete ? 'bg-success/15 text-success' : 'bg-brand/10 text-brand'
+          }`}>
+            <GraduationCap className="w-4 h-4" strokeWidth={1.75} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm">
+                {isRtl ? 'التعليم والمؤهلات الأكاديمية' : 'Education'}
+              </h3>
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+                {data.education.length}
+              </span>
+              {isEducationComplete && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success bg-success/10 px-1.5 py-0.2 rounded-full">
+                  <Check className="w-3 h-3" />
+                  <span>{isRtl ? 'مكتمل' : 'Complete'}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted">
+              {isRtl ? 'الدرجات العلمية، الجامعات، والتقدير' : 'Degrees, universities, dates & GPA'}
+            </p>
+          </div>
+        </div>
+        {openSections.education ? (
+          <ChevronUp className="w-4 h-4 text-text-muted" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-text-muted" />
+        )}
+      </button>
+
+      {openSections.education && (
+        <div className="p-4 pt-2 border-t border-line space-y-4">
+          {data.education.map((edu, eduIdx) => (
+            <div
+              key={edu.id || eduIdx}
+              draggable
+              onDragStart={() => setDraggedEduIndex(eduIdx)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (draggedEduIndex === null || draggedEduIndex === eduIdx) return;
+                const updated = [...data.education];
+                const [moved] = updated.splice(draggedEduIndex, 1);
+                updated.splice(eduIdx, 0, moved);
+                setDraggedEduIndex(eduIdx);
+                onChange({ ...data, education: updated });
+              }}
+              onDragEnd={() => setDraggedEduIndex(null)}
+              className="p-4 bg-surface-2/30 border border-line hover:border-line-strong rounded-xl space-y-3 relative transition-all duration-200"
+            >
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-line">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="p-1 text-text-muted hover:text-text-primary cursor-grab active:cursor-grabbing"
+                    title={isRtl ? 'اسحب لإعادة الترتيب' : 'Drag to reorder'}
+                  >
+                    <GripVertical className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-semibold text-brand font-mono">
+                    #{eduIdx + 1} {edu.degree || (isRtl ? 'مؤهل جديد' : 'New Degree')}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => addExperienceBullet(expIdx)}
-                    className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 py-1 transition-colors"
+                    onClick={() => moveEducation(eduIdx, -1)}
+                    disabled={eduIdx === 0}
+                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title={isRtl ? 'تحريك للأعلى' : 'Move up'}
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add bullet point</span>
+                    <ArrowUp className="w-3.5 h-3.5" />
                   </button>
-                </div>
-              </div>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => moveEducation(eduIdx, 1)}
+                    disabled={eduIdx === data.education.length - 1}
+                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title={isRtl ? 'تحريك للأسفل' : 'Move down'}
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
 
-            <button
-              type="button"
-              onClick={addExperience}
-              className="w-full py-2.5 px-3 border border-dashed border-slate-700 hover:border-cyan-500/60 rounded-lg text-xs font-medium text-slate-300 hover:text-cyan-400 flex items-center justify-center gap-2 hover:bg-slate-800/30 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Another Experience</span>
-            </button>
-          </div>
-        )}
-      </div>
+                  <div className="w-px h-3.5 bg-line mx-1" />
 
-      {/* 4. EDUCATION */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
-        <button
-          type="button"
-          onClick={() => toggleSection('education')}
-          className="w-full flex items-center justify-between p-4 bg-slate-900/60 hover:bg-slate-800/50 text-left transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <GraduationCap className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-100 text-sm">Education</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                  {data.education.length}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">Degrees, colleges, and certifications</p>
-            </div>
-          </div>
-          {openSections.education ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          )}
-        </button>
-
-        {openSections.education && (
-          <div className="p-4 pt-2 border-t border-slate-800/80 space-y-4">
-            {data.education.map((edu, eduIdx) => (
-              <div
-                key={edu.id || eduIdx}
-                className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-lg space-y-3 relative group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-amber-400">
-                    Education #{eduIdx + 1}
-                  </span>
                   <button
                     type="button"
                     onClick={() => removeEducation(eduIdx)}
-                    className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                    title="Delete Education"
+                    className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
+                    title={isRtl ? 'حذف هذا المؤهل' : 'Delete education'}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                      Degree
-                    </label>
-                    <input
-                      type="text"
-                      value={edu.degree}
-                      onChange={(e) => updateEducation(eduIdx, 'degree', e.target.value)}
-                      placeholder="Bachelor of Science"
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                      Field of Study
-                    </label>
-                    <input
-                      type="text"
-                      value={edu.fieldOfStudy}
-                      onChange={(e) => updateEducation(eduIdx, 'fieldOfStudy', e.target.value)}
-                      placeholder="Computer Science"
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                      Institution / University
-                    </label>
-                    <input
-                      type="text"
-                      value={edu.institution}
-                      onChange={(e) => updateEducation(eduIdx, 'institution', e.target.value)}
-                      placeholder="Stanford University"
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                        Start Year
-                      </label>
-                      <input
-                        type="text"
-                        value={edu.startDate}
-                        onChange={(e) => updateEducation(eduIdx, 'startDate', e.target.value)}
-                        placeholder="2016"
-                        className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                        End / Grad Year
-                      </label>
-                      <input
-                        type="text"
-                        value={edu.endDate}
-                        onChange={(e) => updateEducation(eduIdx, 'endDate', e.target.value)}
-                        placeholder="2020"
-                        className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                    GPA / Honors (Optional)
+                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                    {isRtl ? 'الدرجة العلمية' : 'Degree'}
                   </label>
                   <input
                     type="text"
-                    value={edu.gpa || ''}
-                    onChange={(e) => updateEducation(eduIdx, 'gpa', e.target.value)}
-                    placeholder="GPA: 3.9/4.0 • Magna Cum Laude"
-                    className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-500"
+                    value={edu.degree}
+                    onChange={(e) => updateEducation(eduIdx, 'degree', e.target.value)}
+                    placeholder={isRtl ? 'بكالوريوس' : 'Bachelor of Science'}
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                    {isRtl ? 'التخصص الدراسي' : 'Field of Study'}
+                  </label>
+                  <input
+                    type="text"
+                    value={edu.fieldOfStudy}
+                    onChange={(e) => updateEducation(eduIdx, 'fieldOfStudy', e.target.value)}
+                    placeholder={isRtl ? 'علوم الحاسب' : 'Computer Science'}
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                    {isRtl ? 'الجامعة أو المعهد' : 'Institution / University'}
+                  </label>
+                  <input
+                    type="text"
+                    value={edu.institution}
+                    onChange={(e) => updateEducation(eduIdx, 'institution', e.target.value)}
+                    placeholder="University of California, Berkeley"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-text-primary mb-1">
+                      {isRtl ? 'سنة البدء' : 'Start Year'}
+                    </label>
+                    <input
+                      type="text"
+                      value={edu.startDate}
+                      onChange={(e) => updateEducation(eduIdx, 'startDate', e.target.value)}
+                      placeholder="2017"
+                      className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-text-primary mb-1">
+                      {isRtl ? 'سنة التخرج' : 'Grad Year'}
+                    </label>
+                    <input
+                      type="text"
+                      value={edu.endDate}
+                      onChange={(e) => updateEducation(eduIdx, 'endDate', e.target.value)}
+                      placeholder="2021"
+                      className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    />
+                  </div>
+                </div>
               </div>
-            ))}
 
+              <div>
+                <label className="block text-xs font-semibold text-text-primary mb-1">
+                  {isRtl ? 'المعدل التراكمي / مرتبة الشرف (اختياري)' : 'GPA / Honors (Optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={edu.gpa || ''}
+                  onChange={(e) => updateEducation(eduIdx, 'gpa', e.target.value)}
+                  placeholder="3.85 / 4.0 • Magna Cum Laude"
+                  className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                />
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addEducation}
+            className="w-full py-2.5 px-3 border border-dashed border-line hover:border-brand rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary flex items-center justify-center gap-2 hover:bg-surface-2 transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-brand" strokeWidth={1.75} />
+            <span>{isRtl ? 'إضافة مؤهل دراسي جديد' : 'Add Education Entry'}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderSkillsSection = () => (
+    <div
+      key="skills"
+      id="section-skills"
+      className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs transition-all"
+    >
+      <button
+        type="button"
+        onClick={() => toggleSection('skills')}
+        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            isSkillsComplete ? 'bg-success/15 text-success' : 'bg-brand/10 text-brand'
+          }`}>
+            <Sparkles className="w-4 h-4" strokeWidth={1.75} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm">
+                {isRtl ? 'المهارات والتقنيات' : 'Skills & Proficiencies'}
+              </h3>
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+                {data.skills.length}
+              </span>
+              {isSkillsComplete && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success bg-success/10 px-1.5 py-0.2 rounded-full">
+                  <Check className="w-3 h-3" />
+                  <span>{isRtl ? 'مكتمل' : 'Complete'}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted">
+              {isRtl ? 'لغات البرمجة، أطر العمل، والمهارات الصلبة' : 'Key hard skills and tools matching job posts'}
+            </p>
+          </div>
+        </div>
+        {openSections.skills ? (
+          <ChevronUp className="w-4 h-4 text-text-muted" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-text-muted" />
+        )}
+      </button>
+
+      {openSections.skills && (
+        <div className="p-4 pt-2 border-t border-line space-y-3.5">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newSkillInput}
+              onChange={(e) => setNewSkillInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddSkill();
+                }
+              }}
+              placeholder={
+                isRtl
+                  ? 'أدخل مهارة أو افصل بينها بفاصلة (مثال: React, TypeScript, Python)'
+                  : 'Type a skill or comma-separated list (e.g. React, TypeScript, Docker)'
+              }
+              className="flex-1 px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+            />
             <button
               type="button"
-              onClick={addEducation}
-              className="w-full py-2.5 px-3 border border-dashed border-slate-700 hover:border-amber-500/60 rounded-lg text-xs font-medium text-slate-300 hover:text-amber-400 flex items-center justify-center gap-2 hover:bg-slate-800/30 transition-all"
+              onClick={handleAddSkill}
+              className="px-4 py-2 bg-brand hover:opacity-90 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add Another Education</span>
+              <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>{isRtl ? 'إضافة' : 'Add'}</span>
             </button>
           </div>
-        )}
-      </div>
 
-      {/* 5. PROJECTS */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
-        <button
-          type="button"
-          onClick={() => toggleSection('projects')}
-          className="w-full flex items-center justify-between p-4 bg-slate-900/60 hover:bg-slate-800/50 text-left transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
-              <FolderGit2 className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-100 text-sm">Projects</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                  {data.projects.length}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">Key open-source & portfolio builds</p>
-            </div>
-          </div>
-          {openSections.projects ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          )}
-        </button>
-
-        {openSections.projects && (
-          <div className="p-4 pt-2 border-t border-slate-800/80 space-y-4">
-            {data.projects.map((proj, projIdx) => (
-              <div
-                key={proj.id || projIdx}
-                className="p-3.5 bg-slate-950/70 border border-slate-800 rounded-lg space-y-3 relative group"
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {data.skills.map((skill, sIdx) => (
+              <span
+                key={sIdx}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-2 border border-line rounded-md text-xs font-medium text-text-primary transition-all hover:border-brand/40"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-pink-400">
-                    Project #{projIdx + 1}
+                <span>{skill}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveSkill(skill)}
+                  className="text-text-muted hover:text-danger transition-colors cursor-pointer"
+                  aria-label={`Remove ${skill}`}
+                >
+                  <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+                </button>
+              </span>
+            ))}
+            {data.skills.length === 0 && (
+              <span className="text-xs text-text-muted italic">
+                {isRtl
+                  ? 'لم تقم بإضافة أي مهارات بعد. أضف على الأقل 3-6 مهارات متوافقة مع إعلان الوظيفة.'
+                  : 'No skills added yet. Add at least 3-6 hard skills to boost your ATS match score.'}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderProjectsSection = () => (
+    <div
+      key="projects"
+      id="section-projects"
+      className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs transition-all"
+    >
+      <button
+        type="button"
+        onClick={() => toggleSection('projects')}
+        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            isProjectsComplete ? 'bg-success/15 text-success' : 'bg-brand/10 text-brand'
+          }`}>
+            <FolderGit2 className="w-4 h-4" strokeWidth={1.75} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm">
+                {isRtl ? 'المشاريع البارزة' : 'Key Projects'}
+              </h3>
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+                {data.projects.length}
+              </span>
+              {isProjectsComplete && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success bg-success/10 px-1.5 py-0.2 rounded-full">
+                  <Check className="w-3 h-3" />
+                  <span>{isRtl ? 'مكتمل' : 'Complete'}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted">
+              {isRtl ? 'الأعمال المستقلة، المصادر المفتوحة، والمشاريع البرمجية' : 'Portfolio highlights, GitHub repos & live products'}
+            </p>
+          </div>
+        </div>
+        {openSections.projects ? (
+          <ChevronUp className="w-4 h-4 text-text-muted" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-text-muted" />
+        )}
+      </button>
+
+      {openSections.projects && (
+        <div className="p-4 pt-2 border-t border-line space-y-4">
+          {data.projects.map((proj, projIdx) => (
+            <div
+              key={proj.id || projIdx}
+              draggable
+              onDragStart={() => setDraggedProjIndex(projIdx)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (draggedProjIndex === null || draggedProjIndex === projIdx) return;
+                const updated = [...data.projects];
+                const [moved] = updated.splice(draggedProjIndex, 1);
+                updated.splice(projIdx, 0, moved);
+                setDraggedProjIndex(projIdx);
+                onChange({ ...data, projects: updated });
+              }}
+              onDragEnd={() => setDraggedProjIndex(null)}
+              className="p-4 bg-surface-2/30 border border-line hover:border-line-strong rounded-xl space-y-3 relative transition-all duration-200"
+            >
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-line">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="p-1 text-text-muted hover:text-text-primary cursor-grab active:cursor-grabbing"
+                    title={isRtl ? 'اسحب لإعادة الترتيب' : 'Drag to reorder'}
+                  >
+                    <GripVertical className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-semibold text-brand font-mono">
+                    #{projIdx + 1} {proj.title || (isRtl ? 'مشروع جديد' : 'New Project')}
                   </span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveProject(projIdx, -1)}
+                    disabled={projIdx === 0}
+                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title={isRtl ? 'تحريك للأعلى' : 'Move up'}
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveProject(projIdx, 1)}
+                    disabled={projIdx === data.projects.length - 1}
+                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title={isRtl ? 'تحريك للأسفل' : 'Move down'}
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+
+                  <div className="w-px h-3.5 bg-line mx-1" />
+
                   <button
                     type="button"
                     onClick={() => removeProject(projIdx)}
-                    className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                    title="Delete Project"
+                    className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
+                    title={isRtl ? 'حذف المشروع' : 'Delete project'}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                      Project Name
-                    </label>
-                    <input
-                      type="text"
-                      value={proj.title}
-                      onChange={(e) => updateProject(projIdx, 'title', e.target.value)}
-                      placeholder="AI Resume Optimizer"
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-pink-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                      Tech Stack Used
-                    </label>
-                    <input
-                      type="text"
-                      value={proj.techStack}
-                      onChange={(e) => updateProject(projIdx, 'techStack', e.target.value)}
-                      placeholder="Next.js, TypeScript, OpenAI API, Tailwind CSS"
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-pink-500"
-                    />
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                    Live Demo / GitHub Link
+                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                    {isRtl ? 'عنوان المشروع' : 'Project Title'}
                   </label>
                   <input
                     type="text"
-                    value={proj.link}
-                    onChange={(e) => updateProject(projIdx, 'link', e.target.value)}
-                    placeholder="https://github.com/username/project"
-                    className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-pink-500"
+                    value={proj.title}
+                    onChange={(e) => updateProject(projIdx, 'title', e.target.value)}
+                    placeholder="ATS Resume & Career Platform"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
                   />
                 </div>
-
-                {/* Project Bullet Points */}
-                <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <label className="block text-[11px] font-medium text-slate-400">
-                    Key Features / Impact
+                <div>
+                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                    {isRtl ? 'التقنيات المستخدمة' : 'Technologies Used'}
                   </label>
-                  {proj.description.map((bullet, bIdx) => (
-                    <div key={bIdx} className="flex items-start gap-2">
-                      <span className="text-pink-400 text-xs mt-2">•</span>
-                      <textarea
-                        rows={2}
-                        value={bullet}
-                        onChange={(e) => updateProjectBullet(projIdx, bIdx, e.target.value)}
-                        placeholder="Built real-time scoring engine that parses resumes in <150ms..."
-                        className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-pink-500 leading-relaxed"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeProjectBullet(projIdx, bIdx)}
-                        disabled={proj.description.length <= 1}
-                        className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors mt-1"
-                        title="Remove bullet"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                  <input
+                    type="text"
+                    value={proj.techStack}
+                    onChange={(e) => updateProject(projIdx, 'techStack', e.target.value)}
+                    placeholder="Next.js, TypeScript, Tailwind, Node.js"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-primary mb-1">
+                  {isRtl ? 'رابط المشروع أو الكود (Live Demo / GitHub)' : 'Live Demo / GitHub URL'}
+                </label>
+                <input
+                  type="text"
+                  value={proj.link}
+                  onChange={(e) => updateProject(projIdx, 'link', e.target.value)}
+                  placeholder="https://github.com/alexmorgan/project"
+                  className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                />
+              </div>
+
+              {/* Project Bullet Points */}
+              <div className="space-y-2 pt-2 border-t border-line">
+                <label className="block text-xs font-semibold text-text-primary">
+                  {isRtl ? 'تفاصيل الإنجاز والنتائج التقنية' : 'Key Outcomes & Technical Features'}
+                </label>
+                {proj.description.map((bullet, bIdx) => (
+                  <div key={bIdx} className="flex items-start gap-2">
+                    <span className="text-brand text-xs mt-2">•</span>
+                    <textarea
+                      rows={2}
+                      value={bullet}
+                      onChange={(e) => updateProjectBullet(projIdx, bIdx, e.target.value)}
+                      placeholder={
+                        isRtl
+                          ? 'بناء نظام محاكاة لتقييم السيرة الذاتية بدقة 99.4% مع دعم المعاينة المباشرة...'
+                          : 'Developed an AI-assisted resume analyzer with automated ATS keyword matching and PDF generation...'
+                      }
+                      className="flex-1 px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand leading-relaxed"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeProjectBullet(projIdx, bIdx)}
+                      disabled={proj.description.length <= 1}
+                      className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors mt-1 cursor-pointer"
+                      title={isRtl ? 'حذف النقطة' : 'Remove bullet'}
+                    >
+                      <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => addProjectBullet(projIdx)}
+                  className="inline-flex items-center gap-1.5 text-xs text-brand hover:opacity-80 font-medium py-1 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>{isRtl ? 'إضافة نقطة للمشروع' : 'Add bullet point'}</span>
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addProject}
+            className="w-full py-2.5 px-3 border border-dashed border-line hover:border-brand rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary flex items-center justify-center gap-2 hover:bg-surface-2 transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-brand" strokeWidth={1.75} />
+            <span>{isRtl ? 'إضافة مشروع جديد' : 'Add Project Entry'}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderLanguagesSection = () => (
+    <div
+      key="languages"
+      id="section-languages"
+      className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs transition-all"
+    >
+      <button
+        type="button"
+        onClick={() => toggleSection('languages')}
+        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            isLanguagesComplete ? 'bg-success/15 text-success' : 'bg-brand/10 text-brand'
+          }`}>
+            <LanguagesIcon className="w-4 h-4" strokeWidth={1.75} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm">
+                {isRtl ? 'اللغات ومستوى الإتقان' : 'Languages & Fluency'}
+              </h3>
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+                {(data.languages || []).length}
+              </span>
+              {isLanguagesComplete && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success bg-success/10 px-1.5 py-0.2 rounded-full">
+                  <Check className="w-3 h-3" />
+                  <span>{isRtl ? 'مكتمل' : 'Complete'}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted">
+              {isRtl ? 'اللغات المنطوقة ودرجات الإجادة' : 'Spoken languages & proficiency levels'}
+            </p>
+          </div>
+        </div>
+        {openSections.languages ? (
+          <ChevronUp className="w-4 h-4 text-text-muted" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-text-muted" />
+        )}
+      </button>
+
+      {openSections.languages && (
+        <div className="p-4 pt-2 border-t border-line space-y-4">
+          {/* Quick Language Suggestions */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-text-muted me-1">
+              {isRtl ? 'اقتراحات سريعة:' : 'Quick add:'}
+            </span>
+            {(isRtl ? COMMON_LANGUAGES_AR : COMMON_LANGUAGES_EN).map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => handleAddLanguage(lang, 'Fluent')}
+                className="px-2.5 py-0.5 rounded-full bg-surface border border-line hover:border-brand text-xs text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+              >
+                + {lang}
+              </button>
+            ))}
+          </div>
+
+          {/* Add custom language input */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={newLangName}
+              onChange={(e) => setNewLangName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddLanguage();
+                }
+              }}
+              placeholder={isRtl ? 'اسم اللغة (مثال: الفرنسية)' : 'Language name (e.g. Spanish)'}
+              className="flex-1 px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+            />
+
+            <select
+              value={newLangProficiency}
+              onChange={(e) => setNewLangProficiency(e.target.value)}
+              aria-label={isRtl ? 'مستوى إتقان اللغة الجديدة' : 'Proficiency level for new language'}
+              className="px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary focus:outline-none focus:border-brand cursor-pointer"
+            >
+              {(isRtl ? PROFICIENCY_LEVELS_AR : PROFICIENCY_LEVELS_EN).map((lvl) => (
+                <option key={lvl.value} value={lvl.value}>
+                  {lvl.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={() => handleAddLanguage()}
+              className="px-4 py-2 bg-brand hover:opacity-90 text-white text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>{isRtl ? 'إضافة لغة' : 'Add Language'}</span>
+            </button>
+          </div>
+
+          {/* List of active languages */}
+          <div className="space-y-2 pt-1">
+            {(data.languages || []).map((lang, lIdx) => (
+              <div
+                key={lang.id || lIdx}
+                className="flex items-center justify-between gap-3 p-3 bg-surface-2/40 border border-line rounded-lg"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-md bg-brand/10 text-brand flex items-center justify-center font-mono text-[11px] font-bold">
+                    {lang.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-text-primary block">
+                      {lang.name}
+                    </span>
+                    <span className="text-[11px] text-text-muted">
+                      {lang.proficiency}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={lang.proficiency}
+                    onChange={(e) => handleUpdateLanguage(lIdx, 'proficiency', e.target.value)}
+                    aria-label={isRtl ? `مستوى إتقان ${lang.name}` : `Proficiency level for ${lang.name}`}
+                    className="px-2 py-1 bg-surface border border-line rounded text-xs text-text-primary focus:outline-none focus:border-brand cursor-pointer"
+                  >
+                    {(isRtl ? PROFICIENCY_LEVELS_AR : PROFICIENCY_LEVELS_EN).map((lvl) => (
+                      <option key={lvl.value} value={lvl.value}>
+                        {lvl.label}
+                      </option>
+                    ))}
+                  </select>
 
                   <button
                     type="button"
-                    onClick={() => addProjectBullet(projIdx)}
-                    className="inline-flex items-center gap-1.5 text-xs text-pink-400 hover:text-pink-300 py-1 transition-colors"
+                    onClick={() => moveLanguage(lIdx, -1)}
+                    disabled={lIdx === 0}
+                    className="p-1 rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title={isRtl ? 'تحريك للأعلى' : 'Move up'}
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add bullet point</span>
+                    <ArrowUp className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveLanguage(lIdx, 1)}
+                    disabled={lIdx === (data.languages?.length || 0) - 1}
+                    className="p-1 rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title={isRtl ? 'تحريك للأسفل' : 'Move down'}
+                  >
+                    <ArrowDown className="w-3 h-3" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveLanguage(lIdx)}
+                    className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
+                    title={isRtl ? 'حذف اللغة' : 'Remove language'}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
                 </div>
               </div>
             ))}
 
+            {(!data.languages || data.languages.length === 0) && (
+              <span className="text-xs text-text-muted italic block py-1">
+                {isRtl ? 'لم يتم إضافة لغات بعد. أضف لغاتك المحكية لتعزيز فرصك الدولية.' : 'No languages added yet. Add languages you speak for international roles.'}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderCertificationsSection = () => (
+    <div
+      key="certifications"
+      id="section-certifications"
+      className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs transition-all"
+    >
+      <button
+        type="button"
+        onClick={() => toggleSection('certifications')}
+        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            isCertificationsComplete ? 'bg-success/15 text-success' : 'bg-brand/10 text-brand'
+          }`}>
+            <Award className="w-4 h-4" strokeWidth={1.75} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm">
+                {isRtl ? 'الشهادات المهنية والتراخيص' : 'Certifications & Honors'}
+              </h3>
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+                {data.certifications.length}
+              </span>
+              {isCertificationsComplete && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success bg-success/10 px-1.5 py-0.2 rounded-full">
+                  <Check className="w-3 h-3" />
+                  <span>{isRtl ? 'مكتمل' : 'Complete'}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted">
+              {isRtl ? 'الشهادات المعتمدة من AWS, Google, Meta وغيرها' : 'Professional credentials, AWS/Meta/Google certificates'}
+            </p>
+          </div>
+        </div>
+        {openSections.certifications ? (
+          <ChevronUp className="w-4 h-4 text-text-muted" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-text-muted" />
+        )}
+      </button>
+
+      {openSections.certifications && (
+        <div className="p-4 pt-2 border-t border-line space-y-3.5">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newCertInput}
+              onChange={(e) => setNewCertInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddCert();
+                }
+              }}
+              placeholder={isRtl ? 'مثال: AWS Certified Solutions Architect' : 'e.g. AWS Certified Solutions Architect – Associate'}
+              className="flex-1 px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+            />
             <button
               type="button"
-              onClick={addProject}
-              className="w-full py-2.5 px-3 border border-dashed border-slate-700 hover:border-pink-500/60 rounded-lg text-xs font-medium text-slate-300 hover:text-pink-400 flex items-center justify-center gap-2 hover:bg-slate-800/30 transition-all"
+              onClick={handleAddCert}
+              className="px-4 py-2 bg-brand hover:opacity-90 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add Another Project</span>
+              <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>{isRtl ? 'إضافة' : 'Add'}</span>
             </button>
           </div>
-        )}
+
+          <div className="space-y-1.5 pt-1">
+            {data.certifications.map((cert, cIdx) => (
+              <div
+                key={cIdx}
+                className="flex items-center justify-between px-3 py-2 bg-surface-2/40 border border-line rounded-lg text-xs text-text-primary"
+              >
+                <span className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-brand shrink-0" strokeWidth={1.5} />
+                  <span>{cert}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveCert(cIdx)}
+                  className="text-text-muted hover:text-danger transition-colors p-1 cursor-pointer"
+                  title={isRtl ? 'حذف الشهادة' : 'Remove certification'}
+                >
+                  <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                </button>
+              </div>
+            ))}
+            {data.certifications.length === 0 && (
+              <span className="text-xs text-text-muted italic block py-1">
+                {isRtl ? 'لا توجد شهادات مضافة حالياً.' : 'No certifications added yet.'}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const sectionMap: Record<SectionKey, () => React.ReactNode> = {
+    personal: renderPersonalSection,
+    summary: renderSummarySection,
+    experience: renderExperienceSection,
+    education: renderEducationSection,
+    skills: renderSkillsSection,
+    projects: renderProjectsSection,
+    languages: renderLanguagesSection,
+    certifications: renderCertificationsSection,
+  };
+
+  return (
+    <div className="space-y-4 w-full max-w-full min-w-0">
+      {/* 1. Overall Resume Strength & Completion Progress Bar */}
+      <div className="bg-surface border border-line rounded-xl p-4 shadow-xs">
+        <div className="flex items-center justify-between gap-3 mb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-text-primary">
+              {isRtl ? 'جاهزية السيرة لأنظمة ATS' : 'Resume ATS Strength'}
+            </span>
+            <span className="font-mono text-xs font-bold text-brand px-2 py-0.5 rounded-full bg-brand/10">
+              {resumeScorePercentage}%
+            </span>
+          </div>
+
+          <span className="text-xs text-text-muted">
+            {isRtl
+              ? `${completedSectionsCount} من ${coreSections.length} أقسام مكتملة`
+              : `${completedSectionsCount} of ${coreSections.length} sections complete`}
+          </span>
+        </div>
+
+        <ProgressBar
+          value={resumeScorePercentage}
+          max={100}
+          variant={resumeScorePercentage >= 85 ? 'success' : resumeScorePercentage >= 50 ? 'brand' : 'warning'}
+          size="sm"
+          className="mb-3"
+        />
+
+        {/* 2. Step Navigation Pills */}
+        <div className="w-full max-w-full min-w-0 flex items-center gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {stepNavItems.map((step) => {
+            const isCompleted = sectionStatus[step.key];
+            const StepIcon = step.icon;
+            const isOpen = openSections[step.key];
+            return (
+              <button
+                key={step.key}
+                type="button"
+                onClick={() => handleSelectStep(step.key)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                  isOpen
+                    ? 'bg-brand/15 text-brand border border-brand/30 shadow-xs'
+                    : isCompleted
+                    ? 'bg-surface hover:bg-surface-2 text-text-primary border border-line'
+                    : 'bg-surface-2/60 text-text-muted hover:text-text-primary border border-transparent'
+                }`}
+              >
+                {isCompleted ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
+                ) : (
+                  <StepIcon className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                )}
+                <span>{isRtl ? step.labelAr : step.labelEn}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* 6. SKILLS */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
+      {/* 3. Collapsible ATS Optimization Tips Panel */}
+      <div className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs">
         <button
           type="button"
-          onClick={() => toggleSection('skills')}
-          className="w-full flex items-center justify-between p-4 bg-slate-900/60 hover:bg-slate-800/50 text-left transition-colors"
+          onClick={() => setIsAtsTipsOpen((prev) => !prev)}
+          className="w-full flex items-center justify-between p-3.5 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-              <Sparkles className="w-4 h-4" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-accent-soft text-accent flex items-center justify-center">
+              <Lightbulb className="w-3.5 h-3.5" strokeWidth={2} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-100 text-sm">Skills & Keywords</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                  {data.skills.length}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">Target ATS keywords, languages, and frameworks</p>
-            </div>
+            <span className="text-xs font-semibold text-text-primary">
+              {isRtl ? 'قائمة إرشادات توافق ATS (5 قواعد ذهبية)' : 'ATS Optimization Guidelines (5 Golden Rules)'}
+            </span>
           </div>
-          {openSections.skills ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
+          {isAtsTipsOpen ? (
+            <ChevronUp className="w-4 h-4 text-text-muted" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
+            <ChevronDown className="w-4 h-4 text-text-muted" />
           )}
         </button>
 
-        {openSections.skills && (
-          <div className="p-4 pt-2 border-t border-slate-800/80 space-y-3">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newSkillInput}
-                onChange={(e) => setNewSkillInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddSkill();
-                  }
-                }}
-                placeholder="Type a skill or comma-separated list (e.g. Next.js, Docker, AWS)"
-                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddSkill}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add</span>
-              </button>
+        {isAtsTipsOpen && (
+          <div className="p-4 pt-1 border-t border-line text-xs text-text-secondary space-y-2 bg-surface-2/20 leading-relaxed">
+            <div className="flex items-start gap-2">
+              <Check className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+              <span>
+                <strong>{isRtl ? 'عناوين قياسية:' : 'Standard Headings:'}</strong>{' '}
+                {isRtl
+                  ? 'استخدم مسميات واضحة للأقسام (الخبرات، التعليم، المهارات) حتى يتعرف عليها الماسح الآلي.'
+                  : 'Keep section names standard (Experience, Education, Skills) for accurate parsing.'}
+              </span>
             </div>
-
-            {/* Skill tags */}
-            <div className="flex flex-wrap gap-1.5 pt-2">
-              {data.skills.map((skill, sIdx) => (
-                <span
-                  key={sIdx}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800/90 hover:bg-slate-800 border border-slate-700/70 rounded-md text-xs text-slate-200 transition-colors"
-                >
-                  <span>{skill}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSkill(skill)}
-                    className="text-slate-400 hover:text-red-400 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-              {data.skills.length === 0 && (
-                <span className="text-xs text-slate-500 italic">
-                  No skills added yet. Add key technical and soft skills above.
-                </span>
-              )}
+            <div className="flex items-start gap-2">
+              <Check className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+              <span>
+                <strong>{isRtl ? 'أفعال إنجاز قوية:' : 'Power Action Verbs:'}</strong>{' '}
+                {isRtl
+                  ? 'ابدأ كل نقطة في مهامك الوظيفية بفعل إنجاز (طوّر، قاد، سرّع، حسّن).'
+                  : 'Begin achievement bullets with verbs like Architected, Optimized, Spearheaded.'}
+              </span>
+            </div>
+            <div className="flex items-start gap-2">
+              <Check className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+              <span>
+                <strong>{isRtl ? 'أرقام ونتائج قياسية:' : 'Quantified Metrics:'}</strong>{' '}
+                {isRtl
+                  ? 'أضف نسباً مئوية وأرقاماً (مثال: خفض زمن الاستجابة بنسبة 35% أو خدمة 50 ألف مستخدم).'
+                  : 'Include % numbers, dollars saved, or user counts in at least 60% of your bullets.'}
+              </span>
+            </div>
+            <div className="flex items-start gap-2">
+              <Check className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+              <span>
+                <strong>{isRtl ? 'مطابقة الكلمات المفتاحية:' : 'Exact Keyword Match:'}</strong>{' '}
+                {isRtl
+                  ? 'قم بإدراج المهارات التقنية المذكورة نصاً في إعلان الوظيفة التي تستهدفها.'
+                  : 'Incorporate skills explicitly mentioned in target job descriptions.'}
+              </span>
+            </div>
+            <div className="flex items-start gap-2">
+              <Check className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+              <span>
+                <strong>{isRtl ? 'تنسيق متوافق للطباعة:' : 'Clean Layout:'}</strong>{' '}
+                {isRtl
+                  ? 'تجنب الجداول المعقدة أو إخفاء النصوص داخل رسوميات لضمان استخراج النص بدقة.'
+                  : 'Single/two column clean structure guarantees zero loss during automated parsing.'}
+              </span>
             </div>
           </div>
         )}
       </div>
 
-      {/* 7. CERTIFICATIONS */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden transition-all shadow-md">
-        <button
-          type="button"
-          onClick={() => toggleSection('certifications')}
-          className="w-full flex items-center justify-between p-4 bg-slate-900/60 hover:bg-slate-800/50 text-left transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
-              <Award className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-100 text-sm">Certifications & Honors</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                  {data.certifications.length}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">Industry certificates, awards, and licenses</p>
-            </div>
-          </div>
-          {openSections.certifications ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          )}
-        </button>
-
-        {openSections.certifications && (
-          <div className="p-4 pt-2 border-t border-slate-800/80 space-y-3">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newCertInput}
-                onChange={(e) => setNewCertInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddCert();
-                  }
-                }}
-                placeholder="e.g. AWS Certified Solutions Architect - Associate"
-                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddCert}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add</span>
-              </button>
-            </div>
-
-            <div className="space-y-1.5 pt-1">
-              {data.certifications.map((cert, cIdx) => (
-                <div
-                  key={cIdx}
-                  className="flex items-center justify-between px-3 py-1.5 bg-slate-950/70 border border-slate-800 rounded-md text-xs text-slate-200"
-                >
-                  <span className="flex items-center gap-2">
-                    <Award className="w-3.5 h-3.5 text-teal-400" />
-                    {cert}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCert(cIdx)}
-                    className="text-slate-400 hover:text-red-400 transition-colors p-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-              {data.certifications.length === 0 && (
-                <span className="text-xs text-slate-500 italic">
-                  No certifications added.
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* 4. Render Form Sections According to sectionOrder */}
+      {sectionOrder.map((key) => {
+        const renderer = sectionMap[key];
+        return renderer ? renderer() : null;
+      })}
     </div>
   );
 }

@@ -1,33 +1,46 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ResumeData, TemplateId, ThemeConfig } from './types';
+import { ResumeData, TemplateId, ThemeConfig, DocumentLanguage } from './types';
 import { initialSampleData } from './initialData';
-import BuilderSidebar from './components/BuilderSidebar';
+import { SectionKey } from './components/BuilderSidebar';
 import { BuilderForm } from './components/BuilderForm';
+import dynamic from 'next/dynamic';
 import { ResumePreview } from './components/ResumePreview';
+const TemplateSelector = dynamic(() => import('./components/TemplateSelector'), { ssr: false });
 import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeft,
   Download,
-  Sparkles,
-  FileCheck2,
   Upload,
   FileCode,
-  Eye,
-  Edit3,
   FileText,
-  Cloud,
   Check,
-  Loader2,
   Printer,
-  Palette,
+  Layout,
+  RefreshCw,
+  Globe,
+  Sliders,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import LogoLoader from '../components/LogoLoader';
-import LanguageSelector from '../components/LanguageSelector';
 import { useLanguage } from '../context/LanguageContext';
+import { PaperSize, getDefaultPaperSize, exportResumeToPdf } from './utils/exportPdf';
+import { exportResumeToDocx } from './utils/exportWord';
+import { Button } from '@/components/ui/Button';
+import { Toast, ToastProps } from '@/components/ui/Toast';
+import { UserMenu } from '@/components/layout/UserMenu';
+import {
+  DOCUMENT_LANGUAGE_OPTIONS,
+  getStoredDocumentLanguage,
+  setStoredDocumentLanguage,
+  getDocumentFontFamily,
+} from '../lib/documentI18n';
 
 const emptyResumeData: ResumeData = {
   personalInfo: {
@@ -76,33 +89,126 @@ const emptyResumeData: ResumeData = {
     },
   ],
   skills: [],
+  languages: [],
   certifications: [],
 };
+
+const DEFAULT_SECTION_ORDER: SectionKey[] = [
+  'personal',
+  'summary',
+  'experience',
+  'education',
+  'skills',
+  'projects',
+  'languages',
+  'certifications',
+];
+
+export type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'failed';
 
 export default function BuilderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const { t, isRtl } = useLanguage();
+  const { isRtl, language } = useLanguage();
 
+  const [mounted, setMounted] = useState<boolean>(false);
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [resumeTitle, setResumeTitle] = useState<string>('My Professional Resume');
-  const [isSavingCloud, setIsSavingCloud] = useState<boolean>(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
+  // Autosave and unsaved changes tracking
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>('saved');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [lastSavedTimestamp, setLastSavedTimestamp] = useState<number>(Date.now());
+  const [autosaveRelativeText, setAutosaveRelativeText] = useState<string>('Saved just now');
+
+  // Export states
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingWord, setIsExportingWord] = useState(false);
+
+  // Resume Document Data
   const [resumeData, setResumeData] = useState<ResumeData>(initialSampleData);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>('compact');
+  const [paperSize, setPaperSize] = useState<PaperSize>(() => getDefaultPaperSize());
   const [theme, setTheme] = useState<ThemeConfig>({
-    accentColor: '#2563eb',
+    accentColor: '#0F5C4D',
     fontFamily: 'var(--font-sans), sans-serif',
     fontSize: 'base',
+    documentLanguage: (language as DocumentLanguage) || 'en',
   });
-  const [mobileTab, setMobileTab] = useState<'editor' | 'preview' | 'templates'>('editor');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch resume by ID if opening an existing resume from dashboard
+  const [sectionOrder, setSectionOrder] = useState<SectionKey[]>(DEFAULT_SECTION_ORDER);
+  const [activeSection, setActiveSection] = useState<SectionKey>('personal');
+
+  // Responsive Layout: Mobile tabs "Edit | Preview"
+  const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
+
+  // Drawer / Switcher states
+  const [isTemplateDrawerOpen, setIsTemplateDrawerOpen] = useState(false);
+  const [isThemeControlsOpen, setIsThemeControlsOpen] = useState(false);
+
+  // Toast feedback
+  const [toast, setToast] = useState<{ type: ToastProps['type']; message: string } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
+    setMounted(true);
+    const storedDocLang = getStoredDocumentLanguage();
+    if (storedDocLang) {
+      setTheme((prev) => ({
+        ...prev,
+        documentLanguage: storedDocLang,
+        fontFamily: storedDocLang === 'ar' ? getDocumentFontFamily('ar') : prev.fontFamily,
+      }));
+    }
+  }, []);
+
+
+  // Update relative autosave text every 4 seconds
+  useEffect(() => {
+    const updateAutosaveString = () => {
+      const diffSec = Math.floor((Date.now() - lastSavedTimestamp) / 1000);
+      if (diffSec < 4) {
+        setAutosaveRelativeText(isRtl ? 'تم الحفظ الآن' : 'Saved just now');
+      } else if (diffSec < 60) {
+        setAutosaveRelativeText(isRtl ? `حُفظ منذ ${diffSec} ثانية` : `Saved ${diffSec}s ago`);
+      } else {
+        const diffMin = Math.floor(diffSec / 60);
+        setAutosaveRelativeText(isRtl ? `حُفظ منذ ${diffMin} دقيقة` : `Saved ${diffMin}m ago`);
+      }
+    };
+
+    const interval = setInterval(updateAutosaveString, 4000);
+    return () => clearInterval(interval);
+  }, [lastSavedTimestamp, isRtl]);
+
+  // Warning when leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges || autosaveStatus === 'saving') {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, autosaveStatus]);
+
+  // Load from URL query or ID
+  useEffect(() => {
+    const templateParam = searchParams.get('template');
+    if (templateParam) {
+      if (templateParam === 'ats-friendly' || templateParam === 'executive-blue') {
+        setSelectedTemplate('executive-blue');
+      } else {
+        setSelectedTemplate(templateParam as TemplateId);
+      }
+    }
+
     const id = searchParams.get('id');
     if (id) {
       setResumeId(id);
@@ -114,114 +220,181 @@ export default function BuilderPage() {
         .then((json) => {
           if (json.resume) {
             if (json.resume.data) setResumeData(json.resume.data);
-            if (json.resume.templateId) setSelectedTemplate(json.resume.templateId);
+            if (json.resume.templateId) {
+              const tid = json.resume.templateId === 'ats-friendly' ? 'executive-blue' : json.resume.templateId;
+              setSelectedTemplate(tid);
+            }
             if (json.resume.theme) setTheme(json.resume.theme);
             if (json.resume.title) setResumeTitle(json.resume.title);
+            setHasUnsavedChanges(false);
           }
         })
         .catch((err) => console.error('Failed to load resume by id:', err));
     }
   }, [searchParams]);
 
-  const handleSaveCloud = async () => {
-    if (!user) {
-      if (window.confirm('You need to be signed in to save your resume to your cloud account. Go to login?')) {
-        router.push(`/login?returnUrl=/builder${resumeId ? `?id=${resumeId}` : ''}`);
-      }
-      return;
-    }
+  // Core Cloud / Local Persistence Function
+  const persistResume = useCallback(
+    async (isManualTrigger = false) => {
+      try {
+        setAutosaveStatus('saving');
 
-    try {
-      setIsSavingCloud(true);
-      setSaveMessage(null);
+        // 1. Local storage cache
+        try {
+          localStorage.setItem(
+            'jobmatch_resume_builder_cache',
+            JSON.stringify({
+              resumeTitle,
+              resumeData,
+              selectedTemplate,
+              paperSize,
+              theme,
+              sectionOrder,
+            })
+          );
+        } catch {}
 
-      const payload = {
-        title: resumeTitle || `${resumeData.personalInfo?.fullName || 'Untitled'} - Resume`,
-        templateId: selectedTemplate,
-        theme,
-        data: resumeData,
-      };
+        // 2. Cloud save if logged in
+        if (user) {
+          const titleToSave =
+            resumeTitle ||
+            (resumeData.personalInfo.fullName
+              ? `${resumeData.personalInfo.fullName} - Resume`
+              : 'My Resume');
 
-      if (resumeId) {
-        // Update existing resume in MongoDB
-        const res = await fetch(`/api/resumes/${resumeId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error('Failed to update resume');
-        setSaveMessage('Saved!');
-      } else {
-        // Create new resume in MongoDB
-        const res = await fetch('/api/resumes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error('Failed to save resume');
-        const json = await res.json();
-        if (json.resume?.id) {
-          setResumeId(json.resume.id);
-          window.history.replaceState(null, '', `/builder?id=${json.resume.id}`);
+          const payload = {
+            title: titleToSave,
+            templateId: selectedTemplate,
+            theme,
+            data: resumeData,
+          };
+
+          let res;
+          if (resumeId) {
+            res = await fetch(`/api/resumes/${resumeId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+          } else {
+            res = await fetch('/api/resumes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+          }
+
+          if (res.ok) {
+            const body = await res.json();
+            const savedResume = body.resume;
+            if (savedResume && (savedResume.id || savedResume._id)) {
+              setResumeId(savedResume.id || savedResume._id);
+            }
+            setAutosaveStatus('saved');
+            setHasUnsavedChanges(false);
+            setLastSavedTimestamp(Date.now());
+            if (isManualTrigger) {
+              setToast({
+                type: 'success',
+                message: isRtl ? 'تم حفظ السيرة الذاتية بنجاح!' : 'Resume saved to cloud successfully!',
+              });
+            }
+          } else {
+            setAutosaveStatus('failed');
+          }
+        } else {
+          // Guest user: local saved
+          setAutosaveStatus('saved');
+          setHasUnsavedChanges(false);
+          setLastSavedTimestamp(Date.now());
         }
-        setSaveMessage('Saved!');
+      } catch (err) {
+        console.error('Autosave error:', err);
+        setAutosaveStatus('failed');
       }
+    },
+    [resumeTitle, resumeData, selectedTemplate, paperSize, theme, sectionOrder, user, resumeId, isRtl]
+  );
 
-      setTimeout(() => setSaveMessage(null), 3000);
-    } catch (err: any) {
-      alert(err.message || 'Error saving resume to cloud.');
-    } finally {
-      setIsSavingCloud(false);
+  // Debounced Autosave Trigger
+  const triggerDebouncedAutosave = useCallback(() => {
+    setHasUnsavedChanges(true);
+    setAutosaveStatus('saving');
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      persistResume(false);
+    }, 1500);
+  }, [persistResume]);
+
+  const handleDataChange = (newData: ResumeData) => {
+    setResumeData(newData);
+    triggerDebouncedAutosave();
   };
 
-  const handleLoadSample = () => {
-    if (
-      window.confirm(
-        'Load pre-filled sample data? This will replace your current entries.'
-      )
-    ) {
-      setResumeData(initialSampleData);
-    }
+  const handleTitleChange = (newTitle: string) => {
+    setResumeTitle(newTitle);
+    triggerDebouncedAutosave();
   };
 
-  const handleClear = () => {
-    if (
-      window.confirm(
-        'Are you sure you want to clear all fields? This cannot be undone.'
-      )
-    ) {
-      setResumeData(emptyResumeData);
-    }
+  const handleTemplateSelect = (t: TemplateId) => {
+    setSelectedTemplate(t);
+    triggerDebouncedAutosave();
+    setToast({
+      type: 'info',
+      message: isRtl ? 'تم تحديث قالب المعاينة فورياً' : 'Template updated instantly in preview',
+    });
   };
 
-  const [isExportingWord, setIsExportingWord] = useState(false);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
-
+  // Word (.docx) Export Handler
   const handleDownloadWord = async () => {
     try {
       setIsExportingWord(true);
-      const { exportResumeToDocx } = await import('./utils/exportWord');
       await exportResumeToDocx(resumeData, theme);
-    } catch (err) {
+      setToast({
+        type: 'success',
+        message: isRtl
+          ? 'تم تصدير مستند Word (.docx) المتوافق بنجاح!'
+          : 'ATS-compliant Word (.docx) downloaded successfully!',
+      });
+    } catch (err: any) {
       console.error('Word export error:', err);
-      alert('Failed to generate Word document. Please try again.');
+      setToast({
+        type: 'error',
+        message: isRtl
+          ? 'فشل تصدير ملف Word. يرجى المحاولة ثانية.'
+          : `Failed to export Word file: ${err?.message || 'Please try again.'}`,
+      });
     } finally {
       setIsExportingWord(false);
     }
   };
 
+  // PDF Export Handler
   const handleDownloadPdf = async () => {
     try {
       setIsExportingPdf(true);
       const safeName = resumeData.personalInfo.fullName
-        ? `${resumeData.personalInfo.fullName.replace(/\s+/g, '_')}_Resume.pdf`
-        : 'Resume_ATS.pdf';
-      const { exportResumeToPdf } = await import('./utils/exportPdf');
-      await exportResumeToPdf('resume-preview', safeName);
+        ? `${resumeData.personalInfo.fullName.replace(/\s+/g, '_')}_Resume`
+        : 'Resume';
+      await exportResumeToPdf('resume-preview', safeName, paperSize);
+      setToast({
+        type: 'success',
+        message: isRtl
+          ? 'تم تحميل السيرة الذاتية بصيغة PDF بنجاح!'
+          : 'ATS-compliant PDF resume downloaded successfully!',
+      });
     } catch (err: any) {
       console.error('PDF export error:', err);
-      alert(`Failed to generate PDF: ${err?.message || 'Please try again.'}`);
+      setToast({
+        type: 'error',
+        message: isRtl
+          ? 'فشل إنشاء ملف PDF. يرجى المحاولة ثانية.'
+          : `Failed to generate PDF: ${err?.message || 'Please try again.'}`,
+      });
     } finally {
       setIsExportingPdf(false);
     }
@@ -246,6 +419,10 @@ export default function BuilderPage() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    setToast({
+      type: 'info',
+      message: isRtl ? 'تم تنزيل النسخة الاحتياطية JSON' : 'Backup JSON downloaded',
+    });
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,13 +433,22 @@ export default function BuilderPage() {
       try {
         const parsed = JSON.parse(event.target?.result as string);
         if (parsed.personalInfo) {
-          setResumeData(parsed);
-          alert('Resume data imported successfully!');
+          handleDataChange(parsed);
+          setToast({
+            type: 'success',
+            message: isRtl ? 'تم استيراد بيانات السيرة الذاتية بنجاح!' : 'Resume JSON imported successfully!',
+          });
         } else {
-          alert('Invalid resume JSON format.');
+          setToast({
+            type: 'error',
+            message: isRtl ? 'صيغة JSON غير صحيحة للسيرة الذاتية' : 'Invalid resume JSON format',
+          });
         }
-      } catch (err) {
-        alert('Failed to parse JSON file.');
+      } catch {
+        setToast({
+          type: 'error',
+          message: isRtl ? 'فشل قراءة ملف JSON' : 'Failed to parse JSON file',
+        });
       }
     };
     reader.readAsText(file);
@@ -271,39 +457,144 @@ export default function BuilderPage() {
     }
   };
 
+  const colors = [
+    { name: 'Studio Green', hex: '#0F5C4D' },
+    { name: 'Deep Ink', hex: '#14181F' },
+    { name: 'Navy Blue', hex: '#1E3A5F' },
+    { name: 'Terra Cotta', hex: '#8C5A20' },
+    { name: 'Burgundy', hex: '#7A2021' },
+    { name: 'Graphite', hex: '#374151' },
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-white">
-      {/* Top Header */}
-      <header className="print:hidden sticky top-0 z-40 bg-slate-950/85 backdrop-blur-xl border-b border-slate-800">
-        <div className="max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+    <div
+      dir={isRtl ? 'rtl' : 'ltr'}
+      suppressHydrationWarning
+      className="min-h-screen w-full max-w-full overflow-x-hidden bg-bg text-text-primary flex flex-col selection:bg-brand/20 selection:text-brand"
+    >
+      {/* 1. Top Builder Header & Comprehensive Action Toolbar */}
+      <header
+        suppressHydrationWarning
+        className="print:hidden sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-line shadow-xs w-full"
+      >
+        <div className="max-w-[1720px] w-full mx-auto px-2 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-1.5 sm:gap-3 min-w-0">
+          {/* Left: Brand Return & Resume Title & Autosave Badge */}
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
             <Link
-              href="/"
-              className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-slate-400 hover:text-white transition-colors shrink-0"
-              title="Return to homepage"
+              href="/dashboard"
+              suppressHydrationWarning
+              aria-label={isRtl ? 'العودة إلى لوحة التحكم' : 'Return to Dashboard'}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-2 p-1.5 rounded-md min-h-[36px] min-w-[36px] justify-center transition-colors shrink-0"
+              title={isRtl ? 'العودة إلى لوحة التحكم' : 'Return to Dashboard'}
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Home</span>
-              <span className="sm:hidden text-xs">Back</span>
-            </Link>
-            <div className="h-4 w-px bg-slate-800 shrink-0" />
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/20 shrink-0">
-                <FileCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </div>
-              <h1 className="text-xs sm:text-base font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent truncate">
-                ATS Builder
-              </h1>
-              <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                <Sparkles className="w-3 h-3" /> 100% Free
+              <ArrowLeft className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`} strokeWidth={1.75} />
+              <span suppressHydrationWarning className="hidden sm:inline">
+                {isRtl ? 'لوحة التحكم' : 'Dashboard'}
               </span>
+            </Link>
+
+            <div className="h-4 w-px bg-line shrink-0" />
+
+            <div className="flex items-center gap-2 min-w-0">
+              <input
+                type="text"
+                value={resumeTitle}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                aria-label={isRtl ? 'عنوان السيرة الذاتية' : 'Resume title'}
+                className="bg-transparent border-b border-transparent hover:border-line focus:border-brand text-xs sm:text-sm font-semibold text-text-primary px-1 py-0.5 truncate focus:outline-none max-w-[70px] xs:max-w-[140px] sm:max-w-[240px] md:max-w-[280px]"
+                title={isRtl ? 'انقر لتعديل عنوان السيرة الذاتية' : 'Click to rename resume'}
+              />
+
+              {/* Autosave Status Badge with Three Distinct States */}
+              <div
+                className={`hidden md:inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded-md border transition-all ${
+                  autosaveStatus === 'saving'
+                    ? 'bg-brand/10 border-brand/20 text-brand'
+                    : autosaveStatus === 'failed'
+                    ? 'bg-danger/10 border-danger/30 text-danger'
+                    : 'bg-surface-2 border-line text-ink-2 font-medium'
+                }`}
+              >
+                {autosaveStatus === 'saving' && (
+                  <>
+                    <RefreshCw className="w-3 h-3 text-brand animate-spin" />
+                    <span>{isRtl ? 'جاري الحفظ…' : 'Saving…'}</span>
+                  </>
+                )}
+                {autosaveStatus === 'saved' && (
+                  <>
+                    <Check className="w-3 h-3 text-success stroke-[2.5]" />
+                    <span>{isRtl ? 'تم الحفظ ✓' : 'Saved ✓'}</span>
+                    <span className="text-[10px] opacity-70">({autosaveRelativeText})</span>
+                  </>
+                )}
+                {autosaveStatus === 'failed' && (
+                  <button
+                    type="button"
+                    onClick={() => persistResume(true)}
+                    className="inline-flex items-center gap-1 text-danger hover:underline cursor-pointer"
+                  >
+                    <AlertCircle className="w-3 h-3" />
+                    <span>{isRtl ? 'فشل – إعادة المحاولة' : 'Failed – retry'}</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <LanguageSelector />
+          {/* Right Toolbar: Templates, Styling, Language, Export, Account */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Template Switcher Trigger Button */}
+            <Button
+              variant={isTemplateDrawerOpen ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setIsTemplateDrawerOpen((prev) => !prev);
+                setIsThemeControlsOpen(false);
+              }}
+              leftIcon={<Layout className="w-3.5 h-3.5" strokeWidth={1.75} />}
+              className="hidden sm:inline-flex"
+              title={isRtl ? 'تغيير قالب السيرة الذاتية' : 'Change resume template'}
+            >
+              <span>{isRtl ? 'القوالب' : 'Templates'}</span>
+              <span className="text-[10px] font-mono px-1 rounded bg-black/10 dark:bg-white/10 uppercase ms-1 hidden lg:inline">
+                {selectedTemplate}
+              </span>
+            </Button>
 
+            {/* Output Language Selector (6 Languages) */}
+            <div className="relative">
+              <select
+                id="builder-document-output-language"
+                value={theme.documentLanguage || 'en'}
+                aria-label={isRtl ? 'لغة إخراج المستند' : 'Document output language'}
+                onChange={(e) => {
+                  const newLang = e.target.value as DocumentLanguage;
+                  setStoredDocumentLanguage(newLang);
+                  setTheme((prev) => ({
+                    ...prev,
+                    documentLanguage: newLang,
+                    fontFamily:
+                      newLang === 'ar'
+                        ? getDocumentFontFamily('ar')
+                        : prev.fontFamily.includes('font-arabic')
+                        ? 'var(--font-sans), sans-serif'
+                        : prev.fontFamily,
+                  }));
+                  triggerDebouncedAutosave();
+                }}
+                className="text-xs bg-surface border border-line rounded-md px-1.5 sm:px-2.5 py-1 text-ink focus:outline-none focus:border-brand cursor-pointer font-medium max-w-[62px] sm:max-w-none"
+                title={isRtl ? 'لغة إخراج المستند (مستقلة عن لغة الواجهة)' : 'Output language (independent from UI language)'}
+              >
+                {DOCUMENT_LANGUAGE_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.nativeName} ({opt.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Hidden JSON file input */}
             <input
               type="file"
               ref={fileInputRef}
@@ -311,213 +602,262 @@ export default function BuilderPage() {
               accept=".json"
               className="hidden"
             />
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => fileInputRef.current?.click()}
-              className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 bg-slate-900/60 hover:bg-slate-900 text-xs text-slate-300 transition-colors"
-              title="Upload previously saved JSON resume"
+              className="hidden 2xl:inline-flex"
+              leftIcon={<Upload className="w-3.5 h-3.5" strokeWidth={1.5} />}
+              title={isRtl ? 'استيراد نسخة JSON' : 'Import JSON'}
             >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Import</span>
-            </button>
-            <button
-              type="button"
+              <span>{isRtl ? 'استيراد' : 'Import'}</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleExportJSON}
-              className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 bg-slate-900/60 hover:bg-slate-900 text-xs text-slate-300 transition-colors"
-              title="Save a backup copy as JSON"
+              className="hidden 2xl:inline-flex"
+              leftIcon={<FileCode className="w-3.5 h-3.5" strokeWidth={1.5} />}
+              title={isRtl ? 'نسخة احتياطية JSON' : 'Backup JSON'}
             >
-              <FileCode className="w-3.5 h-3.5" />
-              <span>Backup</span>
-            </button>
+              <span>{isRtl ? 'نسخة JSON' : 'JSON'}</span>
+            </Button>
 
-            {/* Save to Cloud Button */}
-            <button
-              type="button"
-              disabled={isSavingCloud}
-              onClick={handleSaveCloud}
-              className={`inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-white font-semibold text-xs sm:text-sm transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                saveMessage
-                  ? 'bg-emerald-600 shadow-md shadow-emerald-600/30'
-                  : 'bg-emerald-700 hover:bg-emerald-600 shadow-md shadow-emerald-700/25'
-              }`}
-              title="Save resume to your cloud account to edit anytime"
-            >
-              {isSavingCloud ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span className="hidden sm:inline">Saving...</span>
-                </>
-              ) : saveMessage ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{saveMessage}</span>
-                  <span className="sm:hidden">Saved</span>
-                </>
-              ) : (
-                <>
-                  <Cloud className="w-3.5 h-3.5 text-emerald-200" />
-                  <span className="hidden sm:inline">{resumeId ? 'Save Changes' : 'Save CV'}</span>
-                  <span className="sm:hidden">Save</span>
-                </>
-              )}
-            </button>
-
-            {/* Download Word (.docx) */}
-            <button
-              type="button"
+            {/* Export Word (.docx) */}
+            <Button
+              variant="outline"
+              size="sm"
               disabled={isExportingWord}
+              isLoading={isExportingWord}
               onClick={handleDownloadWord}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-700/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              title="Download editable Microsoft Word document (.docx)"
+              className="hidden lg:inline-flex"
+              leftIcon={<FileText className="w-3.5 h-3.5 text-text-secondary" strokeWidth={1.75} />}
+              title={isRtl ? 'تحميل بصيغة مايكروسوفت وورد (.docx)' : 'Download editable Microsoft Word document'}
             >
-              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200" />
-              <span className="hidden sm:inline">{isExportingWord ? 'Exporting...' : 'Word (.docx)'}</span>
-              <span className="sm:hidden">{isExportingWord ? '...' : 'Word'}</span>
-            </button>
+              <span>Word</span>
+            </Button>
 
-            {/* Direct Download PDF */}
-            <button
-              type="button"
-              disabled={isExportingPdf}
-              onClick={handleDownloadPdf}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              title="Directly download PDF file to computer"
-            >
-              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-200" />
-              <span className="hidden sm:inline">{isExportingPdf ? 'Saving PDF...' : 'Download PDF'}</span>
-              <span className="sm:hidden">{isExportingPdf ? '...' : 'PDF'}</span>
-            </button>
-
-            {/* Print / Save Vector PDF */}
-            <button
-              type="button"
+            {/* Print / Vector PDF dialog */}
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white font-semibold text-xs sm:text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-              title="Print or Save as Vector PDF via browser dialog (preserves 100% selectable text & ATS compatibility)"
+              className="hidden xl:inline-flex"
+              leftIcon={<Printer className="w-3.5 h-3.5 text-text-secondary" strokeWidth={1.75} />}
+              title={isRtl ? 'طباعة مباشرة عبر المتصفح' : 'Print via browser dialog'}
             >
-              <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
-              <span className="hidden sm:inline">Print / Vector</span>
-              <span className="sm:hidden">Print</span>
-            </button>
+              <span>{isRtl ? 'طباعة' : 'Print'}</span>
+            </Button>
+
+            {/* Primary Download PDF */}
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={isExportingPdf}
+              isLoading={isExportingPdf}
+              onClick={handleDownloadPdf}
+              leftIcon={<Download className="w-3.5 h-3.5" strokeWidth={1.75} />}
+              title={isRtl ? 'تحميل مباشر كملف PDF عالي الجودة' : 'Direct download ATS PDF'}
+            >
+              <span className="hidden sm:inline">
+                {isExportingPdf ? (isRtl ? 'جاري التحميل…' : 'Downloading…') : (isRtl ? 'تحميل PDF' : 'Download PDF')}
+              </span>
+              <span className="sm:hidden">
+                {isExportingPdf ? '...' : 'PDF'}
+              </span>
+            </Button>
+
+            {/* User Account Menu */}
+            <UserMenu variant="compact" />
           </div>
         </div>
+
+        {/* Expandable Template Switcher Bar */}
+        {isTemplateDrawerOpen && (
+          <div className="border-t border-line bg-surface-2/60 backdrop-blur-md p-4 sm:p-5 max-w-[1720px] mx-auto animate-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <Layout className="w-4 h-4 text-brand" />
+                <h3 className="text-xs font-semibold text-text-primary">
+                  {isRtl ? 'اختر قالب السيرة الذاتية (معاينة فورية)' : 'Choose Template (Instant Live Preview)'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTemplateDrawerOpen(false)}
+                className="text-xs text-text-muted hover:text-text-primary p-1 rounded-md"
+              >
+                ✕ {isRtl ? 'إغلاق' : 'Close'}
+              </button>
+            </div>
+
+            <TemplateSelector
+              selectedTemplate={selectedTemplate}
+              onSelect={handleTemplateSelect}
+              accentColor={theme.accentColor}
+              isRtl={isRtl}
+            />
+          </div>
+        )}
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Mobile View Switcher (Tabs) */}
-        <div className="print:hidden lg:hidden flex rounded-xl bg-slate-900/90 border border-slate-800 p-1">
+      {/* 2. Main Workspace Split Layout */}
+      <main id="main-content" className="max-w-[1720px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 lg:pb-6 flex-1 flex flex-col min-w-0 overflow-x-hidden">
+        {/* Mobile Tab Switcher (<1024px): "Edit | Preview" */}
+        <div className="lg:hidden flex items-center justify-between mb-4 bg-surface-2 p-1 rounded-xl border border-line">
           <button
             type="button"
             onClick={() => setMobileTab('editor')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mobileTab === 'editor'
-                ? 'bg-cyan-500 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-surface text-text-primary shadow-xs'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Editor</span>
+            ✏️ {isRtl ? 'تعديل البيانات' : 'Edit Resume'}
           </button>
           <button
             type="button"
             onClick={() => setMobileTab('preview')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mobileTab === 'preview'
-                ? 'bg-cyan-500 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-surface text-text-primary shadow-xs'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            <Eye className="w-3.5 h-3.5" />
-            <span>A4 Preview</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobileTab('templates')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-              mobileTab === 'templates'
-                ? 'bg-cyan-500 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Palette className="w-3.5 h-3.5" />
-            <span>Templates</span>
+            👁️ {isRtl ? 'المعاينة الحية' : 'Live Preview'}
           </button>
         </div>
 
-        {/* 3-Column Responsive Workspace with Sidebar */}
-        <div className="flex flex-col lg:flex-row gap-5 items-start">
-          {/* Left Column: Sidebar (Templates & Style) */}
+        {/* 2-Column Split: Form Editor (Left) & Sticky Preview (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-w-0">
+          {/* Form Editor Column (50-55% width on desktop) */}
           <div
-            className={`print:hidden shrink-0 transition-all duration-300 ${
-              mobileTab === 'templates'
-                ? 'block w-full'
-                : 'hidden lg:block lg:sticky lg:top-20'
+            className={`lg:col-span-6 xl:col-span-6 2xl:col-span-6 space-y-4 print:hidden transition-all min-w-0 ${
+              mobileTab === 'editor' ? 'block w-full' : 'hidden lg:block'
             }`}
           >
-            <BuilderSidebar
-              selectedTemplate={selectedTemplate}
-              onSelectTemplate={(tpl) => {
-                setSelectedTemplate(tpl);
-              }}
-              theme={theme}
-              setTheme={setTheme}
-              onLoadSample={handleLoadSample}
-              onClear={handleClear}
-              onDownloadPdf={handleDownloadPdf}
-              onDownloadWord={handleDownloadWord}
-              onPrint={handlePrint}
-              isExportingPdf={isExportingPdf}
-              isExportingWord={isExportingWord}
-              isCollapsed={!isSidebarOpen}
-              onToggleCollapse={() => setIsSidebarOpen((prev) => !prev)}
-              onSaveCloud={handleSaveCloud}
-              isSavingCloud={isSavingCloud}
-              saveMessage={saveMessage}
+            {/* Quick Template Switcher Card for Desktop */}
+            <div className="hidden lg:flex items-center justify-between gap-3 p-3 bg-surface border border-line rounded-xl shadow-xs">
+              <div className="flex items-center gap-2 text-xs font-medium text-text-secondary">
+                <Layout className="w-4 h-4 text-brand" />
+                <span>{isRtl ? 'القالب النشط:' : 'Active Template:'}</span>
+                <span className="font-semibold text-text-primary capitalize">{selectedTemplate}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Accent Color Circles */}
+                <div className="flex items-center gap-1.5 me-2">
+                  {colors.map((c) => (
+                    <button
+                      key={c.hex}
+                      type="button"
+                      onClick={() => {
+                        setTheme((prev) => ({ ...prev, accentColor: c.hex }));
+                        triggerDebouncedAutosave();
+                      }}
+                      className={`w-4 h-4 rounded-full transition-transform cursor-pointer ${
+                        theme.accentColor === c.hex ? 'scale-125 ring-2 ring-brand ring-offset-2 ring-offset-bg' : 'hover:scale-110'
+                      }`}
+                      style={{ backgroundColor: c.hex }}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsTemplateDrawerOpen((prev) => !prev)}
+                  className="text-xs h-7 px-2.5"
+                >
+                  {isTemplateDrawerOpen ? (isRtl ? 'إخفاء القوالب' : 'Hide Templates') : (isRtl ? 'تغيير القالب' : 'Change Template')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Core Form Component */}
+            <BuilderForm
+              data={resumeData}
+              onChange={handleDataChange}
+              sectionOrder={sectionOrder}
+              activeSection={activeSection}
+              onActiveSectionChange={(s) => setActiveSection(s)}
             />
           </div>
 
-          {/* Middle Column: Form Editor */}
+          {/* Live Sticky Preview Column (45-50% width on desktop) */}
           <div
-            className={`space-y-4 print:hidden transition-all duration-300 ${
-              mobileTab === 'editor'
-                ? 'block w-full'
-                : mobileTab === 'preview' || mobileTab === 'templates'
-                ? 'hidden lg:block'
-                : 'hidden lg:block'
-            } ${
-              isSidebarOpen
-                ? 'lg:w-[45%] xl:w-[48%]'
-                : 'lg:w-[50%] xl:w-[52%]'
-            } flex-1`}
-          >
-            <BuilderForm data={resumeData} onChange={setResumeData} />
-          </div>
-
-          {/* Right Column: Live Sticky A4 Preview */}
-          <div
-            className={`transition-all duration-300 ${
-              mobileTab === 'preview'
-                ? 'block w-full'
-                : 'hidden lg:block'
-            } lg:sticky lg:top-20 print:!block print:!w-full print:!m-0 print:!p-0 flex-1 min-w-0`}
+            className={`lg:col-span-6 xl:col-span-6 2xl:col-span-6 transition-all min-w-0 ${
+              mobileTab === 'preview' ? 'block w-full' : 'hidden lg:block'
+            } lg:sticky lg:top-20 print:!block print:!w-full print:!m-0 print:!p-0`}
           >
             <ResumePreview
               data={resumeData}
               template={selectedTemplate}
               theme={theme}
+              paperSize={paperSize}
             />
           </div>
         </div>
       </main>
 
-      {/* Animated Logo Loading Overlay during PDF/Word Export */}
+      {/* 3. Mobile Sticky Bottom Action Bar (<1024px) */}
+      <div className="print:hidden lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur-md border-t border-line py-2 px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between shadow-card">
+        {/* Autosave Mini Indicator */}
+        <div className="flex items-center gap-1.5 text-[11px] font-mono text-text-muted">
+          {autosaveStatus === 'saving' ? (
+            <RefreshCw className="w-3 h-3 text-brand animate-spin" />
+          ) : (
+            <Check className="w-3 h-3 text-success" />
+          )}
+          <span>{autosaveStatus === 'saving' ? (isRtl ? 'حفظ…' : 'Saving…') : autosaveRelativeText}</span>
+        </div>
+
+        {/* Quick Export Actions */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isExportingWord}
+            onClick={handleDownloadWord}
+            className="text-xs h-8 px-2.5"
+          >
+            Word
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={isExportingPdf}
+            isLoading={isExportingPdf}
+            onClick={handleDownloadPdf}
+            leftIcon={<Download className="w-3.5 h-3.5" />}
+            className="text-xs h-8 px-3"
+          >
+            <span>{isExportingPdf ? '...' : (isRtl ? 'تحميل PDF' : 'Download PDF')}</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* 4. Fullscreen Export Loader Overlay */}
       {(isExportingPdf || isExportingWord) && (
         <LogoLoader
-          text={isExportingPdf ? 'Generating PDF Resume...' : 'Generating Word Document...'}
-          subtext="Formatting high-precision ATS template..."
+          text={isExportingPdf ? (isRtl ? 'جاري تجهيز وتحميل ملف PDF...' : 'Generating ATS-Compliant PDF...') : (isRtl ? 'جاري تجهيز مستند Word...' : 'Generating Word Document...')}
+          subtext={isRtl ? 'تنسيق الخطوط والجداول بدقة عالية...' : 'Applying strict typography & formatting guidelines...'}
           size="md"
           fullScreen
+        />
+      )}
+
+      {/* 5. Accessible Toast Notification */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+          duration={3500}
         />
       )}
     </div>

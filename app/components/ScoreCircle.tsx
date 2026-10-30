@@ -1,9 +1,49 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+
 const ScoreCircle = ({ score = 75 }: { score: number }) => {
   const radius = 40;
   const stroke = 8;
   const normalizedRadius = radius - stroke / 2;
   const circumference = 2 * Math.PI * normalizedRadius;
-  const progress = score / 100;
+
+  const [animatedScore, setAnimatedScore] = useState<number>(score);
+
+  useEffect(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
+      setAnimatedScore(score);
+      return;
+    }
+
+    let startTimestamp: number | null = null;
+    const duration = 300;
+    const startValue = 0;
+    const endValue = score;
+    let animId: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const elapsed = timestamp - startTimestamp;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setAnimatedScore(Math.round(startValue + (endValue - startValue) * ease));
+
+      if (progress < 1) {
+        animId = requestAnimationFrame(animate);
+      }
+    };
+
+    animId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animId);
+  }, [score]);
+
+  const currentScore = animatedScore;
+  const progress = currentScore / 100;
   const strokeDashoffset = circumference * (1 - progress);
 
   return (
@@ -40,10 +80,11 @@ const ScoreCircle = ({ score = 75 }: { score: number }) => {
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
+          className="transition-all duration-300 ease-out"
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-        <span className="font-semibold text-sm">{`${score}/100`}</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-white" dir="ltr">
+        <span className="font-semibold text-sm tabular-nums" data-score>{`${currentScore}/100`}</span>
       </div>
     </div>
   );

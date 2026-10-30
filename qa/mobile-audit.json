@@ -1,0 +1,58 @@
+[
+  {
+    "page": "Home",
+    "path": "/",
+    "performance": 82,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 100,
+    "metrics": {
+      "loadTimeMs": 3007,
+      "title": "JobMatch AI - A Resume That Gets Read",
+      "h1Found": true,
+      "consoleErrors": 0
+    }
+  },
+  {
+    "page": "Builder",
+    "path": "/builder",
+    "performance": 88,
+    "accessibility": 88,
+    "bestPractices": 100,
+    "seo": 100,
+    "metrics": {
+      "loadTimeMs": 1531,
+      "title": "ATS Resume Builder | JobMatch AI",
+      "h1Found": true,
+      "consoleErrors": 0
+    }
+  },
+  {
+    "page": "Review",
+    "path": "/review",
+    "performance": 92,
+    "accessibility": 88,
+    "bestPractices": 100,
+    "seo": 100,
+    "metrics": {
+      "loadTimeMs": 1437,
+      "title": "ATS Resume Diagnostic & Job Match Review | JobMatch AI",
+      "h1Found": true,
+      "consoleErrors": 0
+    }
+  },
+  {
+    "page": "Cover Letter",
+    "path": "/cover-letter",
+    "performance": 92,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100,
+    "metrics": {
+      "loadTimeMs": 1097,
+      "title": "AI Cover Letter Generator | JobMatch AI",
+      "h1Found": true,
+      "consoleErrors": 0
+    }
+  }
+]

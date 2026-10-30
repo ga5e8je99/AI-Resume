@@ -206,8 +206,19 @@ export class CoverLetterService {
       throw new Error('البروتوكول غير مدعوم. يجب أن يبدأ الرابط بـ http أو https.');
     }
 
+    const lowerHost = parsedUrl.hostname.toLowerCase();
+    if (
+      lowerHost.includes('linkedin.com') ||
+      lowerHost.includes('indeed.com') ||
+      lowerHost.includes('glassdoor.com')
+    ) {
+      throw new Error(
+        'This job board (e.g. LinkedIn/Indeed) restricts automated scraping or requires authentication. Please copy the job description and paste it directly into the form.'
+      );
+    }
+
     if (this.isPrivateOrBlockedHost(parsedUrl.hostname)) {
-      throw new Error('الرابط المقدم غير مسموح به لأسباب أمنية.');
+      throw new Error('The provided URL is not allowed for security reasons.');
     }
 
     const controller = new AbortController();
@@ -224,7 +235,18 @@ export class CoverLetterService {
       });
 
       if (!response.ok) {
-        throw new Error(`تعذر جلب تفاصيل الرابط (كود الحالة: ${response.status}).`);
+        if (response.status === 401 || response.status === 403 || response.status === 429 || response.status === 999) {
+          throw new Error(
+            'This website restricts automated fetching or requires a user login. Please copy and paste the job description text directly into the form.'
+          );
+        }
+        throw new Error(`Failed to fetch job description (HTTP ${response.status}). Please paste the job description text directly.`);
+      }
+
+      // Enforce 2MB size limit to prevent resource exhaustion
+      const contentLength = response.headers.get('content-length');
+      if (contentLength && parseInt(contentLength, 10) > 2 * 1024 * 1024) {
+        throw new Error('The target web page exceeds the 2MB limit. Please copy and paste the job description text directly.');
       }
 
       const html = await response.text();
@@ -379,7 +401,7 @@ export class CoverLetterService {
       return { valid: false, error: 'نبرة الخطاب المحددة غير صالحة (Invalid tone specified)' };
     }
 
-    const validLangs: CoverLetterLanguage[] = ['ar', 'en'];
+    const validLangs: CoverLetterLanguage[] = ['ar', 'en', 'fr', 'de', 'es', 'tr'];
     if (body.language && !validLangs.includes(body.language)) {
       return { valid: false, error: 'اللغة المحددة غير صالحة (Invalid language specified)' };
     }
@@ -498,7 +520,12 @@ export class CoverLetterService {
     req: GenerateCoverLetterRequest,
     resumeData?: any
   ): CoverLetterData {
-    const isAr = req.language === 'ar';
+    const lang = (req.language || 'en') as CoverLetterLanguage;
+    const isAr = lang === 'ar';
+    const isFr = lang === 'fr';
+    const isDe = lang === 'de';
+    const isEs = lang === 'es';
+    const isTr = lang === 'tr';
     const tone = req.tone || 'formal';
 
     // 1. Recipient Details with graceful fallbacks
@@ -579,13 +606,31 @@ export class CoverLetterService {
     }
 
     // 7. Salutation & Subject
-    const salutation = isAr
-      ? `عناية ${hiringManager}،`
-      : `Dear ${hiringManager},`;
+    let salutation = `Dear ${hiringManager},`;
+    let subject = `Application for ${jobTitle} Role - ${candidateName}`;
+    let signOffPhrase = 'Sincerely,';
 
-    const subject = isAr
-      ? `طلب التقديم لشغل وظيفة: ${jobTitle} - ${candidateName}`
-      : `Application for ${jobTitle} Role - ${candidateName}`;
+    if (isAr) {
+      salutation = `عناية ${hiringManager}،`;
+      subject = `طلب التقديم لشغل وظيفة: ${jobTitle} - ${candidateName}`;
+      signOffPhrase = 'وتفضلوا بقبول فائق الاحترام والتقدير،';
+    } else if (isFr) {
+      salutation = req.hiringManager?.trim() ? `À l'attention de ${hiringManager},` : 'Madame, Monsieur,';
+      subject = `Candidature au poste de : ${jobTitle} - ${candidateName}`;
+      signOffPhrase = "Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées,";
+    } else if (isDe) {
+      salutation = req.hiringManager?.trim() ? `Sehr geehrte(r) ${hiringManager},` : 'Sehr geehrte Damen und Herren,';
+      subject = `Bewerbung als ${jobTitle} - ${candidateName}`;
+      signOffPhrase = 'Mit freundlichen Grüßen,';
+    } else if (isEs) {
+      salutation = req.hiringManager?.trim() ? `Estimado/a ${hiringManager}:` : 'Estimado/a responsable de selección:';
+      subject = `Candidatura para el puesto de: ${jobTitle} - ${candidateName}`;
+      signOffPhrase = 'Atentamente,';
+    } else if (isTr) {
+      salutation = req.hiringManager?.trim() ? `Sayın ${hiringManager},` : 'Sayın Yetkili,';
+      subject = `${jobTitle} Pozisyonu Başvurusu - ${candidateName}`;
+      signOffPhrase = 'Saygılarımla,';
+    }
 
     // 8. Intro & Body composition according to Tone
     let intro = '';
@@ -605,19 +650,16 @@ export class CoverLetterService {
           body1 = `${pastCompanyHighlight}ركزت بشكل مكثف على توظيف أفضل المعايير التقنية وممارسات هندسة البرمجيات الحديثة${skillHighlight}. وقد نجحت في تحسين الأداء العام وحل التحديات المعمارية المعقدة ورفع موثوقية الأنظمة بنسب قابلة للقياس.${customNoteSentence}`;
           body2 = `ما يميز اهتمامي بالانضمام إلى فريق عملكم هو التزام "${companyName}" المستمر بالابتكار والتميز الهندسي. أتطلع لتطبيق خبراتي في معالجة متطلباتكم الحالية وبناء أدوات متينة تحقق أهداف المؤسسة بكفاءة وموثوقية عالية.`;
           break;
-
         case 'leadership':
           intro = `أكتب إليكم للتعبير عن اهتمامي البالغ بشغل منصب "${jobTitle}" في "${companyName}". أمتلك سجلاً حافلاً بالنجاحات في قيادة المبادرات الاستراتيجية، وبناء وتوجيه فرق العمل متعددة التخصصات لتحقيق أعلى العوائد التشغيلية.`;
           body1 = `${pastCompanyHighlight}توليت مسؤولية توجيه المشروعات من مرحلة التخطيط الاستراتيجي وحتى التسليم النهائي، محققاً نمواً ملموساً في كفاءة الإنجاز وجودة المخرجات${skillHighlight}. أؤمن بأن القيادة المؤثرة ترتكز على تمكين الأفراد ومواءمة جهود الفريق مع الرؤية العامة للشركة.${customNoteSentence}`;
           body2 = `إن السمعة المرموقة التي تحظى بها "${companyName}" والنمو المستمر الذي تقودونه يمثلان البيئة المثالية التي أطمح لتوظيف مهاراتي القيادية فيها لتحقيق مستهدفات المرحلة القادمة وتجاوز مؤشرات الأداء المتوقعة.`;
           break;
-
         case 'enthusiastic':
           intro = `يسرني بكل حماس وشغف أن أقدم أوراق اعتمادي لوظيفة "${jobTitle}" لدى "${companyName}". أتابع باهتمام بالغ مسار تطوركم وابتكاراتكم المتميزة في السوق، وأشعر بحافز استثنائي لفرصة المساهمة في هذه الرحلة الملهمة.`;
           body1 = `${pastCompanyHighlight}اكتسبت طاقة دافعة للتعلم السريع والابتكار والتكيف الاستباقي مع متطلبات السوق المتسارعة${skillHighlight}. لطالما كان هدفي تقديم قيمة مضافة تتجاوز التوقعات وإشعال روح الإيجابية والتعاون المثمر في بيئة العمل.${customNoteSentence}`;
           body2 = `أرى في "${companyName}" المكان المثالي الذي يلتقي فيه شغفي وطموحي مع رؤيتكم المتطلعة للمستقبل. إنني على أتم استعداد لبذل أقصى جهد لنكون شركاء في تحقيق المزيد من النجاحات الباهرة معاً.`;
           break;
-
         case 'formal':
         default:
           intro = `يشرفني ويسرني أن أتقدم بطلبي لشغل وظيفة "${jobTitle}" لدى مؤسستكم الموقرة "${companyName}". بعد الاطلاع الدقيق على متطلبات الوظيفة واشتراطاتها المعلنة، أجد في خلفيتي المهنية وتطلعاتي توافقاً وثيقاً مع ما تبحثون عنه.`;
@@ -625,8 +667,31 @@ export class CoverLetterService {
           body2 = `إن العمل تحت مظلة "${companyName}" يمثل فرصة استثنائية أعتز بها، وأتطلع لأن أكون إضافة حقيقية لفريق عملكم تسهم في ترجمة تطلعات المؤسسة إلى إنجازات واقعية ومستدامة.`;
           break;
       }
-
       conclusion = `أرحب بفرصة التحدث معكم في مقابلة شخصية لمناقشة مؤهلاتي بتفصيل أوفى، وكيف يمكن لخبراتي أن تسهم في خدمة أهدافكم. أشكركم جزيل الشكر على كريم وقتكم واهتمامكم بمراجعة طلبي.`;
+    } else if (isFr) {
+      // FRENCH GENERATION
+      intro = `Je vous adresse par la présente ma candidature pour le poste de ${jobTitle} au sein de ${companyName}. Vivement intéressé(e) par vos réalisations et votre positionnement sur le marché, je suis convaincu(e) que mes compétences et mon parcours correspondent aux exigences de cette fonction.`;
+      body1 = `Fort(e) de mes expériences professionnelles antérieures${skillHighlight}, j'ai développé une solide maîtrise opérationnelle et une rigueur constante dans la conduite de projets d'envergure. J'ai mené à bien des initiatives structurantes alliant efficacité et recherche d'excellence.${customNoteSentence}`;
+      body2 = `Rejoindre ${companyName} représente pour moi l'opportunité de mobiliser mon savoir-faire au service de vos ambitions et de contribuer activement à vos futurs succès d'équipe.`;
+      conclusion = `Je me tiens à votre entière disposition pour un entretien afin de vous exposer de vive voix mes motivations et les atouts de ma candidature. En vous remerciant de l'attention que vous porterez à mon dossier.`;
+    } else if (isDe) {
+      // GERMAN GENERATION
+      intro = `mit großem Interesse bewerbe ich mich um die von Ihnen ausgeschriebene Position als ${jobTitle} bei ${companyName}. Ihr renommiertes Unternehmen und Ihre innovativen Projekte entsprechen vollumfänglich meinen beruflichen Zielen und Qualifikationen.`;
+      body1 = `Aufgrund meiner bisherigen beruflichen Erfahrungen${skillHighlight} verfüge ich über fundierte Fachkenntnisse und eine strukturierte, lösungsorientierte Arbeitsweise. Ich habe komplexe Aufgabenbereiche erfolgreich geleitet und messbare Resultate erzielt.${customNoteSentence}`;
+      body2 = `Die Unternehmenskultur und die strategische Ausrichtung von ${companyName} bieten ein erstklassiges Umfeld, in das ich meine Leistungsbereitschaft und Fachkompetenz gewinnbringend einbringen möchte.`;
+      conclusion = `Über eine Einladung zu einem persönlichen Gespräch freue ich mich sehr. Für Ihre Zeit und die wohlwollende Prüfung meiner Unterlagen danke ich Ihnen herzlich.`;
+    } else if (isEs) {
+      // SPANISH GENERATION
+      intro = `Por medio de la presente, tengo el agrado de presentar mi postulación para el puesto de ${jobTitle} en ${companyName}. Tras analizar con atención los requerimientos de la posición, considero que mi trayectoria y competencias se alinean estrechamente con sus objetivos.`;
+      body1 = `A lo largo de mi carrera profesional${skillHighlight}, he consolidado una amplia experiencia en la entrega de proyectos clave y la optimización de procesos operativos. Me caracterizo por un enfoque analítico, proactivo y orientado al logro de resultados medibles.${customNoteSentence}`;
+      body2 = `Formar parte de ${companyName} representa una valiosa oportunidad profesional donde deseo volcar mi dedicación y conocimientos para seguir impulsando el crecimiento y la excelencia de su equipo.`;
+      conclusion = `Agradezco de antemano el tiempo dedicado a revisar mi solicitud y quedo a su total disposición para concertar una entrevista personal en la que profundizar en mi experiencia.`;
+    } else if (isTr) {
+      // TURKISH GENERATION
+      intro = `${companyName} bünyesinde açık bulunan ${jobTitle} pozisyonu için başvurumu sunmaktan büyük memnuniyet duyuyorum. Şirketinizin sektördeki yenilikçi vizyonu ve başarıları, yetkinliklerim ve kariyer hedeflerim ile birebir örtüşmektedir.`;
+      body1 = `Mesleki deneyimlerim doğrultusunda${skillHighlight}, sistemli çalışma prensibi ve analitik düşünme yapısıyla kritik projeleri başarıyla tamamladım. Operasyonel verimliliği artırma ve kalite standartlarını yükseltme konularında somut katkılar sağladım.${customNoteSentence}`;
+      body2 = `${companyName} ekibine katılmak, teknik ve profesyonel birikimimi kurumsal hedefleriniz doğrultusunda değerlendirmek ve birlikte yeni başarılara imza atmak için mükemmel bir fırsattır.`;
+      conclusion = `Niteliklerimi ve şirketinize sağlayabileceğim katma değeri detaylı olarak aktarabilmem için uygun göreceğiniz bir tarihte görüşmeyi arzu ederim. Başvuruma ayırdığınız değerli zaman için teşekkür ederim.`;
     } else {
       // ENGLISH GENERATION PER TONE
       switch (tone) {
@@ -635,19 +700,16 @@ export class CoverLetterService {
           body1 = `${pastCompanyHighlight}I have focused on delivering clean, maintainable systems and implementing modern engineering standards${skillHighlight}. My experience encompasses optimizing performance bottlenecks, streamlining workflows, and architecting resilient solutions that scale efficiently.${customNoteSentence}`;
           body2 = `I have great admiration for the technical rigor and forward-thinking engineering culture cultivated at ${companyName}. I look forward to bringing my problem-solving mindset to your core technical challenges and driving measurable business value.`;
           break;
-
         case 'leadership':
           intro = `I am pleased to present my application for the ${jobTitle} position at ${companyName}. I bring a track record of orchestrating cross-functional initiatives, cultivating high-performing teams, and aligning operational velocity with strategic objectives.`;
           body1 = `${pastCompanyHighlight}I have steered mission-critical projects from early scoping through seamless execution${skillHighlight}. My leadership philosophy focuses on empowering individual contributors, fostering transparent communication, and driving accountability to consistently surpass KPI targets.${customNoteSentence}`;
           body2 = `${companyName}'s strategic market presence and vision resonate deeply with my professional values. I welcome the opportunity to partner with your leadership to scale operations and accelerate your organizational goals.`;
           break;
-
         case 'enthusiastic':
           intro = `I am thrilled to apply for the ${jobTitle} role at ${companyName}! Having followed your impressive innovations and dynamic impact, I would love nothing more than to bring my passion, energy, and commitment to your talented team.`;
           body1 = `${pastCompanyHighlight}I have embraced challenges with rapid adaptability, a relentless curiosity for learning, and a proactive problem-solving mindset${skillHighlight}. I thrive in collaborative environments where exceeding expectations and delivering impactful user experiences are the standard.${customNoteSentence}`;
           body2 = `Joining ${companyName} represents an inspiring opportunity to contribute to a mission I genuinely believe in. I am excited to bring my dedication to your team and make an immediate, positive impact from day one.`;
           break;
-
         case 'formal':
         default:
           intro = `I am writing to formally submit my candidacy for the ${jobTitle} position currently open at ${companyName}. Given my professional background, dedicated work ethic, and relevant competencies, I am confident in my ability to add significant value to your organization.`;
@@ -655,16 +717,13 @@ export class CoverLetterService {
           body2 = `The esteemed reputation and dedication to excellence upheld by ${companyName} make this opportunity particularly compelling. I look forward to the possibility of contributing my background toward supporting your overarching mission.`;
           break;
       }
-
       conclusion = `I would welcome the opportunity to discuss my qualifications with you during an interview. Thank you very much for your time, consideration, and review of my application.`;
     }
 
     // 9. Clean Sign Off Block
     const contactParts = [candidateEmail, candidatePhone].filter(Boolean);
     const contactLine = contactParts.length > 0 ? contactParts.join(' | ') : '';
-    const signOff = isAr
-      ? `وتفضلوا بقبول فائق التحية والتقدير،\n\n${candidateName}\n${candidateRole ? candidateRole + '\n' : ''}${contactLine}`.trim()
-      : `Sincerely,\n\n${candidateName}\n${candidateRole ? candidateRole + '\n' : ''}${contactLine}`.trim();
+    const signOff = `${signOffPhrase}\n\n${candidateName}${candidateRole ? '\n' + candidateRole : ''}${contactLine ? '\n' + contactLine : ''}`.trim();
 
     // 10. Combine full text cleanly
     const fullText = `${salutation}\n\n${intro}\n\n${body1}\n\n${body2}\n\n${conclusion}\n\n${signOff}`;

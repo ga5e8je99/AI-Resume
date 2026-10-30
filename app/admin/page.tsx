@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
+import { useToast } from '@/app/context/ToastContext';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import {
   Users,
   FileText,
@@ -438,6 +440,22 @@ interface AdminAnalysis {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
+  const toast = useToast();
+
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    variant?: 'danger' | 'warning' | 'info';
+    isLoading?: boolean;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean | null>(null);
   const [adminKeyInput, setAdminKeyInput] = useState('');
@@ -481,6 +499,11 @@ export default function AdminDashboardPage() {
   const showNotice = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
+    if (type === 'error') {
+      toast.error(message);
+    } else {
+      toast.success(message);
+    }
   };
 
   // Load Roadmap from LocalStorage with smart merge of new default ideas
@@ -528,16 +551,34 @@ export default function AdminDashboardPage() {
   };
 
   const handleDeleteIdea = (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذه الفكرة من خطة التطوير؟')) return;
-    const updated = roadmapIdeas.filter((item) => item.id !== id);
-    saveRoadmapIdeas(updated);
-    showNotice('تم حذف الفكرة من خطة التطوير');
+    setConfirmState({
+      isOpen: true,
+      title: 'حذف فكرة من خطة التطوير',
+      message: 'هل أنت متأكد من حذف هذه الفكرة من خطة التطوير؟',
+      confirmLabel: 'حذف الفكرة',
+      variant: 'danger',
+      onConfirm: () => {
+        const updated = roadmapIdeas.filter((item) => item.id !== id);
+        saveRoadmapIdeas(updated);
+        showNotice('تم حذف الفكرة من خطة التطوير');
+        setConfirmState((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   const handleResetDefaultIdeas = () => {
-    if (!confirm('هل تريد إعادة تعيين خطة التطوير إلى الخطة الأساسية الشاملة؟')) return;
-    saveRoadmapIdeas(DEFAULT_ROADMAP_IDEAS);
-    showNotice('تمت استعادة خطة التطوير الأساسية بنجاح');
+    setConfirmState({
+      isOpen: true,
+      title: 'إعادة تعيين خطة التطوير',
+      message: 'هل تريد إعادة تعيين خطة التطوير إلى الخطة الأساسية الشاملة؟',
+      confirmLabel: 'إعادة التعيين',
+      variant: 'warning',
+      onConfirm: () => {
+        saveRoadmapIdeas(DEFAULT_ROADMAP_IDEAS);
+        showNotice('تمت استعادة خطة التطوير الأساسية بنجاح');
+        setConfirmState((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   const handleCreateNewIdea = (e: React.FormEvent) => {
@@ -723,109 +764,143 @@ export default function AdminDashboardPage() {
         ? 'هل أنت متأكد من سحب صلاحية الأدمن من هذا المستخدم؟'
         : 'هل تريد ترقية هذا المستخدم إلى مشرف (Admin)؟';
 
-    if (!confirm(confirmMsg)) return;
+    setConfirmState({
+      isOpen: true,
+      title: currentRole === 'admin' ? 'سحب صلاحية المشرف' : 'ترقية إلى مشرف',
+      message: confirmMsg,
+      confirmLabel: currentRole === 'admin' ? 'سحب الصلاحية' : 'ترقية المشرف',
+      variant: currentRole === 'admin' ? 'warning' : 'info',
+      onConfirm: async () => {
+        try {
+          const res = await fetch('/api/admin/users', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, role: newRole }),
+          });
 
-    try {
-      const res = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role: newRole }),
-      });
-
-      if (res.ok) {
-        setUsersList((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-        );
-        showNotice(`تم تعديل صلاحية المستخدم إلى ${newRole === 'admin' ? 'مشرف (Admin)' : 'مستخدم عادي'}`);
-      } else {
-        const d = await res.json();
-        showNotice(d.error || 'فشل تعديل الصلاحية', 'error');
-      }
-    } catch (err) {
-      showNotice('حدث خطأ أثناء تعديل الصلاحية', 'error');
-    }
+          if (res.ok) {
+            setUsersList((prev) =>
+              prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
+            );
+            showNotice(`تم تعديل صلاحية المستخدم إلى ${newRole === 'admin' ? 'مشرف (Admin)' : 'مستخدم عادي'}`);
+          } else {
+            const d = await res.json();
+            showNotice(d.error || 'فشل تعديل الصلاحية', 'error');
+          }
+        } catch (err) {
+          showNotice('حدث خطأ أثناء تعديل الصلاحية', 'error');
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`تحذير: هل أنت متأكد تماماً من حذف المستخدم "${userName}"؟\nسيتم حذف حسابه وجميع السير الذاتية وفحوصات الـ ATS التابعة له نهائياً!`)) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/admin/users?id=${userId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setUsersList((prev) => prev.filter((u) => u.id !== userId));
-        setResumesList((prev) => prev.filter((r) => r.userId !== userId));
-        setAnalysesList((prev) => prev.filter((a) => a.userId !== userId));
-        if (stats) {
-          setStats({
-            ...stats,
-            metrics: {
-              ...stats.metrics,
-              totalUsers: Math.max(0, stats.metrics.totalUsers - 1),
-            },
-          });
+    setConfirmState({
+      isOpen: true,
+      title: `حذف المستخدم "${userName}"`,
+      message: `تحذير: هل أنت متأكد تماماً من حذف المستخدم "${userName}"؟\nسيتم حذف حسابه وجميع السير الذاتية وفحوصات الـ ATS التابعة له نهائياً!`,
+      confirmLabel: 'حذف المستخدم نهائياً',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/users?id=${userId}`, { method: 'DELETE' });
+          if (res.ok) {
+            setUsersList((prev) => prev.filter((u) => u.id !== userId));
+            setResumesList((prev) => prev.filter((r) => r.userId !== userId));
+            setAnalysesList((prev) => prev.filter((a) => a.userId !== userId));
+            if (stats) {
+              setStats({
+                ...stats,
+                metrics: {
+                  ...stats.metrics,
+                  totalUsers: Math.max(0, stats.metrics.totalUsers - 1),
+                },
+              });
+            }
+            showNotice(`تم حذف المستخدم "${userName}" وبياناته بنجاح`);
+          } else {
+            const d = await res.json();
+            showNotice(d.error || 'فشل حذف المستخدم', 'error');
+          }
+        } catch (err) {
+          showNotice('حدث خطأ أثناء حذف المستخدم', 'error');
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
         }
-        showNotice(`تم حذف المستخدم "${userName}" وبياناته بنجاح`);
-      } else {
-        const d = await res.json();
-        showNotice(d.error || 'فشل حذف المستخدم', 'error');
-      }
-    } catch (err) {
-      showNotice('حدث خطأ أثناء حذف المستخدم', 'error');
-    }
+      },
+    });
   };
 
   const handleDeleteResume = async (resumeId: string, title: string) => {
-    if (!confirm(`هل أنت متأكد من حذف السيرة الذاتية "${title}"؟`)) return;
-
-    try {
-      const res = await fetch(`/api/admin/resumes?id=${resumeId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setResumesList((prev) => prev.filter((r) => r.id !== resumeId));
-        if (stats) {
-          setStats({
-            ...stats,
-            metrics: {
-              ...stats.metrics,
-              totalResumes: Math.max(0, stats.metrics.totalResumes - 1),
-            },
-          });
+    setConfirmState({
+      isOpen: true,
+      title: 'حذف السيرة الذاتية',
+      message: `هل أنت متأكد من حذف السيرة الذاتية "${title}"؟`,
+      confirmLabel: 'حذف السيرة',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/resumes?id=${resumeId}`, { method: 'DELETE' });
+          if (res.ok) {
+            setResumesList((prev) => prev.filter((r) => r.id !== resumeId));
+            if (stats) {
+              setStats({
+                ...stats,
+                metrics: {
+                  ...stats.metrics,
+                  totalResumes: Math.max(0, stats.metrics.totalResumes - 1),
+                },
+              });
+            }
+            showNotice('تم حذف السيرة الذاتية بنجاح');
+          } else {
+            const d = await res.json();
+            showNotice(d.error || 'فشل حذف السيرة الذاتية', 'error');
+          }
+        } catch (err) {
+          showNotice('حدث خطأ أثناء حذف السيرة الذاتية', 'error');
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
         }
-        showNotice('تم حذف السيرة الذاتية بنجاح');
-      } else {
-        const d = await res.json();
-        showNotice(d.error || 'فشل حذف السيرة الذاتية', 'error');
-      }
-    } catch (err) {
-      showNotice('حدث خطأ أثناء حذف السيرة الذاتية', 'error');
-    }
+      },
+    });
   };
 
   const handleDeleteAnalysis = async (analysisId: string) => {
-    if (!confirm('هل تريد حذف سجل فحص الـ ATS هذا؟')) return;
-
-    try {
-      const res = await fetch(`/api/admin/analyses?id=${analysisId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setAnalysesList((prev) => prev.filter((a) => a.id !== analysisId));
-        if (stats) {
-          setStats({
-            ...stats,
-            metrics: {
-              ...stats.metrics,
-              totalAnalyses: Math.max(0, stats.metrics.totalAnalyses - 1),
-            },
-          });
+    setConfirmState({
+      isOpen: true,
+      title: 'حذف فحص الـ ATS',
+      message: 'هل تريد حذف سجل فحص الـ ATS هذا؟',
+      confirmLabel: 'حذف السجل',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/analyses?id=${analysisId}`, { method: 'DELETE' });
+          if (res.ok) {
+            setAnalysesList((prev) => prev.filter((a) => a.id !== analysisId));
+            if (stats) {
+              setStats({
+                ...stats,
+                metrics: {
+                  ...stats.metrics,
+                  totalAnalyses: Math.max(0, stats.metrics.totalAnalyses - 1),
+                },
+              });
+            }
+            showNotice('تم حذف سجل الفحص');
+          } else {
+            const d = await res.json();
+            showNotice(d.error || 'فشل حذف سجل الفحص', 'error');
+          }
+        } catch (err) {
+          showNotice('حدث خطأ أثناء حذف السجل', 'error');
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
         }
-        showNotice('تم حذف سجل الفحص');
-      } else {
-        const d = await res.json();
-        showNotice(d.error || 'فشل حذف سجل الفحص', 'error');
-      }
-    } catch (err) {
-      showNotice('حدث خطأ أثناء حذف السجل', 'error');
-    }
+      },
+    });
   };
 
   const handleExportData = () => {
@@ -893,10 +968,10 @@ export default function AdminDashboardPage() {
   // If NOT authorized as admin, show Admin Authentication Access Gate
   if (!isAdminAuthorized) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
+      <div className="min-h-screen bg-paper flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-8  shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 end-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
+          <div className="absolute bottom-0 start-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
 
           <div className="flex justify-center mb-6">
             <div className="p-4 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/20">
@@ -924,13 +999,13 @@ export default function AdminDashboardPage() {
                 مفتاح الدخول السري (Admin Secret Key)
               </label>
               <div className="relative">
-                <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Key className="w-4 h-4 text-slate-400 absolute start-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="password"
                   value={adminKeyInput}
                   onChange={(e) => setAdminKeyInput(e.target.value)}
                   placeholder="أدخل مفتاح الإدارة أو كلمة المرور السرية"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 placeholder-slate-500"
+                  className="w-full ps-10 pe-4 py-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 placeholder-slate-500"
                   required
                 />
               </div>
@@ -939,7 +1014,7 @@ export default function AdminDashboardPage() {
             <button
               type="submit"
               disabled={isVerifyingKey}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm shadow-lg shadow-cyan-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl bg-accent text-on-accent hover:bg-accent-hover text-white font-bold text-sm shadow-lg shadow-cyan-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isVerifyingKey ? (
                 <>
@@ -1008,7 +1083,7 @@ export default function AdminDashboardPage() {
       {/* Top Notification Toast */}
       {notification && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-medium flex items-center gap-2.5 animate-in slide-in-from-top duration-300 ${
+          className={`fixed top-4 end-4 z-50 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-medium flex items-center gap-2.5 animate-in slide-in-from-top duration-300 ${
             notification.type === 'error'
               ? 'bg-red-950/95 border-red-800 text-red-200'
               : 'bg-emerald-950/95 border-emerald-800 text-emerald-200'
@@ -1024,10 +1099,10 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Admin Navbar */}
-      <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-40 px-4 sm:px-8 py-3.5">
+      <header className="border-b border-slate-800/80 bg-slate-900/60  sticky top-0 z-40 px-4 sm:px-8 py-3.5">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 shadow-md shadow-cyan-500/20 text-white font-bold">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-accent text-on-accent shadow-md shadow-cyan-500/20 text-white font-bold">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
@@ -1081,7 +1156,7 @@ export default function AdminDashboardPage() {
         {/* KPI Metrics Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Card 1: Users */}
-          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden backdrop-blur-sm">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden ">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">إجمالي المستخدمين</span>
               <div className="p-2 rounded-xl bg-blue-500/15 text-blue-400">
@@ -1101,7 +1176,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Card 2: Resumes */}
-          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden backdrop-blur-sm">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden ">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">إجمالي السير الذاتية</span>
               <div className="p-2 rounded-xl bg-cyan-500/15 text-cyan-400">
@@ -1121,7 +1196,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Card 3: ATS Scans */}
-          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden backdrop-blur-sm">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden ">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">فحوصات الـ ATS</span>
               <div className="p-2 rounded-xl bg-purple-500/15 text-purple-400">
@@ -1138,7 +1213,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Card 4: Avg Score */}
-          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden backdrop-blur-sm">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 relative overflow-hidden ">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">متوسط درجات المطابقة</span>
               <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400">
@@ -1211,7 +1286,7 @@ export default function AdminDashboardPage() {
             onClick={() => setActiveTab('plan')}
             className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${
               activeTab === 'plan'
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold shadow-md shadow-orange-500/25'
+                ? 'bg-accent text-on-accent text-slate-950 font-bold shadow-md shadow-orange-500/25'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
@@ -1221,6 +1296,15 @@ export default function AdminDashboardPage() {
               خارطة الطريق
             </span>
           </button>
+
+          <Link
+            href="/admin/payments"
+            className="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/30 transition-all cursor-pointer"
+            title="Crypto & Binance Payments Verification"
+          >
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <span>مدفوعات Binance والـ Crypto</span>
+          </Link>
         </div>
 
         {/* TAB 1: OVERVIEW & ANALYTICS */}
@@ -1228,7 +1312,7 @@ export default function AdminDashboardPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Template Popularity Distribution */}
-              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 ">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-2.5">
                     <Layout className="w-5 h-5 text-cyan-400" />
@@ -1267,7 +1351,7 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Score Distribution Breakdown */}
-              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm">
+              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-6 ">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-2.5">
                     <Award className="w-5 h-5 text-amber-400" />
@@ -1328,7 +1412,7 @@ export default function AdminDashboardPage() {
             {/* Recent Platform Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Latest Users */}
-              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 backdrop-blur-sm">
+              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 ">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-bold text-sm text-white flex items-center gap-2">
                     <Users className="w-4 h-4 text-cyan-400" />
@@ -1341,7 +1425,7 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2.5">
                   {usersList.slice(0, 5).map((u) => (
                     <div key={u.id} className="p-3 rounded-xl bg-slate-800/40 border border-slate-800 flex items-center justify-between">
-                      <div className="min-w-0 pr-2">
+                      <div className="min-w-0 pe-2">
                         <div className="font-semibold text-xs text-white truncate">{u.name}</div>
                         <div className="text-[11px] text-slate-400 truncate">{u.email}</div>
                       </div>
@@ -1357,7 +1441,7 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Latest Resumes */}
-              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 backdrop-blur-sm">
+              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 ">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-bold text-sm text-white flex items-center gap-2">
                     <FileText className="w-4 h-4 text-emerald-400" />
@@ -1370,7 +1454,7 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2.5">
                   {resumesList.slice(0, 5).map((r) => (
                     <div key={r.id} className="p-3 rounded-xl bg-slate-800/40 border border-slate-800 flex items-center justify-between">
-                      <div className="min-w-0 pr-2">
+                      <div className="min-w-0 pe-2">
                         <div className="font-semibold text-xs text-white truncate">{r.title}</div>
                         <div className="text-[11px] text-slate-400 truncate">بواسطة: {r.userName}</div>
                       </div>
@@ -1382,7 +1466,7 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Latest ATS Scans */}
-              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 backdrop-blur-sm">
+              <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 ">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-bold text-sm text-white flex items-center gap-2">
                     <ScanSearch className="w-4 h-4 text-purple-400" />
@@ -1395,11 +1479,11 @@ export default function AdminDashboardPage() {
                 <div className="space-y-2.5">
                   {analysesList.slice(0, 5).map((a) => (
                     <div key={a.id} className="p-3 rounded-xl bg-slate-800/40 border border-slate-800 flex items-center justify-between">
-                      <div className="min-w-0 pr-2">
+                      <div className="min-w-0 pe-2">
                         <div className="font-semibold text-xs text-white truncate">{a.targetRole}</div>
                         <div className="text-[11px] text-slate-400 truncate">{a.userName}</div>
                       </div>
-                      <div className="text-left shrink-0">
+                      <div className="text-start shrink-0">
                         {getScoreBadge(a.overallScore)}
                       </div>
                     </div>
@@ -1413,7 +1497,7 @@ export default function AdminDashboardPage() {
 
         {/* TAB 2: USERS DIRECTORY */}
         {activeTab === 'users' && (
-          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 sm:p-6 backdrop-blur-sm space-y-4">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 sm:p-6  space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1428,20 +1512,20 @@ export default function AdminDashboardPage() {
 
               {/* Search input */}
               <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   placeholder="بحث بالاسم أو الإيميل..."
-                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400 placeholder-slate-500"
+                  className="w-full ps-9 pe-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400 placeholder-slate-500"
                 />
               </div>
             </div>
 
             {/* Users Table */}
             <div className="overflow-x-auto rounded-2xl border border-slate-800">
-              <table className="w-full text-right text-xs sm:text-sm">
+              <table className="w-full text-start text-xs sm:text-sm">
                 <thead className="bg-slate-800/80 text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-700/80">
                   <tr>
                     <th className="py-3 px-4">المستخدم</th>
@@ -1458,7 +1542,7 @@ export default function AdminDashboardPage() {
                     <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-accent text-on-accent flex items-center justify-center text-white font-bold text-xs shrink-0">
                             {u.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -1531,7 +1615,7 @@ export default function AdminDashboardPage() {
 
         {/* TAB 3: ALL RESUMES DIRECTORY */}
         {activeTab === 'resumes' && (
-          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 sm:p-6 backdrop-blur-sm space-y-4">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 sm:p-6  space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1559,13 +1643,13 @@ export default function AdminDashboardPage() {
                 </select>
 
                 <div className="relative flex-1 sm:w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={resumeSearch}
                     onChange={(e) => setResumeSearch(e.target.value)}
                     placeholder="بحث بالعنوان أو صاحب السيرة..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400 placeholder-slate-500"
+                    className="w-full ps-9 pe-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400 placeholder-slate-500"
                   />
                 </div>
               </div>
@@ -1573,7 +1657,7 @@ export default function AdminDashboardPage() {
 
             {/* Resumes Table */}
             <div className="overflow-x-auto rounded-2xl border border-slate-800">
-              <table className="w-full text-right text-xs sm:text-sm">
+              <table className="w-full text-start text-xs sm:text-sm">
                 <thead className="bg-slate-800/80 text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-700/80">
                   <tr>
                     <th className="py-3 px-4">عنوان السيرة الذاتية</th>
@@ -1659,7 +1743,7 @@ export default function AdminDashboardPage() {
 
         {/* TAB 4: ATS SCANS HISTORY */}
         {activeTab === 'analyses' && (
-          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 sm:p-6 backdrop-blur-sm space-y-4">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-3xl p-5 sm:p-6  space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -1674,20 +1758,20 @@ export default function AdminDashboardPage() {
 
               {/* Search */}
               <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={analysisSearch}
                   onChange={(e) => setAnalysisSearch(e.target.value)}
                   placeholder="بحث بالمسمى أو المستخدم..."
-                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400 placeholder-slate-500"
+                  className="w-full ps-9 pe-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400 placeholder-slate-500"
                 />
               </div>
             </div>
 
             {/* Analyses Table */}
             <div className="overflow-x-auto rounded-2xl border border-slate-800">
-              <table className="w-full text-right text-xs sm:text-sm">
+              <table className="w-full text-start text-xs sm:text-sm">
                 <thead className="bg-slate-800/80 text-slate-300 text-xs font-bold uppercase tracking-wider border-b border-slate-700/80">
                   <tr>
                     <th className="py-3 px-4">الوظيفة المستهدفة</th>
@@ -1833,9 +1917,9 @@ export default function AdminDashboardPage() {
           return (
             <div className="space-y-6">
               {/* Header Hero Banner */}
-              <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-cyan-950/30 border border-amber-500/20 rounded-3xl p-6 sm:p-8 backdrop-blur-md relative overflow-hidden shadow-2xl">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
-                <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+              <div className="bg-surface border border-amber-500/20 rounded-3xl p-6 sm:p-8  relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 end-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+                <div className="absolute bottom-0 start-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
                   <div className="space-y-2 max-w-2xl">
@@ -1855,7 +1939,7 @@ export default function AdminDashboardPage() {
                   <div className="flex flex-wrap items-center gap-2.5">
                     <button
                       onClick={() => setIsAddIdeaModalOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-on-accent hover:bg-accent-hover text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
                     >
                       <Plus className="w-4 h-4" />
                       <span>إضافة فكرة جديدة</span>
@@ -1884,7 +1968,7 @@ export default function AdminDashboardPage() {
 
               {/* Progress & KPIs Summary Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur-sm">
+                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 ">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">إجمالي الأفكار</span>
                     <div className="p-2 rounded-xl bg-amber-500/15 text-amber-400">
@@ -1895,7 +1979,7 @@ export default function AdminDashboardPage() {
                   <p className="text-[11px] text-slate-400 mt-1">ميزة وخدمة في الخطة</p>
                 </div>
 
-                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur-sm">
+                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 ">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">قيد التنفيذ والبرمجة</span>
                     <div className="p-2 rounded-xl bg-cyan-500/15 text-cyan-400">
@@ -1906,7 +1990,7 @@ export default function AdminDashboardPage() {
                   <p className="text-[11px] text-cyan-400 mt-1">جاري تطويرها حالياً</p>
                 </div>
 
-                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur-sm">
+                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 ">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">مكتمل ومنفذ</span>
                     <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-400">
@@ -1917,7 +2001,7 @@ export default function AdminDashboardPage() {
                   <p className="text-[11px] text-emerald-400 mt-1">جاهزة وتعمل بالمنصة</p>
                 </div>
 
-                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 backdrop-blur-sm">
+                <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 ">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">نسبة الإنجاز العامة</span>
                     <div className="p-2 rounded-xl bg-purple-500/15 text-purple-400">
@@ -1930,7 +2014,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="w-full bg-slate-800 h-2 rounded-full mt-2.5 overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-amber-500 via-cyan-400 to-emerald-400 rounded-full transition-all duration-500"
+                      className="h-full bg-accent rounded-full transition-all duration-500"
                       style={{ width: `${completionPercentage}%` }}
                     />
                   </div>
@@ -1938,22 +2022,22 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Filters & Search Toolbar */}
-              <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 backdrop-blur-sm space-y-4">
+              <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4  space-y-4">
                 <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
                   {/* Search Input */}
                   <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                    <Search className="w-4 h-4 text-slate-400 absolute end-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={planSearch}
                       onChange={(e) => setPlanSearch(e.target.value)}
                       placeholder="ابحث في أفكار التطوير، الذكاء الاصطناعي، التصميم، أو المواصفات..."
-                      className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 placeholder-slate-500"
+                      className="w-full ps-10 pe-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white text-xs sm:text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 placeholder-slate-500"
                     />
                     {planSearch && (
                       <button
                         onClick={() => setPlanSearch('')}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -2007,7 +2091,7 @@ export default function AdminDashboardPage() {
 
                 {/* Category Pills */}
                 <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pt-1 border-t border-slate-800/80">
-                  <span className="text-xs text-slate-400 whitespace-nowrap ml-2">التصنيف:</span>
+                  <span className="text-xs text-slate-400 whitespace-nowrap ms-2">التصنيف:</span>
                   <button
                     onClick={() => setPlanCategoryFilter('all')}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
@@ -2083,7 +2167,7 @@ export default function AdminDashboardPage() {
                   return (
                     <div
                       key={idea.id}
-                      className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 rounded-3xl p-5 sm:p-6 backdrop-blur-sm transition-all duration-200 flex flex-col justify-between group shadow-xl relative overflow-hidden"
+                      className="bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 rounded-3xl p-5 sm:p-6  transition-all duration-200 flex flex-col justify-between group shadow-xl relative overflow-hidden"
                     >
                       {/* Top Badges */}
                       <div>
@@ -2204,7 +2288,7 @@ export default function AdminDashboardPage() {
 
                           <button
                             onClick={() => handleDeleteIdea(idea.id)}
-                            className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors ml-1 cursor-pointer"
+                            className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors ms-1 cursor-pointer"
                             title="حذف من الخطة"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -2241,11 +2325,11 @@ export default function AdminDashboardPage() {
 
         {/* Modal: Add New Roadmap Idea */}
         {isAddIdeaModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 z-50 bg-black/80  flex items-center justify-center p-4 overflow-y-auto">
             <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
               <button
                 onClick={() => setIsAddIdeaModalOpen(false)}
-                className="absolute top-5 left-5 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                className="absolute top-5 start-5 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2365,7 +2449,7 @@ export default function AdminDashboardPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent text-on-accent hover:bg-accent-hover text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     <span>حفظ وإضافة إلى الخطة</span>
@@ -2375,6 +2459,19 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Global Admin Confirmation Dialog */}
+        <ConfirmModal
+          isOpen={confirmState.isOpen}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmLabel={confirmState.confirmLabel || 'تأكيد'}
+          cancelLabel="إلغاء"
+          variant={confirmState.variant || 'danger'}
+          isLoading={confirmState.isLoading}
+          onConfirm={confirmState.onConfirm}
+          onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+        />
       </main>
     </div>
   );

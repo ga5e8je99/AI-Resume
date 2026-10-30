@@ -1,5 +1,9 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export type UserPlan = 'free' | 'pro' | 'enterprise';
+export type BillingCycle = 'monthly' | 'annual' | 'lifetime' | 'none';
+export type PaymentProvider = 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
@@ -7,6 +11,18 @@ export interface IUser extends Document {
   password: string;
   avatar?: string;
   role: 'user' | 'admin';
+  isDemo?: boolean;
+  plan: UserPlan;
+  aiCredits: number;
+  aiResumeGenerationsCount?: number;
+  jobMatchFreeUsed?: number;
+  billingCycle: BillingCycle;
+  planExpiresAt: Date | null;
+  paymentProvider: PaymentProvider;
+  providerCustomerId: string;
+  providerSubscriptionId: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpires?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +57,58 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ['user', 'admin'],
       default: 'user',
+    },
+    isDemo: {
+      type: Boolean,
+      default: false,
+    },
+    plan: {
+      type: String,
+      enum: ['free', 'pro', 'enterprise'],
+      default: 'free',
+    },
+    aiCredits: {
+      type: Number,
+      default: 3,
+    },
+    aiResumeGenerationsCount: {
+      type: Number,
+      default: 0,
+    },
+    jobMatchFreeUsed: {
+      type: Number,
+      default: 0,
+    },
+    billingCycle: {
+      type: String,
+      enum: ['monthly', 'annual', 'lifetime', 'none'],
+      default: 'none',
+    },
+    planExpiresAt: {
+      type: Date,
+      default: null,
+    },
+    paymentProvider: {
+      type: String,
+      enum: ['stripe', 'paymob', 'paddle', 'binance', 'none'],
+      default: 'none',
+    },
+    providerCustomerId: {
+      type: String,
+      default: '',
+    },
+    providerSubscriptionId: {
+      type: String,
+      default: '',
+    },
+    resetPasswordToken: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
     },
   },
   {

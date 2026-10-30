@@ -95,7 +95,7 @@ export default function AuthPageClient() {
           </div>
         )}
 
-        <div className=" bg-gray-800/50 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden border border-gray-700 ">
+        <div className="bg-surface rounded-[10px] shadow-subtle overflow-hidden border border-line-strong">
           <div className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>

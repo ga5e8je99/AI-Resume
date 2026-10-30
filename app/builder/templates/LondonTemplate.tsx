@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -19,7 +19,7 @@ export default function LondonTemplate({ data, theme }: TemplateProps) {
   return (
     <div 
       className="bg-white text-gray-900 w-full min-h-[1050px] p-12 font-serif leading-relaxed text-[13px] print:p-8"
-      style={{ fontFamily: theme.fontFamily.includes('serif') ? theme.fontFamily : 'Georgia, serif' }}
+      style={{ fontFamily: theme.documentLanguage === 'ar' ? 'var(--font-arabic), "IBM Plex Sans Arabic", sans-serif' : (theme.fontFamily.includes('serif') ? theme.fontFamily : 'Georgia, serif') }}
       dir={h.dir}
     >
       {/* Centered London Header */}
@@ -86,7 +86,7 @@ export default function LondonTemplate({ data, theme }: TemplateProps) {
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-bold text-gray-900">{exp.position}</span>
                   <span className={`text-gray-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                    {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                   </span>
                 </div>
                 <div className="text-gray-600 italic mb-1">
@@ -135,7 +135,7 @@ export default function LondonTemplate({ data, theme }: TemplateProps) {
                   <div className="text-gray-600 italic">{edu.institution} {edu.gpa && `• ${h.gpa}: ${edu.gpa}`}</div>
                 </div>
                 <span className={`text-gray-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                  {edu.startDate} – {edu.endDate}
+                  {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                 </span>
               </div>
             ))}

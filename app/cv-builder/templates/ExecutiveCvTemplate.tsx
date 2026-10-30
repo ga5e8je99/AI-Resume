@@ -1,6 +1,6 @@
 import React from 'react';
 import { CvData, CvThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: CvData;
@@ -137,7 +137,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-bold text-slate-900 text-[12.5px]">{exp.position}</span>
                   <span className="text-[11px] font-semibold text-slate-500">
-                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                    {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-700 italic font-medium mb-1.5 text-[11px]">
@@ -180,7 +180,7 @@ export default function ExecutiveCvTemplate({ data, theme }: TemplateProps) {
                   </div>
                 </div>
                 <span className="text-slate-500 font-medium text-[11px]">
-                  {edu.startDate} – {edu.endDate}
+                  {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                 </span>
               </div>
             ))}

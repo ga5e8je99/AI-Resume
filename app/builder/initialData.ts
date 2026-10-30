@@ -96,5 +96,9 @@ export const initialSampleData: ResumeData = {
   certifications: [
     "AWS Certified Solutions Architect – Associate",
     "Meta Certified Front-End Developer Specialization"
+  ],
+  languages: [
+    { id: "lang-1", name: "English", proficiency: "Native" },
+    { id: "lang-2", name: "Arabic", proficiency: "Fluent" }
   ]
 };

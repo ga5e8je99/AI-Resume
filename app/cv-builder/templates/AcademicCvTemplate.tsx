@@ -1,6 +1,6 @@
 import React from 'react';
 import { CvData, CvThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: CvData;
@@ -91,7 +91,7 @@ export default function AcademicCvTemplate({ data, theme }: TemplateProps) {
                     {edu.degree} in {edu.fieldOfStudy}
                   </span>
                   <span className={`font-sans text-[11px] text-slate-600 font-normal ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                    {edu.startDate} – {edu.endDate}
+                    {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                   </span>
                 </div>
                 <p className="italic text-slate-700">
@@ -118,7 +118,7 @@ export default function AcademicCvTemplate({ data, theme }: TemplateProps) {
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-bold text-slate-900">{exp.position}</span>
                   <span className={`font-sans text-[10.5px] text-slate-600 ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                    {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                   </span>
                 </div>
                 <p className="italic text-slate-700 mb-1">
@@ -150,8 +150,8 @@ export default function AcademicCvTemplate({ data, theme }: TemplateProps) {
           </h2>
           <div className="space-y-3 text-[11.5px]">
             {publications.map((pub, idx) => (
-              <div key={pub.id} className={`${h.isRtl ? 'pr-4 -mr-4' : 'pl-4 -indent-4'}`}>
-                <span className={`font-sans font-bold text-slate-500 ${h.isRtl ? 'ml-1.5' : 'mr-1.5'}`}>[{idx + 1}]</span>
+              <div key={pub.id} className="ps-4 -indent-4">
+                <span className="font-sans font-bold text-slate-500 me-1.5">[{idx + 1}]</span>
                 <span className="font-bold text-slate-900">{pub.title}. </span>
                 <span className="italic text-slate-800">{pub.publisher}</span>, {pub.date}.
                 {pub.link && (
@@ -159,13 +159,13 @@ export default function AcademicCvTemplate({ data, theme }: TemplateProps) {
                     href={pub.link}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-sans text-[10.5px] text-blue-700 underline ml-1"
+                    className="font-sans text-[10.5px] text-blue-700 underline ms-1"
                   >
                     DOI
                   </a>
                 )}
                 {pub.description && (
-                  <p className={`text-[11px] text-slate-700 italic mt-0.5 ${h.isRtl ? 'mr-4' : 'ml-4'} font-normal`}>
+                  <p className="text-[11px] text-slate-700 italic mt-0.5 ms-4 font-normal">
                     {pub.description}
                   </p>
                 )}

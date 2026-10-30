@@ -1,241 +1,205 @@
-"use client";
-import Link from "next/link";
-import Navbar from "../components/Navbar";
-import { Shield, FileText, Lock, AlertTriangle, ChevronRight } from "lucide-react";
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import { useLanguage } from '../context/LanguageContext';
+import { ChevronDown } from 'lucide-react';
 
 export default function TermsOfService() {
+  const { language, isRtl } = useLanguage();
+  const isAr = language === 'ar';
+  const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'support@jobmatch.ai';
+
+  const sections = [
+    { id: 'acceptance', title: isAr ? '1. قبول الشروط والأحكام' : '1. Acceptance of Terms' },
+    { id: 'services', title: isAr ? '2. خدمات المنصة ومحرر السير' : '2. Platform Services' },
+    { id: 'subscriptions', title: isAr ? '3. الاشتراكات والدفع وسياسة الاسترجاع' : '3. Subscriptions, Payments & Refunds' },
+    { id: 'ai-disclaimer', title: isAr ? '4. إخلاء المسؤولية عن محتوى الذكاء الاصطناعي' : '4. AI Content Disclaimer' },
+    { id: 'user-responsibilities', title: isAr ? '5. مسؤوليات المستخدم والاستخدام المقبول' : '5. Acceptable Use' },
+    { id: 'contact', title: isAr ? '6. التواصل والدعم القانوني' : '6. Contact Information' },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col justify-between">
-      <div>
-        <Navbar />
-        <main className="container mx-auto px-4 sm:px-6 py-10 max-w-4xl">
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-900/30 rounded-2xl mb-6 border border-blue-700/50">
-            <FileText className="w-8 h-8 text-blue-400" />
-          </div>
-          <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-linear-to-r from-blue-400 to-cyan-300">
-            Terms of Service
+    <div className="min-h-screen bg-paper text-ink flex flex-col justify-between selection:bg-accent-soft selection:text-ink" dir={isRtl ? 'rtl' : 'ltr'}>
+      <Navbar />
+
+      <main id="main-content" className="max-w-[1160px] mx-auto px-4 sm:px-6 py-12 md:py-20 w-full">
+        {/* Document Header */}
+        <div className="max-w-[680px] mx-auto text-start pb-8 border-b border-line mb-8">
+          <span className="text-xs font-mono uppercase tracking-wider text-accent font-semibold">
+            {isAr ? 'الاتفاقية القانونية' : 'Legal Agreement'}
+          </span>
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-semibold text-ink tracking-tight mt-2 mb-3">
+            {isAr ? 'شروط الاستخدام والخدمة' : 'Terms of Service'}
           </h1>
-          <p className="text-gray-400 text-lg">Last updated: {new Date().toLocaleDateString()}</p>
+          <p className="text-xs font-mono text-ink-3">
+            {isAr ? 'تاريخ التحديث: 2026-10-25 • المعيار: ISO 8601' : 'Last updated: 2026-10-25 • Version 2.1'}
+          </p>
         </div>
 
-        {/* Main Content */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-3xl border border-gray-700/50 p-8 md:p-10">
-          {/* Introduction */}
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-2 h-6 bg-blue-500 rounded-full"></div>
-              <h2 className="text-2xl font-bold text-white">1. Introduction</h2>
-            </div>
-            <p className="text-gray-300 leading-relaxed">
-              Welcome to <span className="font-semibold text-blue-300">JobMatch AI</span>. 
-              These Terms of Service (&quot;Terms&quot;) govern your use of our website, services, and applications 
-              (collectively, the &quot;Service&quot;). By accessing or using the Service, you agree to be bound by 
-              these Terms. If you disagree with any part of the terms, you may not access the Service.
-            </p>
-          </section>
+        {/* Mobile "On this page" Collapsed Dropdown (<lg) */}
+        <div className="lg:hidden max-w-[680px] mx-auto mb-8">
+          <details className="group rounded-[8px] border border-line bg-surface p-3.5 transition-all">
+            <summary className="flex items-center justify-between cursor-pointer list-none text-xs font-mono font-semibold uppercase text-ink select-none">
+              <span>{isAr ? 'في هذه الصفحة (فهرس البنود)' : 'On this page (Table of Contents)'}</span>
+              <ChevronDown className="w-4 h-4 text-ink-3 transition-transform duration-200 group-open:rotate-180" />
+            </summary>
+            <nav className="mt-3 pt-3 border-t border-line space-y-1 text-xs">
+              {sections.map((sec) => (
+                <a
+                  key={sec.id}
+                  href={`#${sec.id}`}
+                  className="block py-1.5 px-2 rounded-[4px] text-ink-2 hover:text-ink hover:bg-surface-2 transition-colors font-medium"
+                >
+                  {sec.title}
+                </a>
+              ))}
+            </nav>
+          </details>
+        </div>
 
-          {/* Accounts */}
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-2 h-6 bg-blue-500 rounded-full"></div>
-              <h2 className="text-2xl font-bold text-white">2. User Accounts</h2>
+        {/* Layout: Sticky Table of Contents on Desktop (lg+) + 680px Reading Column */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start max-w-[1160px] mx-auto">
+          {/* Left / Desktop Sticky TOC (4 cols) */}
+          <aside className="hidden lg:block lg:col-span-4 sticky top-24 text-start">
+            <div className="rounded-[8px] border border-line bg-surface p-5 space-y-3">
+              <span className="text-[11px] font-mono uppercase font-semibold text-ink-3 tracking-wider block border-b border-line pb-2">
+                {isAr ? 'فهرس البنود' : 'Table of Contents'}
+              </span>
+              <nav className="space-y-1 text-xs">
+                {sections.map((sec) => (
+                  <a
+                    key={sec.id}
+                    href={`#${sec.id}`}
+                    className="block py-1.5 px-2 rounded-[4px] text-ink-2 hover:text-ink hover:bg-surface-2 transition-colors font-medium"
+                  >
+                    {sec.title}
+                  </a>
+                ))}
+              </nav>
             </div>
-            <div className="space-y-4 text-gray-300">
-              <div className="flex items-start gap-3">
-                <ChevronRight className="w-5 h-5 text-blue-400 mt-1 shrink-0" />
-                <p>You must be at least 18 years old to create an account</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <ChevronRight className="w-5 h-5 text-blue-400 mt-1 shrink-0" />
-                <p>You are responsible for maintaining the confidentiality of your account and password</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <ChevronRight className="w-5 h-5 text-blue-400 mt-1 shrink-0" />
-                <p>You agree to provide accurate and complete information during registration</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <ChevronRight className="w-5 h-5 text-blue-400 mt-1 shrink-0" />
-                <p>You must notify us immediately of any unauthorized use of your account</p>
-              </div>
-            </div>
-          </section>
+          </aside>
 
-          {/* Service Description */}
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-2 h-6 bg-blue-500 rounded-full"></div>
-              <h2 className="text-2xl font-bold text-white">3. Service Description</h2>
-            </div>
-            <div className="space-y-4 text-gray-300">
+          {/* Right Reading Column (8 cols, max-w-[680px]) */}
+          <article className="lg:col-span-8 max-w-[680px] w-full text-start space-y-12 text-ink-2 text-sm sm:text-base leading-relaxed">
+            {/* Section 1 */}
+            <section id="acceptance" className="space-y-4 pt-2">
+              <h2 className="font-serif text-2xl font-semibold text-ink tracking-tight">
+                {isAr ? '1. قبول الشروط والأحكام' : '1. Acceptance of Terms'}
+              </h2>
               <p>
-                Our Service provides AI-powered resume analysis and optimization tools. We offer:
+                {isAr
+                  ? 'من خلال استخدامك لمنصة JobMatch AI أو إنشاء حساب أو استخدام أدوات فحص وتوليد السير الذاتية، فإنك تقر بأنك قرأت وفهمت ووافقت على الالتزام بجميع بنود هذه الاتفاقية. إذا كنت لا توافق على هذه الشروط، يُرجى التوقف عن استخدام المنصة.'
+                  : 'By accessing JobMatch AI, creating an account, or using our resume diagnostics, CV builder, or cover letter tools, you agree to be bound by these Terms of Service. If you disagree with any portion of these terms, please discontinue using the service.'}
               </p>
-              <div className="grid md:grid-cols-2 gap-4 mt-6">
-                <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
-                  <h4 className="font-semibold text-blue-300 mb-2">Resume Analysis</h4>
-                  <p className="text-sm">AI-powered review of your resume content and structure</p>
-                </div>
-                <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
-                  <h4 className="font-semibold text-blue-300 mb-2">ATS Optimization</h4>
-                  <p className="text-sm">Improving compatibility with Applicant Tracking Systems</p>
-                </div>
-                <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
-                  <h4 className="font-semibold text-blue-300 mb-2">Content Suggestions</h4>
-                  <p className="text-sm">Recommendations for improving your resume content</p>
-                </div>
-                <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700">
-                  <h4 className="font-semibold text-blue-300 mb-2">Formatting Tools</h4>
-                  <p className="text-sm">Tools to enhance the visual appeal of your resume</p>
-                </div>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          {/* User Content */}
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-2 h-6 bg-blue-500 rounded-full"></div>
-              <h2 className="text-2xl font-bold text-white">4. User Content</h2>
-            </div>
-            <div className="space-y-4 text-gray-300">
+            {/* Section 2 */}
+            <section id="services" className="space-y-4 pt-2">
+              <h2 className="font-serif text-2xl font-semibold text-ink tracking-tight">
+                {isAr ? '2. خدمات المنصة (محرر السير الذاتية ومولد خطابات التقديم)' : '2. Platform Services'}
+              </h2>
               <p>
-                You retain all rights to the content you upload to our Service. However, by uploading content:
+                {isAr
+                  ? 'توفر المنصة أدوات متخصصة لصياغة وثائق التقديم على الوظائف:'
+                  : 'JobMatch AI provides software tools designed to assist in career documentation:'}
               </p>
-              <div className="bg-blue-900/20 border border-blue-800/30 rounded-xl p-4 mt-4">
-                <div className="flex items-start gap-3">
-                  <Lock className="w-5 h-5 text-blue-400 mt-1 shrink-0" />
-                  <p className="text-sm">
-                    We do not claim ownership of your resume data or personal information
-                  </p>
-                </div>
-                <div className="flex items-start gap-3 mt-3">
-                  <Shield className="w-5 h-5 text-blue-400 mt-1 shrink-0" />
-                  <p className="text-sm">
-                    Your data is processed securely and in accordance with our Privacy Policy
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+              <ul className="space-y-3 ps-4 border-s-2 border-line">
+                <li>
+                  <strong className="text-ink">{isAr ? 'محرر السير الذاتية (CV Builder):' : 'Resume & CV Builder:'}</strong>{' '}
+                  {isAr
+                    ? 'يوفر نماذج متوافقة مع أنظمة تتبع المتقدمين (ATS) مع تصدير متجهي بصيغ A4 و US Letter و Word. تقع مسؤولية صحة ودقة البيانات المدخلة على المستخدم وحده.'
+                    : 'Provides structured single and two-column layouts formatted for applicant tracking systems, supporting A4, US Letter, and DOCX exports. You are responsible for the truthfulness of all entered information.'}
+                </li>
+                <li>
+                  <strong className="text-ink">{isAr ? 'توليد خطابات التقديم (Cover Letter):' : 'Cover Letter Generator:'}</strong>{' '}
+                  {isAr
+                    ? 'أداة مساعدة مدعومة بالذكاء الاصطناعي تقترح صياغات للفقرات بناءً على متطلبات الوظيفة وخبراتك.'
+                    : 'An assistive tool generating custom paragraphs tailored to specific job specifications.'}
+                </li>
+              </ul>
+            </section>
 
-          {/* Prohibited Activities */}
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-2 h-6 bg-red-500 rounded-full"></div>
-              <h2 className="text-2xl font-bold text-white">5. Prohibited Activities</h2>
-            </div>
-            <div className="space-y-4 text-gray-300">
-              <p>You agree not to:</p>
-              <div className="bg-red-900/20 border border-red-800/30 rounded-xl p-4 mt-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-400 mt-1 shrink-0" />
-                  <p className="text-sm">Use the Service for any illegal purpose</p>
-                </div>
-                <div className="flex items-start gap-3 mt-3">
-                  <AlertTriangle className="w-5 h-5 text-red-400 mt-1 shrink-0" />
-                  <p className="text-sm">Attempt to gain unauthorized access to our systems</p>
-                </div>
-                <div className="flex items-start gap-3 mt-3">
-                  <AlertTriangle className="w-5 h-5 text-red-400 mt-1 shrink-0" />
-                  <p className="text-sm">Upload malicious content or viruses</p>
-                </div>
-                <div className="flex items-start gap-3 mt-3">
-                  <AlertTriangle className="w-5 h-5 text-red-400 mt-1 shrink-0" />
-                  <p className="text-sm">Share your account credentials with others</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Limitation of Liability */}
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-2 h-6 bg-yellow-500 rounded-full"></div>
-              <h2 className="text-2xl font-bold text-white">6. Limitation of Liability</h2>
-            </div>
-            <div className="space-y-4 text-gray-300">
-              <p>
-                To the maximum extent permitted by law, JobMatch AI shall not be liable for any indirect, 
-                incidental, special, consequential, or punitive damages resulting from your use of the Service.
-              </p>
-              <div className="bg-yellow-900/20 border border-yellow-800/30 rounded-xl p-4 mt-4">
-                <p className="text-sm text-yellow-200">
-                  The Service provides AI-powered suggestions and analysis. While we strive for accuracy, 
-                  we do not guarantee job placement or specific outcomes from using our Service.
+            {/* Section 3 */}
+            <section id="subscriptions" className="space-y-4 pt-2">
+              <h2 className="font-serif text-2xl font-semibold text-ink tracking-tight">
+                {isAr ? '3. خطط الاشتراك والدفع وسياسة الاسترجاع' : '3. Subscriptions, Payments & Refunds'}
+              </h2>
+              <div className="space-y-3">
+                <p>
+                  <strong className="text-ink">{isAr ? 'الفوترة:' : 'Billing:'}</strong>{' '}
+                  {isAr
+                    ? 'يتم تجديد اشتراك باقة برو شهرياً أو سنوياً بشكل تلقائي حتى تقوم بإلغائه من لوحة التحكم.'
+                    : 'Pro subscriptions renew automatically on a recurring monthly or annual basis until canceled via your account dashboard.'}
+                </p>
+                <p>
+                  <strong className="text-ink">{isAr ? 'سياسة الاسترجاع (14 يوماً):' : '14-Day Refund Policy:'}</strong>{' '}
+                  {isAr
+                    ? 'يحق للمشتركين الجدد في باقة برو طلب استرداد كامل المبلغ المدفوع خلال 14 يوماً من تاريخ الاشتراك الأول في حال عدم رضاهم عن الخدمة، بشرط عدم استهلاك الخدمة بأعداد غير معتادة.'
+                    : 'First-time Pro subscribers are entitled to a full refund within 14 days of purchase upon contacting support, provided usage has remained within standard personal parameters.'}
+                </p>
+                <p>
+                  <strong className="text-ink">{isAr ? 'رصيد الدفع حسب الاستخدام:' : 'Pay-As-You-Go Credits:'}</strong>{' '}
+                  {isAr
+                    ? 'نقاط باقة الدفع حسب الاستخدام صالحة مدى الحياة ولا تنتهي صلاحيتها.'
+                    : 'Credits purchased under the Pay-As-You-Go plan have lifetime validity and do not expire.'}
                 </p>
               </div>
-            </div>
-          </section>
+            </section>
 
-          {/* Changes to Terms */}
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-2 h-6 bg-green-500 rounded-full"></div>
-              <h2 className="text-2xl font-bold text-white">7. Changes to Terms</h2>
-            </div>
-            <div className="space-y-4 text-gray-300">
-              <p>
-                We reserve the right to modify these Terms at any time. We will notify users of significant 
-                changes via email or through the Service. Continued use of the Service after changes 
-                constitutes acceptance of the new Terms.
-              </p>
-            </div>
-          </section>
-
-          {/* Contact */}
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-2 h-6 bg-cyan-500 rounded-full"></div>
-              <h2 className="text-2xl font-bold text-white">8. Contact Information</h2>
-            </div>
-            <div className="space-y-4 text-gray-300">
-              <p>
-                For questions about these Terms of Service, please contact us at:
-              </p>
-              <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700 max-w-md">
-                <p className="font-medium">Email: legal@resumeanalyzer.pro</p>
-                <p className="text-sm text-gray-400 mt-1">We typically respond within 2 business days</p>
+            {/* Section 4 */}
+            <section id="ai-disclaimer" className="space-y-4 pt-2">
+              <h2 className="font-serif text-2xl font-semibold text-ink tracking-tight">
+                {isAr ? '4. إخلاء المسؤولية عن محتوى الذكاء الاصطناعي ونتائج التوظيف' : '4. AI Content & Hiring Outcome Disclaimer'}
+              </h2>
+              <div className="p-4 rounded-[8px] border border-line bg-surface text-xs sm:text-sm text-ink-2 space-y-2">
+                <p className="font-semibold text-ink">
+                  {isAr ? 'تنبيه مهني هام:' : 'Important Employment Disclaimer:'}
+                </p>
+                <p className="leading-relaxed">
+                  {isAr
+                    ? 'تُعد مخرجات الذكاء الاصطناعي مسودات مساعدة واقتراحات تتطلب المراجعة والتحقق البشري من قبلك قبل التقديم. لا تقدم منصة JobMatch AI أي تعهدات أو ضمانات صريحة أو ضمنية بقبول وظيفي أو اجتياز مقابلة معينة.'
+                    : 'Outputs generated by our AI tools serve as draft suggestions and require human review. JobMatch AI makes no representations, warranties, or guarantees regarding interview invitations, hiring decisions, or employment outcomes.'}
+                </p>
               </div>
-            </div>
-          </section>
+            </section>
 
-          {/* Agreement */}
-          <div className="mt-12 p-6 bg-linear-to-r from-blue-900/30 to-cyan-900/30 rounded-2xl border border-blue-700/30">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <h3 className="text-xl font-bold text-white">Acceptance of Terms</h3>
-            </div>
-            <p className="text-gray-300">
-              By creating an account and using our Service, you acknowledge that you have read, 
-              understood, and agree to be bound by these Terms of Service.
-            </p>
-          </div>
+            {/* Section 5 */}
+            <section id="user-responsibilities" className="space-y-4 pt-2">
+              <h2 className="font-serif text-2xl font-semibold text-ink tracking-tight">
+                {isAr ? '5. مسؤوليات المستخدم والاستخدام المقبول' : '5. Acceptable Use'}
+              </h2>
+              <p>
+                {isAr
+                  ? 'يلتزم المستخدم بعدم استخدام المنصة لأي أغراض غير قانونية، أو استخراج البيانات آلياً (Scraping)، أو محاولة اختراق البنية التحتية، أو انتحال هويات مهنية زائفة.'
+                  : 'You agree not to misuse the service, reverse engineer our parsers, perform unauthorized automated scraping, or misrepresent third-party identities.'}
+              </p>
+            </section>
 
-          {/* Navigation */}
-          <div className="mt-12 pt-8 border-t border-gray-700/50">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <Link 
-                href="/register" 
-                className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2"
-              >
-                ← Return to Sign Up
-              </Link>
-              <Link 
-                href="/privacy" 
-                className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2"
-              >
-                Read Privacy Policy
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
+            {/* Section 6 */}
+            <section id="contact" className="space-y-4 pt-2 border-t border-line">
+              <h2 className="font-serif text-2xl font-semibold text-ink tracking-tight">
+                {isAr ? '6. التواصل والدعم القانوني' : '6. Contact Information'}
+              </h2>
+              <p>
+                {isAr
+                  ? 'لأي استفسارات قانونية أو متعلقة بسياسة الاسترجاع والاشتراكات، يمكنك مراسلتنا مباشرة على:'
+                  : 'For legal questions, refund claims, or subscription assistance, please reach out to:'}
+              </p>
+              <div className="p-4 rounded-[6px] border border-line bg-surface font-mono text-sm text-accent">
+                <a href={`mailto:${contactEmail}`} className="hover:underline">
+                  {contactEmail}
+                </a>
+              </div>
+            </section>
+          </article>
         </div>
-      </div>
-    </main>
-      </div>
+      </main>
+
+      {/* Shared Footer */}
+      <Footer />
     </div>
   );
 }

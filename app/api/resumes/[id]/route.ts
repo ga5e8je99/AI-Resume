@@ -21,6 +21,10 @@ export async function GET(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Resume not found' }, { status: 404 });
     }
 
+    if (resume.userId && resume.userId !== authUser.userId && authUser.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden. You do not have permission to view this resume.' }, { status: 403 });
+    }
+
     return NextResponse.json({ resume });
   } catch (error: any) {
     console.error('Error fetching resume:', error);

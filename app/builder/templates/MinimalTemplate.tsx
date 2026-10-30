@@ -1,5 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -9,10 +10,12 @@ interface TemplateProps {
 export default function MinimalTemplate({ data, theme }: TemplateProps) {
   const { personalInfo, experience, education, projects, skills, certifications } = data;
   const accent = theme.accentColor || '#0f172a';
+  const h = getDocumentHeadings(theme.documentLanguage);
 
   return (
     <div 
-      className="bg-white text-gray-900 w-full min-h-[1050px] p-12 font-sans leading-relaxed text-[12.5px] print:p-8"
+      dir={h.dir}
+      className="bg-white text-gray-900 w-full min-h-[1050px] p-12 font-sans leading-relaxed text-[12.5px] print:p-8 text-start"
       style={{ fontFamily: theme.fontFamily }}
     >
       {/* Centered Minimal Header */}
@@ -43,7 +46,7 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
           <h2 
             className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2"
           >
-            Profile
+            {h.summary}
           </h2>
           <p className="text-gray-700 text-xs leading-relaxed">
             {personalInfo.summary}
@@ -55,7 +58,7 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
       {experience.length > 0 && (
         <div className="mb-6">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-            Experience
+            {h.experience}
           </h2>
           <div className="space-y-4">
             {experience.map((exp) => (
@@ -63,14 +66,14 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-semibold text-gray-900">{exp.position}</span>
                   <span className="text-gray-400 text-[11px]">
-                    {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                    {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                   </span>
                 </div>
                 <div className="text-gray-600 mb-1.5 text-[11px]">
                   <span>{exp.company}</span>
                   {exp.location && ` • ${exp.location}`}
                 </div>
-                <ul className="list-disc list-outside ml-4 space-y-1 text-gray-600">
+                <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-1 text-gray-600`}>
                   {exp.description.filter(d => d.trim()).map((bullet, idx) => (
                     <li key={idx} className="leading-relaxed">{bullet}</li>
                   ))}
@@ -85,7 +88,7 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
       {projects.length > 0 && (
         <div className="mb-6">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-            Projects
+            {h.projects}
           </h2>
           <div className="space-y-3">
             {projects.map((proj) => (
@@ -99,7 +102,7 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
                 {proj.link && (
                   <p className="text-[11px] text-gray-500 mb-1">{proj.link}</p>
                 )}
-                <ul className="list-disc list-outside ml-4 space-y-0.5 text-gray-600">
+                <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-0.5 text-gray-600`}>
                   {proj.description.filter(d => d.trim()).map((b, idx) => (
                     <li key={idx} className="leading-relaxed">{b}</li>
                   ))}
@@ -114,7 +117,7 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
       {skills.length > 0 && (
         <div className="mb-6">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-            Skills
+            {h.skills}
           </h2>
           <p className="text-xs text-gray-700 leading-relaxed">
             {skills.join('  /  ')}
@@ -126,7 +129,7 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
       {education.length > 0 && (
         <div className="mb-6">
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-            Education
+            {h.education}
           </h2>
           <div className="space-y-2">
             {education.map((edu) => (
@@ -136,7 +139,7 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
                   <div className="text-gray-500 text-[11px]">{edu.institution} {edu.gpa && `• GPA: ${edu.gpa}`}</div>
                 </div>
                 <span className="text-gray-400 text-[11px]">
-                  {edu.startDate} – {edu.endDate}
+                  {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                 </span>
               </div>
             ))}
@@ -148,9 +151,9 @@ export default function MinimalTemplate({ data, theme }: TemplateProps) {
       {certifications.length > 0 && (
         <div>
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-            Certifications
+            {h.certifications}
           </h2>
-          <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-gray-600">
+          <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} space-y-0.5 text-xs text-gray-600`}>
             {certifications.map((cert, idx) => (
               <li key={idx}>{cert}</li>
             ))}

@@ -41,6 +41,12 @@ export interface ProjectItem {
   description: string[];
 }
 
+export interface LanguageItem {
+  id: string;
+  name: string;
+  proficiency: 'Native' | 'Fluent' | 'Proficient' | 'Intermediate' | 'Basic' | string;
+}
+
 export interface ResumeData {
   personalInfo: PersonalInfo;
   experience: ExperienceItem[];
@@ -48,13 +54,15 @@ export interface ResumeData {
   projects: ProjectItem[];
   skills: string[];
   certifications: string[];
+  languages?: LanguageItem[];
 }
 
 export type TemplateId = 
   // ResumeForFree Templates
   | 'compact'      // ResumeForFree: Single column ATS friendly template
   | 'two-column'   // ResumeForFree: A two-column resume layout with sections side by side
-  | 'ats-friendly' // ResumeForFree: Single-column template with blue accents, optimized for ATS
+  | 'ats-friendly' // Legacy alias for executive-blue
+  | 'executive-blue' // Executive Blue Accent Model (spacious layout)
   | 'simple'       // ResumeForFree: Traditional academic CV layout with labeled columns and horizontal rules
   // Popular ATS Templates
   | 'oslo'         // Resume.io ATS: Single-column pure typography, highest parse rate

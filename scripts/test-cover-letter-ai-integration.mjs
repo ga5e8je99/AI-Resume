@@ -4,6 +4,7 @@
  */
 
 import http from 'http';
+import jwt from 'jsonwebtoken';
 
 function assert(condition, message) {
   if (!condition) {
@@ -165,9 +166,17 @@ async function runTests() {
 
   // Test 6: Verify end-to-end API Route on live local server
   try {
+    const testToken = jwt.sign(
+      { userId: 'usr_mvpabfxqsnc5', email: 'demo@jobmatch.ai', name: 'Alex Rivera (Demo)', role: 'user', isDemo: true },
+      process.env.JWT_SECRET || 'jobmatch_ats_ai_resume_super_secret_jwt_key_2026',
+      { expiresIn: '1h' }
+    );
     const apiRes = await fetch('http://localhost:3000/api/cover-letter/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${testToken}`,
+      },
       body: JSON.stringify(sampleRequest),
     });
 

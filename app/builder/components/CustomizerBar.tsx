@@ -1,6 +1,14 @@
+'use client';
+
 import React from 'react';
 import { ThemeConfig } from '../types';
-import { Download, RefreshCw, Trash2, Palette, Type, FileText, Printer } from 'lucide-react';
+import { Download, RefreshCw, Trash2, Palette, Type, FileText, Printer, Globe } from 'lucide-react';
+import {
+  DOCUMENT_LANGUAGE_OPTIONS,
+  DocumentLanguage,
+  setStoredDocumentLanguage,
+  getDocumentFontFamily,
+} from '@/app/lib/documentI18n';
 
 interface Props {
   theme: ThemeConfig;
@@ -26,56 +34,93 @@ export default function CustomizerBar({
   isExportingWord = false,
 }: Props) {
   const colors = [
-    { name: 'Classic Slate', hex: '#1e293b' },
-    { name: 'Tech Blue', hex: '#2563eb' },
-    { name: 'Sky Cyan', hex: '#0284c7' },
-    { name: 'Emerald', hex: '#059669' },
-    { name: 'Indigo Purple', hex: '#6366f1' },
-    { name: 'Burgundy Rose', hex: '#be123c' },
-    { name: 'Amber Gold', hex: '#d97706' },
+    { name: 'Editorial Ink', hex: '#14181F' },
+    { name: 'Pine Accent', hex: '#0F5C4D' },
+    { name: 'Warm Slate', hex: '#4A5160' },
+    { name: 'Amber Highlight', hex: '#C8892B' },
+    { name: 'Forest Green', hex: '#1B7F4B' },
+    { name: 'Classic Burgundy', hex: '#8B1E17' },
+    { name: 'Charcoal', hex: '#2A322D' },
   ];
 
   const fonts = [
     { label: 'Clean Sans (Inter)', value: 'var(--font-sans), sans-serif' },
+    { label: 'Plex Arabic (العربية)', value: 'var(--font-arabic), "IBM Plex Sans Arabic", var(--font-sans), sans-serif' },
     { label: 'Executive Serif (Georgia)', value: 'Georgia, serif' },
-    { label: 'Technical Mono', value: 'var(--font-mono), monospace' }
+    { label: 'Technical Mono', value: 'var(--font-mono), monospace' },
   ];
 
+  const handleDocumentLanguageChange = (newLang: DocumentLanguage) => {
+    setStoredDocumentLanguage(newLang);
+    setTheme((prev) => ({
+      ...prev,
+      documentLanguage: newLang,
+      fontFamily: newLang === 'ar' ? getDocumentFontFamily('ar') : (prev.fontFamily.includes('font-arabic') ? 'var(--font-sans), sans-serif' : prev.fontFamily),
+    }));
+  };
+
   return (
-    <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5 backdrop-blur-xl shadow-xl">
-      {/* Colors & Fonts */}
-      <div className="flex flex-wrap items-center justify-between sm:justify-start gap-3 sm:gap-6">
+    <div className="bg-surface border border-line rounded-[10px] p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5 shadow-subtle">
+      {/* Colors, Output Language & Fonts */}
+      <div className="flex flex-wrap items-center justify-between sm:justify-start gap-3 sm:gap-5">
+        {/* Output Language Selector */}
+        <div className="flex items-center gap-2">
+          <Globe className="w-4 h-4 text-accent shrink-0" />
+          <span className="text-xs font-medium text-ink-2 hidden sm:inline">Output:</span>
+          <select
+            id="document-output-language"
+            aria-label="Resume output language"
+            value={theme.documentLanguage || 'en'}
+            onChange={(e) => handleDocumentLanguageChange(e.target.value as DocumentLanguage)}
+            className="bg-surface border border-line-strong text-xs text-ink rounded-[6px] px-2 py-1.5 focus:border-accent outline-none font-medium"
+          >
+            {DOCUMENT_LANGUAGE_OPTIONS.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.nativeName} ({opt.code})
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Accent Colors */}
         <div className="flex items-center gap-2">
-          <Palette className="w-4 h-4 text-slate-400 shrink-0" />
-          <span className="text-xs font-semibold text-slate-300 hidden sm:inline">Accent:</span>
+          <Palette className="w-4 h-4 text-ink-3 shrink-0" />
+          <span className="text-xs font-medium text-ink-2 hidden sm:inline">Accent:</span>
           <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
             {colors.map((c) => (
               <button
                 key={c.hex}
                 type="button"
                 title={c.name}
-                onClick={() => setTheme(prev => ({ ...prev, accentColor: c.hex }))}
-                className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full shrink-0 transition-transform ${
-                  theme.accentColor === c.hex ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-900' : 'hover:scale-110 opacity-80 hover:opacity-100'
+                aria-label={`Select accent color ${c.name}`}
+                onClick={() => setTheme((prev) => ({ ...prev, accentColor: c.hex }))}
+                className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center transition-transform ${
+                  theme.accentColor === c.hex
+                    ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface'
+                    : 'hover:scale-110 opacity-85 hover:opacity-100'
                 }`}
-                style={{ backgroundColor: c.hex }}
-              />
+              >
+                <span className="w-3.5 h-3.5 rounded-full pointer-events-none" style={{ backgroundColor: c.hex }} />
+              </button>
             ))}
           </div>
         </div>
 
         {/* Font Selector */}
         <div className="flex items-center gap-2">
-          <Type className="w-4 h-4 text-slate-400 shrink-0" />
-          <span className="text-xs font-semibold text-slate-300 hidden sm:inline">Font:</span>
+          <Type className="w-4 h-4 text-ink-3 shrink-0" />
+          <span className="text-xs font-medium text-ink-2 hidden sm:inline">Font:</span>
           <select
+            id="theme-font-family"
+            aria-label="Resume font family"
             value={theme.fontFamily}
-            onChange={(e) => setTheme(prev => ({ ...prev, fontFamily: e.target.value }))}
-            className="bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-500 max-w-[130px] sm:max-w-none"
+            onChange={(e) => setTheme((prev) => ({ ...prev, fontFamily: e.target.value }))}
+            className="bg-surface border border-line-strong text-xs text-ink rounded-[6px] px-2 py-1.5 focus:border-accent outline-none max-w-[130px] sm:max-w-none"
           >
             {fonts.map((f) => (
-              <option key={f.value} value={f.value}>{f.label}</option>
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
             ))}
           </select>
         </div>
@@ -87,17 +132,17 @@ export default function CustomizerBar({
           <button
             type="button"
             onClick={onLoadSample}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-[6px] text-xs font-medium bg-surface-2 text-ink hover:bg-line transition-colors border border-line"
             title="Fill form with professional sample data"
           >
-            <RefreshCw className="w-3 h-3 text-indigo-400" />
+            <RefreshCw className="w-3 h-3 text-accent" />
             <span>Sample</span>
           </button>
 
           <button
             type="button"
             onClick={onClear}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/60 text-slate-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-[6px] text-xs font-medium bg-surface text-ink-3 hover:text-danger hover:bg-danger-soft border border-line transition-colors"
             title="Clear all fields"
           >
             <Trash2 className="w-3 h-3" />
@@ -111,10 +156,10 @@ export default function CustomizerBar({
             type="button"
             disabled={isExportingWord}
             onClick={onDownloadWord}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-white bg-blue-700 hover:bg-blue-600 disabled:opacity-50 shadow-md shadow-blue-700/25 transition-all"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-[6px] text-xs font-medium text-ink bg-surface border border-line-strong hover:bg-surface-2 disabled:opacity-50 transition-colors"
             title="Download editable Microsoft Word document (.docx)"
           >
-            <FileText className="w-3.5 h-3.5 text-blue-200" />
+            <FileText className="w-3.5 h-3.5 text-ink-2" />
             <span>{isExportingWord ? 'Exporting...' : 'Word'}</span>
           </button>
 
@@ -123,10 +168,10 @@ export default function CustomizerBar({
             type="button"
             disabled={isExportingPdf}
             onClick={onDownloadPdf}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 disabled:opacity-50 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-[6px] text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover disabled:opacity-50 transition-colors"
             title="Directly download PDF file to computer"
           >
-            <Download className="w-3.5 h-3.5 text-cyan-200" />
+            <Download className="w-3.5 h-3.5" />
             <span>{isExportingPdf ? 'Saving...' : 'PDF'}</span>
           </button>
         </div>
@@ -136,7 +181,7 @@ export default function CustomizerBar({
           <button
             type="button"
             onClick={onPrint}
-            className="hidden md:inline-flex p-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors shrink-0"
+            className="hidden md:inline-flex p-2 rounded-[6px] text-ink-3 hover:text-ink hover:bg-surface-2 transition-colors shrink-0"
             title="Open browser printer dialog"
           >
             <Printer className="w-4 h-4" />

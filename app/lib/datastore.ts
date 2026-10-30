@@ -6,6 +6,9 @@ import User, { IUser } from '../models/User';
 import Resume, { IResume } from '../models/Resume';
 import Analysis, { IAnalysis } from '../models/Analysis';
 import CoverLetter, { ICoverLetter } from '../models/CoverLetter';
+import Payment, { IPayment } from '../models/Payment';
+import PaymentEvent, { IPaymentEvent } from '../models/PaymentEvent';
+import Order, { IOrder, OrderStatus, PaymentMethodType, CryptoNetwork } from '../models/Order';
 import { CoverLetterService } from './coverLetterService';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -17,6 +20,46 @@ export interface StoredUser {
   email: string;
   password?: string;
   role: 'user' | 'admin';
+  isDemo?: boolean;
+  plan?: 'free' | 'pro' | 'enterprise';
+  aiCredits?: number;
+  aiResumeGenerationsCount?: number;
+  jobMatchFreeUsed?: number;
+  billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
+  planExpiresAt?: string | null;
+  paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+  providerCustomerId?: string;
+  providerSubscriptionId?: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpires?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StoredOrder {
+  id: string;
+  userId: string;
+  userEmail: string;
+  planId: 'pro' | 'payg';
+  billingCycle: 'monthly' | 'annual' | 'once';
+  baseAmount: number;
+  amount: number;
+  currency: 'USDT';
+  method: PaymentMethodType;
+  network: CryptoNetwork;
+  status: OrderStatus;
+  txid?: string | null;
+  reference: string;
+  recipientAddress?: string;
+  expiresAt: string;
+  paidAt?: string | null;
+  auditLog: {
+    status: OrderStatus;
+    timestamp: string;
+    note?: string;
+    actor?: string;
+  }[];
+  metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +121,10 @@ interface LocalDatabase {
   resumes: StoredResume[];
   analyses: StoredAnalysis[];
   coverLetters?: StoredCoverLetter[];
+  payments?: any[];
+  paymentEvents?: any[];
+  jobCache?: any[];
+  orders?: StoredOrder[];
 }
 
 // Initial seed data so user sees complete, realistic data right away
@@ -255,6 +302,17 @@ const INITIAL_DB: LocalDatabase = {
 
 function readLocalDb(): LocalDatabase {
   try {
+    // In serverless environments (e.g. Vercel), root filesystem is read-only
+    if (process.env.VERCEL) {
+      if (fs.existsSync(DB_FILE)) {
+        const raw = fs.readFileSync(DB_FILE, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (!parsed.coverLetters) parsed.coverLetters = [];
+        return parsed;
+      }
+      return INITIAL_DB;
+    }
+
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
@@ -267,30 +325,39 @@ function readLocalDb(): LocalDatabase {
     if (!parsed.coverLetters) parsed.coverLetters = [];
     return parsed;
   } catch (err) {
-    console.error('Error reading local db file, fallback to initial:', err);
+    console.warn('[DataStore] Error reading local db file, fallback to initial:', err);
     return INITIAL_DB;
   }
 }
 
 function writeLocalDb(db: LocalDatabase) {
   try {
+    // In serverless environments (e.g. Vercel), root filesystem is read-only
+    if (process.env.VERCEL) {
+      return;
+    }
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error writing local db file:', err);
+  } catch (err: any) {
+    console.warn('[DataStore] Local file write skipped or unsupported in this environment:', err?.message);
   }
 }
 
-// Check if MongoDB is connected, returns boolean without waiting
+// Check if MongoDB is connected, returns boolean without blocking
 let isMongoWorking = false;
 let lastCheckTime = 0;
 
 export async function isMongoAvailable(): Promise<boolean> {
+  // Fast path: if already connected (readyState 1 = connected), return true immediately with 0ms latency
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    return true;
+  }
+
   const now = Date.now();
-  // Cache check result for 10 seconds to avoid repeating failed connection attempts
-  if (now - lastCheckTime < 10000 && !isMongoWorking) {
+  // Cache failed result for 30 seconds to avoid repeating failed connection attempts
+  if (now - lastCheckTime < 30000 && !isMongoWorking) {
     return false;
   }
   lastCheckTime = now;
@@ -298,7 +365,7 @@ export async function isMongoAvailable(): Promise<boolean> {
   try {
     const conn = await Promise.race([
       connectToDatabase(),
-      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500)),
+      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
     ]);
     isMongoWorking = !!(conn && conn.connection.readyState === 1);
     return isMongoWorking;
@@ -493,6 +560,11 @@ export const DataStore = {
   },
 
   async deleteUser(userId: string) {
+    const existingUser = await this.findUserById(userId);
+    if (existingUser?.isDemo) {
+      throw new Error('Demo accounts cannot be deleted');
+    }
+
     const mongoUp = await isMongoAvailable();
     if (mongoUp) {
       try {
@@ -1182,14 +1254,50 @@ export const DataStore = {
       try {
         if (mongoose.Types.ObjectId.isValid(id)) {
           const u = await User.findById(id).select('-password').lean();
-          if (u) return { id: (u as any)._id.toString(), name: (u as any).name, email: (u as any).email, role: (u as any).role || 'user', createdAt: (u as any).createdAt };
+          if (u) return {
+            id: (u as any)._id.toString(),
+            name: (u as any).name,
+            email: (u as any).email,
+            role: (u as any).role || 'user',
+            isDemo: Boolean((u as any).isDemo),
+            plan: (u as any).plan || 'free',
+            aiCredits: typeof (u as any).aiCredits === 'number' ? (u as any).aiCredits : 3,
+            aiResumeGenerationsCount: typeof (u as any).aiResumeGenerationsCount === 'number' ? (u as any).aiResumeGenerationsCount : 0,
+            jobMatchFreeUsed: typeof (u as any).jobMatchFreeUsed === 'number' ? (u as any).jobMatchFreeUsed : 0,
+            billingCycle: (u as any).billingCycle || 'none',
+            planExpiresAt: (u as any).planExpiresAt || null,
+            paymentProvider: (u as any).paymentProvider || 'none',
+            providerCustomerId: (u as any).providerCustomerId || '',
+            providerSubscriptionId: (u as any).providerSubscriptionId || '',
+            resetPasswordToken: (u as any).resetPasswordToken || null,
+            resetPasswordExpires: (u as any).resetPasswordExpires ? ((u as any).resetPasswordExpires instanceof Date ? (u as any).resetPasswordExpires.toISOString() : (u as any).resetPasswordExpires) : null,
+            createdAt: (u as any).createdAt,
+          };
         }
       } catch (err) {}
     }
 
     const db = readLocalDb();
     const u = db.users.find((user) => user.id === id);
-    if (u) return { id: u.id, name: u.name, email: u.email, role: u.role || 'user', createdAt: u.createdAt };
+    if (u) return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role || 'user',
+      isDemo: Boolean(u.isDemo),
+      plan: u.plan || 'free',
+      aiCredits: typeof u.aiCredits === 'number' ? u.aiCredits : 3,
+      aiResumeGenerationsCount: typeof u.aiResumeGenerationsCount === 'number' ? u.aiResumeGenerationsCount : 0,
+      jobMatchFreeUsed: typeof u.jobMatchFreeUsed === 'number' ? u.jobMatchFreeUsed : 0,
+      billingCycle: u.billingCycle || 'none',
+      planExpiresAt: u.planExpiresAt || null,
+      paymentProvider: u.paymentProvider || 'none',
+      providerCustomerId: u.providerCustomerId || '',
+      providerSubscriptionId: u.providerSubscriptionId || '',
+      resetPasswordToken: u.resetPasswordToken || null,
+      resetPasswordExpires: u.resetPasswordExpires || null,
+      createdAt: u.createdAt,
+    };
     return null;
   },
 
@@ -1198,17 +1306,62 @@ export const DataStore = {
     if (mongoUp) {
       try {
         const u = await User.findOne({ email: email.toLowerCase().trim() }).select('+password').lean();
-        if (u) return { id: (u as any)._id.toString(), name: (u as any).name, email: (u as any).email, password: (u as any).password, role: (u as any).role || 'user' };
+        if (u) return {
+          id: (u as any)._id.toString(),
+          name: (u as any).name,
+          email: (u as any).email,
+          password: (u as any).password,
+          role: (u as any).role || 'user',
+          isDemo: Boolean((u as any).isDemo),
+          plan: (u as any).plan || 'free',
+          aiCredits: typeof (u as any).aiCredits === 'number' ? (u as any).aiCredits : 3,
+          billingCycle: (u as any).billingCycle || 'none',
+          planExpiresAt: (u as any).planExpiresAt || null,
+          paymentProvider: (u as any).paymentProvider || 'none',
+          providerCustomerId: (u as any).providerCustomerId || '',
+          providerSubscriptionId: (u as any).providerSubscriptionId || '',
+          resetPasswordToken: (u as any).resetPasswordToken || null,
+          resetPasswordExpires: (u as any).resetPasswordExpires ? ((u as any).resetPasswordExpires instanceof Date ? (u as any).resetPasswordExpires.toISOString() : (u as any).resetPasswordExpires) : null,
+        };
       } catch (err) {}
     }
 
     const db = readLocalDb();
     const u = db.users.find((user) => user.email.toLowerCase() === email.toLowerCase().trim());
-    if (u) return { id: u.id, name: u.name, email: u.email, password: u.password, role: u.role || 'user' };
+    if (u) return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      password: u.password,
+      role: u.role || 'user',
+      isDemo: Boolean(u.isDemo),
+      plan: u.plan || 'free',
+      aiCredits: typeof u.aiCredits === 'number' ? u.aiCredits : 3,
+      billingCycle: u.billingCycle || 'none',
+      planExpiresAt: u.planExpiresAt || null,
+      paymentProvider: u.paymentProvider || 'none',
+      providerCustomerId: u.providerCustomerId || '',
+      providerSubscriptionId: u.providerSubscriptionId || '',
+      resetPasswordToken: u.resetPasswordToken || null,
+      resetPasswordExpires: u.resetPasswordExpires || null,
+    };
     return null;
   },
 
-  async createUserAccount(userData: { name: string; email: string; password: string; role?: 'user' | 'admin' }) {
+  async createUserAccount(userData: {
+    name: string;
+    email: string;
+    password: string;
+    role?: 'user' | 'admin';
+    isDemo?: boolean;
+    plan?: 'free' | 'pro' | 'enterprise';
+    aiCredits?: number;
+    billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
+    planExpiresAt?: Date | string | null;
+    paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'none';
+    providerCustomerId?: string;
+    providerSubscriptionId?: string;
+  }) {
     const mongoUp = await isMongoAvailable();
     if (mongoUp) {
       try {
@@ -1217,12 +1370,28 @@ export const DataStore = {
           email: userData.email.toLowerCase().trim(),
           password: userData.password,
           role: userData.role || 'user',
+          isDemo: Boolean(userData.isDemo),
+          plan: userData.plan || 'free',
+          aiCredits: typeof userData.aiCredits === 'number' ? userData.aiCredits : 3,
+          billingCycle: userData.billingCycle || 'none',
+          planExpiresAt: userData.planExpiresAt || null,
+          paymentProvider: userData.paymentProvider || 'none',
+          providerCustomerId: userData.providerCustomerId || '',
+          providerSubscriptionId: userData.providerSubscriptionId || '',
         });
         return {
           id: newUser._id.toString(),
           name: newUser.name,
           email: newUser.email,
           role: newUser.role,
+          isDemo: Boolean(newUser.isDemo),
+          plan: newUser.plan,
+          aiCredits: newUser.aiCredits,
+          billingCycle: newUser.billingCycle,
+          planExpiresAt: newUser.planExpiresAt,
+          paymentProvider: newUser.paymentProvider,
+          providerCustomerId: newUser.providerCustomerId,
+          providerSubscriptionId: newUser.providerSubscriptionId,
         };
       } catch (err) {}
     }
@@ -1234,13 +1403,950 @@ export const DataStore = {
       email: userData.email.toLowerCase().trim(),
       password: userData.password,
       role: userData.role || 'user',
+      isDemo: Boolean(userData.isDemo),
+      plan: userData.plan || 'free',
+      aiCredits: typeof userData.aiCredits === 'number' ? userData.aiCredits : 3,
+      billingCycle: userData.billingCycle || 'none',
+      planExpiresAt: userData.planExpiresAt ? (typeof userData.planExpiresAt === 'string' ? userData.planExpiresAt : userData.planExpiresAt.toISOString()) : null,
+      paymentProvider: userData.paymentProvider || 'none',
+      providerCustomerId: userData.providerCustomerId || '',
+      providerSubscriptionId: userData.providerSubscriptionId || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     db.users.push(newUser);
     writeLocalDb(db);
-    return { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role };
+    return {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      isDemo: newUser.isDemo,
+      plan: newUser.plan,
+      aiCredits: newUser.aiCredits,
+      billingCycle: newUser.billingCycle,
+      planExpiresAt: newUser.planExpiresAt,
+      paymentProvider: newUser.paymentProvider,
+      providerCustomerId: newUser.providerCustomerId,
+      providerSubscriptionId: newUser.providerSubscriptionId,
+    };
+  },
+
+  async resetDemoUserData(userId: string) {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        await Promise.all([
+          Resume.deleteMany({ userId }),
+          Analysis.deleteMany({ userId }),
+          CoverLetter.deleteMany({ userId }),
+        ]);
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    db.resumes = db.resumes.filter((r) => r.userId !== userId);
+    db.analyses = db.analyses.filter((a) => a.userId !== userId);
+    if (db.coverLetters) {
+      db.coverLetters = db.coverLetters.filter((c) => c.userId !== userId);
+    }
+    writeLocalDb(db);
+    return true;
+  },
+
+  async decrementUserCredits(
+    userId: string,
+    amount = 1,
+    incrementResumeGen = false
+  ): Promise<{ success: boolean; remaining: number; deducted: boolean }> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
+      try {
+        const incQuery: any = {};
+        if (amount > 0) incQuery.aiCredits = -amount;
+        if (incrementResumeGen) incQuery.aiResumeGenerationsCount = 1;
+
+        const findQuery: any = { _id: new mongoose.Types.ObjectId(userId) };
+        if (amount > 0) {
+          findQuery.aiCredits = { $gte: amount };
+        }
+
+        const updated = await User.findOneAndUpdate(
+          findQuery,
+          { $inc: incQuery },
+          { new: true }
+        );
+        if (updated) {
+          return { success: true, remaining: updated.aiCredits, deducted: true };
+        }
+        return { success: false, remaining: 0, deducted: false };
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    const user = db.users.find((u) => u.id === userId);
+    if (user) {
+      const current = typeof user.aiCredits === 'number' ? user.aiCredits : 3;
+      if (amount === 0 || current >= amount) {
+        if (amount > 0) {
+          user.aiCredits = current - amount;
+        }
+        if (incrementResumeGen) {
+          user.aiResumeGenerationsCount = (user.aiResumeGenerationsCount || 0) + 1;
+        }
+        user.updatedAt = new Date().toISOString();
+        writeLocalDb(db);
+        return { success: true, remaining: user.aiCredits ?? 0, deducted: true };
+      }
+      return { success: false, remaining: user.aiCredits ?? 0, deducted: false };
+    }
+    return { success: false, remaining: 0, deducted: false };
+  },
+
+  async upgradeUserPlan(
+    userId: string,
+    planData: {
+      plan: 'pro' | 'enterprise';
+      billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
+      planExpiresAt?: Date | string | null;
+      paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+      providerCustomerId?: string;
+      providerSubscriptionId?: string;
+    }
+  ): Promise<boolean> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
+      try {
+        await User.findByIdAndUpdate(userId, {
+          $set: {
+            plan: planData.plan,
+            billingCycle: planData.billingCycle || 'monthly',
+            planExpiresAt: planData.planExpiresAt ? new Date(planData.planExpiresAt) : null,
+            paymentProvider: planData.paymentProvider || 'none',
+            providerCustomerId: planData.providerCustomerId || '',
+            providerSubscriptionId: planData.providerSubscriptionId || '',
+          },
+        });
+        return true;
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    const user = db.users.find((u) => u.id === userId);
+    if (user) {
+      user.plan = planData.plan;
+      user.billingCycle = planData.billingCycle || 'monthly';
+      user.planExpiresAt = planData.planExpiresAt ? new Date(planData.planExpiresAt).toISOString() : null;
+      user.paymentProvider = planData.paymentProvider || 'none';
+      user.providerCustomerId = planData.providerCustomerId || '';
+      user.providerSubscriptionId = planData.providerSubscriptionId || '';
+      user.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return true;
+    }
+    return false;
+  },
+
+  async incrementUserCredits(userId: string, amount: number = 15): Promise<number> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
+      try {
+        const updated = await User.findByIdAndUpdate(
+          userId,
+          { $inc: { aiCredits: amount } },
+          { new: true }
+        );
+        if (updated) {
+          return updated.aiCredits;
+        }
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    const user = db.users.find((u) => u.id === userId);
+    if (user) {
+      const current = typeof user.aiCredits === 'number' ? user.aiCredits : 3;
+      user.aiCredits = current + amount;
+      user.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return user.aiCredits;
+    }
+    return amount;
+  },
+
+  async isEventProcessed(eventId: string): Promise<boolean> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const existing = await PaymentEvent.findOne({ eventId });
+        if (existing) return true;
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    db.paymentEvents = db.paymentEvents || [];
+    return db.paymentEvents.some((e: any) => e.eventId === eventId);
+  },
+
+  async recordPaymentEvent(eventData: {
+    eventId: string;
+    provider: 'stripe' | 'paymob' | 'test';
+    eventType: string;
+    payload?: any;
+  }): Promise<boolean> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        await PaymentEvent.create({
+          eventId: eventData.eventId,
+          provider: eventData.provider,
+          eventType: eventData.eventType,
+          payload: eventData.payload || {},
+          processedAt: new Date(),
+        });
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    db.paymentEvents = db.paymentEvents || [];
+    if (!db.paymentEvents.some((e: any) => e.eventId === eventData.eventId)) {
+      db.paymentEvents.push({
+        ...eventData,
+        processedAt: new Date().toISOString(),
+      });
+      writeLocalDb(db);
+    }
+    return true;
+  },
+
+  async recordPayment(paymentData: {
+    userId: string;
+    userEmail?: string;
+    amount: number;
+    currency: string;
+    provider: 'stripe' | 'paymob' | 'test';
+    providerPaymentId?: string;
+    planId: string;
+    billingCycle?: 'monthly' | 'annual' | 'none';
+    status?: 'succeeded' | 'pending' | 'failed' | 'refunded';
+    metadata?: any;
+  }): Promise<any> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        return await Payment.create({
+          ...paymentData,
+          status: paymentData.status || 'succeeded',
+        });
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    db.payments = db.payments || [];
+    const paymentRecord = {
+      id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      ...paymentData,
+      status: paymentData.status || 'succeeded',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    db.payments.push(paymentRecord);
+    writeLocalDb(db);
+    return paymentRecord;
+  },
+
+  async setResetPasswordToken(
+    userId: string,
+    tokenHash: string,
+    expires: Date
+  ): Promise<boolean> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
+      try {
+        await User.findByIdAndUpdate(userId, {
+          $set: {
+            resetPasswordToken: tokenHash,
+            resetPasswordExpires: expires,
+          },
+        });
+        return true;
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    const user = db.users.find((u) => u.id === userId);
+    if (user) {
+      user.resetPasswordToken = tokenHash;
+      user.resetPasswordExpires = expires.toISOString();
+      user.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return true;
+    }
+    return false;
+  },
+
+  async findUserByResetToken(tokenHash: string): Promise<StoredUser | null> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const user = await User.findOne({
+          resetPasswordToken: tokenHash,
+          resetPasswordExpires: { $gt: new Date() },
+        });
+        if (user) {
+          return {
+            id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isDemo: user.isDemo,
+            plan: user.plan,
+            aiCredits: user.aiCredits,
+            billingCycle: user.billingCycle,
+            planExpiresAt: user.planExpiresAt?.toISOString() || null,
+            resetPasswordToken: user.resetPasswordToken,
+            resetPasswordExpires: user.resetPasswordExpires?.toISOString() || null,
+            createdAt: user.createdAt.toISOString(),
+            updatedAt: user.updatedAt.toISOString(),
+          };
+        }
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    const now = Date.now();
+    const user = db.users.find((u) => {
+      if (u.resetPasswordToken !== tokenHash) return false;
+      if (!u.resetPasswordExpires) return false;
+      const expiry = new Date(u.resetPasswordExpires).getTime();
+      return expiry > now;
+    });
+
+    return user || null;
+  },
+
+  async resetUserPassword(userId: string, newHashedPassword: string): Promise<boolean> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
+      try {
+        await User.findByIdAndUpdate(userId, {
+          $set: { password: newHashedPassword },
+          $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 },
+        });
+        return true;
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    const user = db.users.find((u) => u.id === userId);
+    if (user) {
+      user.password = newHashedPassword;
+      delete user.resetPasswordToken;
+      delete user.resetPasswordExpires;
+      user.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return true;
+    }
+    return false;
+  },
+
+  async consumeJobMatchCredit(
+    userId: string
+  ): Promise<{ success: boolean; remaining: number; deducted: boolean; freeUsed: number }> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
+      try {
+        const u = await User.findById(userId);
+        if (u) {
+          const freeUsed = typeof u.jobMatchFreeUsed === 'number' ? u.jobMatchFreeUsed : 0;
+          if (freeUsed < 3) {
+            u.jobMatchFreeUsed = freeUsed + 1;
+            await u.save();
+            return { success: true, remaining: u.aiCredits, deducted: true, freeUsed: u.jobMatchFreeUsed };
+          }
+          if (u.aiCredits >= 1) {
+            u.aiCredits -= 1;
+            u.jobMatchFreeUsed = freeUsed + 1;
+            await u.save();
+            return { success: true, remaining: u.aiCredits, deducted: true, freeUsed: u.jobMatchFreeUsed };
+          }
+          return { success: false, remaining: u.aiCredits, deducted: false, freeUsed };
+        }
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    const user = db.users.find((u) => u.id === userId);
+    if (user) {
+      const freeUsed = typeof user.jobMatchFreeUsed === 'number' ? user.jobMatchFreeUsed : 0;
+      const credits = typeof user.aiCredits === 'number' ? user.aiCredits : 3;
+      if (freeUsed < 3) {
+        user.jobMatchFreeUsed = freeUsed + 1;
+        user.updatedAt = new Date().toISOString();
+        writeLocalDb(db);
+        return { success: true, remaining: credits, deducted: true, freeUsed: user.jobMatchFreeUsed };
+      }
+      if (credits >= 1) {
+        user.aiCredits = credits - 1;
+        user.jobMatchFreeUsed = freeUsed + 1;
+        user.updatedAt = new Date().toISOString();
+        writeLocalDb(db);
+        return { success: true, remaining: user.aiCredits, deducted: true, freeUsed: user.jobMatchFreeUsed };
+      }
+      return { success: false, remaining: credits, deducted: false, freeUsed };
+    }
+    return { success: false, remaining: 0, deducted: false, freeUsed: 0 };
+  },
+
+  async getJobCache(cacheKey: string): Promise<any | null> {
+    const db = readLocalDb();
+    if (!db.jobCache) return null;
+    const entry = db.jobCache.find((c: any) => c.cacheKey === cacheKey);
+    if (!entry) return null;
+    if (new Date(entry.expiresAt).getTime() < Date.now()) {
+      return null;
+    }
+    return entry.data;
+  },
+
+  async setJobCache(cacheKey: string, data: any, ttlHours = 6): Promise<void> {
+    const db = readLocalDb();
+    if (!db.jobCache) db.jobCache = [];
+    const now = Date.now();
+    // Prune expired
+    db.jobCache = db.jobCache.filter((c: any) => new Date(c.expiresAt).getTime() > now && c.cacheKey !== cacheKey);
+    db.jobCache.push({
+      cacheKey,
+      data,
+      expiresAt: new Date(now + ttlHours * 3600 * 1000).toISOString(),
+      createdAt: new Date().toISOString(),
+    });
+    writeLocalDb(db);
+  },
+
+  async createOrder(orderData: {
+    userId: string;
+    userEmail: string;
+    planId: 'pro' | 'payg';
+    billingCycle: 'monthly' | 'annual' | 'once';
+    baseAmount: number;
+    amount: number;
+    currency?: 'USDT';
+    method: PaymentMethodType;
+    network: CryptoNetwork;
+    reference: string;
+    recipientAddress?: string;
+    expiresAt: Date | string;
+    metadata?: any;
+  }): Promise<StoredOrder> {
+    const expiresAtIso =
+      typeof orderData.expiresAt === 'string'
+        ? orderData.expiresAt
+        : orderData.expiresAt.toISOString();
+
+    const orderRecord: StoredOrder = {
+      id: `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      userId: orderData.userId,
+      userEmail: orderData.userEmail.toLowerCase().trim(),
+      planId: orderData.planId,
+      billingCycle: orderData.billingCycle,
+      baseAmount: orderData.baseAmount,
+      amount: orderData.amount,
+      currency: 'USDT',
+      method: orderData.method,
+      network: orderData.network,
+      status: 'awaiting_payment',
+      reference: orderData.reference,
+      recipientAddress: orderData.recipientAddress || '',
+      expiresAt: expiresAtIso,
+      paidAt: null,
+      auditLog: [
+        {
+          status: 'awaiting_payment',
+          timestamp: new Date().toISOString(),
+          note: `Order initialized for plan ${orderData.planId} (${orderData.amount} USDT on ${orderData.network})`,
+          actor: 'system',
+        },
+      ],
+      metadata: orderData.metadata || {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const created = await Order.create({
+          userId: orderRecord.userId,
+          userEmail: orderRecord.userEmail,
+          planId: orderRecord.planId,
+          billingCycle: orderRecord.billingCycle,
+          baseAmount: orderRecord.baseAmount,
+          amount: orderRecord.amount,
+          currency: 'USDT',
+          method: orderRecord.method,
+          network: orderRecord.network,
+          status: 'awaiting_payment',
+          reference: orderRecord.reference,
+          recipientAddress: orderRecord.recipientAddress,
+          expiresAt: new Date(expiresAtIso),
+          auditLog: [
+            {
+              status: 'awaiting_payment',
+              timestamp: new Date(),
+              note: `Order initialized for plan ${orderData.planId} (${orderData.amount} USDT on ${orderData.network})`,
+              actor: 'system',
+            },
+          ],
+          metadata: orderRecord.metadata,
+        });
+        orderRecord.id = created._id.toString();
+      } catch (err) {
+        console.error('MongoDB Order.create failed, falling back to local store:', err);
+      }
+    }
+
+    const db = readLocalDb();
+    if (!db.orders) db.orders = [];
+    db.orders.push(orderRecord);
+    writeLocalDb(db);
+
+    return orderRecord;
+  },
+
+  async findOrderById(orderId: string): Promise<StoredOrder | null> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(orderId)) {
+      try {
+        const order = await Order.findById(orderId);
+        if (order) {
+          return {
+            id: order._id.toString(),
+            userId: order.userId,
+            userEmail: order.userEmail,
+            planId: order.planId,
+            billingCycle: order.billingCycle,
+            baseAmount: order.baseAmount,
+            amount: order.amount,
+            currency: 'USDT',
+            method: order.method,
+            network: order.network,
+            status: order.status,
+            txid: order.txid || null,
+            reference: order.reference,
+            recipientAddress: order.recipientAddress,
+            expiresAt: order.expiresAt.toISOString(),
+            paidAt: order.paidAt?.toISOString() || null,
+            auditLog: (order.auditLog || []).map((l) => ({
+              status: l.status,
+              timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
+              note: l.note,
+              actor: l.actor,
+            })),
+            metadata: order.metadata || {},
+            createdAt: order.createdAt.toISOString(),
+            updatedAt: order.updatedAt.toISOString(),
+          };
+        }
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    if (!db.orders) return null;
+    const found = db.orders.find((o) => o.id === orderId || (o as any)._id === orderId);
+    return found || null;
+  },
+
+  async findOrderByReference(reference: string): Promise<StoredOrder | null> {
+    const cleanRef = reference.trim();
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const order = await Order.findOne({ reference: cleanRef });
+        if (order) {
+          return {
+            id: order._id.toString(),
+            userId: order.userId,
+            userEmail: order.userEmail,
+            planId: order.planId,
+            billingCycle: order.billingCycle,
+            baseAmount: order.baseAmount,
+            amount: order.amount,
+            currency: 'USDT',
+            method: order.method,
+            network: order.network,
+            status: order.status,
+            txid: order.txid || null,
+            reference: order.reference,
+            recipientAddress: order.recipientAddress,
+            expiresAt: order.expiresAt.toISOString(),
+            paidAt: order.paidAt?.toISOString() || null,
+            auditLog: (order.auditLog || []).map((l) => ({
+              status: l.status,
+              timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
+              note: l.note,
+              actor: l.actor,
+            })),
+            metadata: order.metadata || {},
+            createdAt: order.createdAt.toISOString(),
+            updatedAt: order.updatedAt.toISOString(),
+          };
+        }
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    if (!db.orders) return null;
+    const found = db.orders.find((o) => o.reference.toLowerCase() === cleanRef.toLowerCase());
+    return found || null;
+  },
+
+  async findOrderByTxid(txid: string): Promise<StoredOrder | null> {
+    const cleanTxid = txid.trim().toLowerCase();
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const order = await Order.findOne({ txid: new RegExp(`^${cleanTxid}$`, 'i') });
+        if (order) {
+          return {
+            id: order._id.toString(),
+            userId: order.userId,
+            userEmail: order.userEmail,
+            planId: order.planId,
+            billingCycle: order.billingCycle,
+            baseAmount: order.baseAmount,
+            amount: order.amount,
+            currency: 'USDT',
+            method: order.method,
+            network: order.network,
+            status: order.status,
+            txid: order.txid || null,
+            reference: order.reference,
+            recipientAddress: order.recipientAddress,
+            expiresAt: order.expiresAt.toISOString(),
+            paidAt: order.paidAt?.toISOString() || null,
+            auditLog: (order.auditLog || []).map((l) => ({
+              status: l.status,
+              timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
+              note: l.note,
+              actor: l.actor,
+            })),
+            metadata: order.metadata || {},
+            createdAt: order.createdAt.toISOString(),
+            updatedAt: order.updatedAt.toISOString(),
+          };
+        }
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    if (!db.orders) return null;
+    const found = db.orders.find((o) => o.txid && o.txid.toLowerCase() === cleanTxid);
+    return found || null;
+  },
+
+  async listOrders(filter?: {
+    status?: string;
+    userId?: string;
+    limit?: number;
+  }): Promise<StoredOrder[]> {
+    const limit = filter?.limit || 100;
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const query: any = {};
+        if (filter?.status && filter.status !== 'all') {
+          query.status = filter.status;
+        }
+        if (filter?.userId) {
+          query.userId = filter.userId;
+        }
+        const orders = await Order.find(query).sort({ createdAt: -1 }).limit(limit);
+        return orders.map((order) => ({
+          id: order._id.toString(),
+          userId: order.userId,
+          userEmail: order.userEmail,
+          planId: order.planId,
+          billingCycle: order.billingCycle,
+          baseAmount: order.baseAmount,
+          amount: order.amount,
+          currency: 'USDT',
+          method: order.method,
+          network: order.network,
+          status: order.status,
+          txid: order.txid || null,
+          reference: order.reference,
+          recipientAddress: order.recipientAddress,
+          expiresAt: order.expiresAt.toISOString(),
+          paidAt: order.paidAt?.toISOString() || null,
+          auditLog: (order.auditLog || []).map((l) => ({
+            status: l.status,
+            timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
+            note: l.note,
+            actor: l.actor,
+          })),
+          metadata: order.metadata || {},
+          createdAt: order.createdAt.toISOString(),
+          updatedAt: order.updatedAt.toISOString(),
+        }));
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    let orders = (db.orders || []).slice();
+    if (filter?.status && filter.status !== 'all') {
+      orders = orders.filter((o) => o.status === filter.status);
+    }
+    if (filter?.userId) {
+      orders = orders.filter((o) => o.userId === filter.userId);
+    }
+    orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return orders.slice(0, limit);
+  },
+
+  async updateOrderStatus(
+    orderId: string,
+    status: OrderStatus,
+    options?: {
+      txid?: string;
+      note?: string;
+      actor?: string;
+      metadata?: any;
+    }
+  ): Promise<StoredOrder | null> {
+    const timestamp = new Date().toISOString();
+    const actor = options?.actor || 'system';
+    const note = options?.note || `Status updated to ${status}`;
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(orderId)) {
+      try {
+        const updateDoc: any = {
+          $set: {
+            status,
+            updatedAt: new Date(),
+          },
+          $push: {
+            auditLog: {
+              status,
+              timestamp: new Date(),
+              note,
+              actor,
+            },
+          },
+        };
+        if (options?.txid) {
+          updateDoc.$set.txid = options.txid;
+        }
+        if (options?.metadata) {
+          updateDoc.$set.metadata = options.metadata;
+        }
+        await Order.findByIdAndUpdate(orderId, updateDoc);
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    if (!db.orders) return null;
+    const order = db.orders.find((o) => o.id === orderId || (o as any)._id === orderId);
+    if (!order) return null;
+
+    order.status = status;
+    order.updatedAt = timestamp;
+    if (options?.txid) {
+      order.txid = options.txid;
+    }
+    if (options?.metadata) {
+      order.metadata = { ...order.metadata, ...options.metadata };
+    }
+    order.auditLog = order.auditLog || [];
+    order.auditLog.push({
+      status,
+      timestamp,
+      note,
+      actor,
+    });
+
+    writeLocalDb(db);
+    return order;
+  },
+
+  async completeOrder(
+    orderId: string,
+    options?: {
+      txid?: string;
+      note?: string;
+      actor?: string;
+    }
+  ): Promise<{ success: boolean; alreadyPaid?: boolean; order: StoredOrder | null }> {
+    const existing = await this.findOrderById(orderId);
+    if (!existing) {
+      return { success: false, order: null };
+    }
+
+    // Idempotency: if already paid, do not re-process
+    if (existing.status === 'paid') {
+      return { success: true, alreadyPaid: true, order: existing };
+    }
+
+    const nowIso = new Date().toISOString();
+    const actor = options?.actor || 'system';
+    const note = options?.note || `Payment verified successfully on ${existing.network}`;
+    const txidToRecord = options?.txid || existing.txid;
+
+    // 1. Update Order in DB
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(orderId)) {
+      try {
+        const updateDoc: any = {
+          $set: {
+            status: 'paid',
+            paidAt: new Date(),
+            updatedAt: new Date(),
+          },
+          $push: {
+            auditLog: {
+              status: 'paid',
+              timestamp: new Date(),
+              note,
+              actor,
+            },
+          },
+        };
+        if (txidToRecord) {
+          updateDoc.$set.txid = txidToRecord;
+        }
+        await Order.findByIdAndUpdate(orderId, updateDoc);
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    if (!db.orders) db.orders = [];
+    let memoryOrder = db.orders.find((o) => o.id === orderId || (o as any)._id === orderId);
+    if (!memoryOrder) {
+      memoryOrder = { ...existing };
+      db.orders.push(memoryOrder);
+    }
+    memoryOrder.status = 'paid';
+    memoryOrder.paidAt = nowIso;
+    memoryOrder.updatedAt = nowIso;
+    if (txidToRecord) {
+      memoryOrder.txid = txidToRecord;
+    }
+    memoryOrder.auditLog = memoryOrder.auditLog || [];
+    memoryOrder.auditLog.push({
+      status: 'paid',
+      timestamp: nowIso,
+      note,
+      actor,
+    });
+    writeLocalDb(db);
+
+    // 2. Activate Entitlements
+    if (existing.planId === 'pro') {
+      // Calculate duration: annual (365 days) vs monthly (30 days)
+      const durationDays = existing.billingCycle === 'annual' ? 365 : 30;
+      const durationMs = durationDays * 24 * 3600 * 1000;
+
+      // Find user to check if existing plan is active
+      const user = await this.findUserById(existing.userId);
+      let newExpiresAt: Date;
+      if (user?.planExpiresAt && new Date(user.planExpiresAt).getTime() > Date.now()) {
+        // Extend existing subscription
+        newExpiresAt = new Date(new Date(user.planExpiresAt).getTime() + durationMs);
+      } else {
+        newExpiresAt = new Date(Date.now() + durationMs);
+      }
+
+      await this.upgradeUserPlan(existing.userId, {
+        plan: 'pro',
+        billingCycle: existing.billingCycle === 'annual' ? 'annual' : 'monthly',
+        planExpiresAt: newExpiresAt,
+        paymentProvider: 'binance',
+        providerCustomerId: existing.userEmail,
+        providerSubscriptionId: existing.reference,
+      });
+    } else if (existing.planId === 'payg') {
+      // Add 15 AI credits
+      await this.incrementUserCredits(existing.userId, 15);
+    }
+
+    // 3. Record in unified Payment collection for accounting
+    await this.recordPayment({
+      userId: existing.userId,
+      userEmail: existing.userEmail,
+      amount: existing.amount,
+      currency: 'USDT',
+      provider: 'test',
+      providerPaymentId: txidToRecord || existing.reference,
+      planId: existing.planId,
+      billingCycle: existing.billingCycle === 'annual' ? 'annual' : existing.billingCycle === 'monthly' ? 'monthly' : 'none',
+      status: 'succeeded',
+      metadata: {
+        orderId: existing.id,
+        reference: existing.reference,
+        network: existing.network,
+        method: existing.method,
+        txid: txidToRecord,
+      },
+    });
+
+    const updated = await this.findOrderById(orderId);
+    return { success: true, order: updated || memoryOrder };
+  },
+
+  async expirePendingOrders(): Promise<number> {
+    const now = Date.now();
+    let count = 0;
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const result = await Order.updateMany(
+          {
+            status: { $in: ['created', 'awaiting_payment'] },
+            expiresAt: { $lt: new Date() },
+          },
+          {
+            $set: { status: 'expired', updatedAt: new Date() },
+            $push: {
+              auditLog: {
+                status: 'expired',
+                timestamp: new Date(),
+                note: 'Order expired automatically after 30 minutes without payment',
+                actor: 'system',
+              },
+            },
+          }
+        );
+        count = result.modifiedCount || 0;
+      } catch (err) {}
+    }
+
+    const db = readLocalDb();
+    if (db.orders) {
+      for (const order of db.orders) {
+        if (
+          (order.status === 'created' || order.status === 'awaiting_payment') &&
+          new Date(order.expiresAt).getTime() < now
+        ) {
+          order.status = 'expired';
+          order.updatedAt = new Date().toISOString();
+          order.auditLog = order.auditLog || [];
+          order.auditLog.push({
+            status: 'expired',
+            timestamp: new Date().toISOString(),
+            note: 'Order expired automatically after 30 minutes without payment',
+            actor: 'system',
+          });
+          count++;
+        }
+      }
+      writeLocalDb(db);
+    }
+
+    return count;
   },
 };
 
 export default DataStore;
+

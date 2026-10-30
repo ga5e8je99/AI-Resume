@@ -476,14 +476,14 @@ export function CvForm({ data, onChange }: CvFormProps) {
       />
 
       {/* Floating AI Helper Bar */}
-      <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-slate-900 border border-emerald-500/30 flex items-center justify-between shadow-lg">
+      <div className="p-3.5 rounded-[8px] bg-accent-soft border border-line flex items-center justify-between text-start">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 animate-spin-slow" />
+          <div className="w-8 h-8 rounded-[6px] bg-accent text-on-accent flex items-center justify-center">
+            <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-white">Smart AI CV Writing Engine</h4>
-            <p className="text-[10px] text-slate-400">
+            <h4 className="text-xs font-serif font-semibold text-ink">Smart AI CV Writing Engine</h4>
+            <p className="text-[11px] text-ink-2">
               Need help writing executive statements or STAR accomplishments?
             </p>
           </div>
@@ -491,7 +491,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
         <button
           type="button"
           onClick={() => setIsAiModalOpen(true)}
-          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center gap-1.5 transition-all shadow hover:scale-105 cursor-pointer"
+          className="px-3 py-1.5 rounded-[6px] text-xs font-medium bg-accent hover:bg-accent-hover text-on-accent flex items-center gap-1.5 transition-colors cursor-pointer"
         >
           <Sparkles className="w-3.5 h-3.5" />
           <span>AI Assist</span>
@@ -503,7 +503,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
         <button
           type="button"
           onClick={() => toggleSection('personal')}
-          className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-850/50 transition-colors"
+          className="w-full p-4 flex items-center justify-between text-start hover:bg-slate-850/50 transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
@@ -785,7 +785,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
         <button
           type="button"
           onClick={() => toggleSection('summary')}
-          className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-850/50 transition-colors"
+          className="w-full p-4 flex items-center justify-between text-start hover:bg-slate-850/50 transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
@@ -829,7 +829,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
       {/* 3. WORK EXPERIENCE */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-left border-b border-slate-800/60">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
           <button
             type="button"
             onClick={() => toggleSection('experience')}
@@ -1021,7 +1021,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
       {/* 4. EDUCATION & DEGREES */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-left border-b border-slate-800/60">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
           <button
             type="button"
             onClick={() => toggleSection('education')}
@@ -1160,7 +1160,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
       {/* 5. LANGUAGES (CV ESSENTIAL) */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-left border-b border-slate-800/60">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
           <button
             type="button"
             onClick={() => toggleSection('languages')}
@@ -1269,7 +1269,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
         <button
           type="button"
           onClick={() => toggleSection('skills')}
-          className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-850/50 transition-colors"
+          className="w-full p-4 flex items-center justify-between text-start hover:bg-slate-850/50 transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
@@ -1391,7 +1391,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
         <button
           type="button"
           onClick={() => toggleSection('certifications')}
-          className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-850/50 transition-colors"
+          className="w-full p-4 flex items-center justify-between text-start hover:bg-slate-850/50 transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
@@ -1445,7 +1445,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
       {/* 8. COURSES & TRAINING */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-left border-b border-slate-800/60">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
           <button
             type="button"
             onClick={() => toggleSection('courses')}
@@ -1503,7 +1503,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   <button
                     type="button"
                     onClick={() => removeCourse(c.id)}
-                    className="p-1 text-slate-500 hover:text-red-400 ml-2"
+                    className="p-1 text-slate-500 hover:text-red-400 ms-2"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1532,7 +1532,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
       {/* 9. PUBLICATIONS & RESEARCH (ACADEMIC / EXPERT CV) */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-left border-b border-slate-800/60">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
           <button
             type="button"
             onClick={() => toggleSection('publications')}
@@ -1590,7 +1590,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   <button
                     type="button"
                     onClick={() => removePublication(pub.id)}
-                    className="p-1 text-slate-500 hover:text-red-400 ml-2"
+                    className="p-1 text-slate-500 hover:text-red-400 ms-2"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1626,7 +1626,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
       {/* 10. HONORS & AWARDS */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-left border-b border-slate-800/60">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
           <button
             type="button"
             onClick={() => toggleSection('awards')}
@@ -1684,7 +1684,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   <button
                     type="button"
                     onClick={() => removeAward(award.id)}
-                    className="p-1 text-slate-500 hover:text-red-400 ml-2"
+                    className="p-1 text-slate-500 hover:text-red-400 ms-2"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1713,7 +1713,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
       {/* 11. VOLUNTEERING & COMMUNITY */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-left border-b border-slate-800/60">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
           <button
             type="button"
             onClick={() => toggleSection('volunteering')}
@@ -1771,7 +1771,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   <button
                     type="button"
                     onClick={() => removeVolunteer(v.id)}
-                    className="p-1 text-slate-500 hover:text-red-400 ml-2"
+                    className="p-1 text-slate-500 hover:text-red-400 ms-2"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1804,7 +1804,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
       {/* 12. REFERENCES */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-left border-b border-slate-800/60">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
           <button
             type="button"
             onClick={() => toggleSection('references')}
@@ -1821,7 +1821,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                 </span>
               </div>
               <p className="text-[10px] text-slate-400">
-                Endorsers or 'Available upon request' statement
+                Endorsers or &apos;Available upon request&apos; statement
               </p>
             </div>
           </button>
@@ -1862,7 +1862,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                 htmlFor="ref-toggle-request"
                 className="text-xs text-slate-300 cursor-pointer font-medium"
               >
-                Display standard: <em>"References available upon request"</em> (Hide names & phones)
+                Display standard: <em>&quot;References available upon request&quot;</em> (Hide names &amp; phones)
               </label>
             </div>
 

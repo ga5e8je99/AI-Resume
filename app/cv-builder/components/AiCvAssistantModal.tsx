@@ -7,8 +7,6 @@ import {
   Check,
   Loader2,
   Wand2,
-  BookOpen,
-  Zap,
   Copy,
   CheckCircle2,
 } from 'lucide-react';
@@ -31,7 +29,6 @@ export default function AiCvAssistantModal({
   const [activeTab, setActiveTab] = useState<'summary' | 'bullets'>('summary');
   const [targetTitle, setTargetTitle] = useState(jobTitle || 'Senior Software Engineer');
   const [yearsExperience, setYearsExperience] = useState('7+');
-  const [keySkillsInput, setKeySkillsInput] = useState('System Design, Cloud, Leadership');
   const [language, setLanguage] = useState<'en' | 'ar'>('en');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResult, setGeneratedResult] = useState<string>('');
@@ -87,22 +84,22 @@ export default function AiCvAssistantModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-surface border border-line-strong rounded-[10px] shadow-elevated overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div className="p-5 border-b border-line flex items-center justify-between bg-surface">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+            <div className="w-9 h-9 rounded-[8px] bg-accent-soft text-accent flex items-center justify-center">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <h3 className="text-base font-serif font-semibold text-ink flex items-center gap-2">
                 <span>AI CV Writing Assistant</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-accent-soft text-accent border border-accent/20">
                   SMART ATS
                 </span>
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-ink-3">
                 Generate high-impact executive summaries and STAR-method accomplishments
               </p>
             </div>
@@ -110,21 +107,21 @@ export default function AiCvAssistantModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-[6px] text-ink-3 hover:text-ink hover:bg-surface-2 transition-colors focus-visible:outline-2 outline-offset-2 outline-[var(--focus)]"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab switch */}
-        <div className="flex border-b border-slate-800 bg-slate-950/40 p-2 gap-2">
+        <div className="flex border-b border-line bg-surface-2 p-2 gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('summary')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+            className={`flex-1 py-2 px-3 rounded-[6px] text-xs font-semibold transition-all ${
               activeTab === 'summary'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-surface text-ink border border-line-strong shadow-subtle'
+                : 'text-ink-2 hover:text-ink'
             }`}
           >
             Executive CV Summary
@@ -132,10 +129,10 @@ export default function AiCvAssistantModal({
           <button
             type="button"
             onClick={() => setActiveTab('bullets')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+            className={`flex-1 py-2 px-3 rounded-[6px] text-xs font-semibold transition-all ${
               activeTab === 'bullets'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-surface text-ink border border-line-strong shadow-subtle'
+                : 'text-ink-2 hover:text-ink'
             }`}
           >
             Impact Bullet Points (STAR Method)
@@ -143,10 +140,10 @@ export default function AiCvAssistantModal({
         </div>
 
         {/* Form content */}
-        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1 text-start">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
+              <label className="text-xs font-medium text-ink block mb-1">
                 Target Role / Job Title
               </label>
               <input
@@ -154,11 +151,11 @@ export default function AiCvAssistantModal({
                 value={targetTitle}
                 onChange={(e) => setTargetTitle(e.target.value)}
                 placeholder="e.g. Senior Machine Learning Engineer"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                className="w-full px-3 py-2 rounded-[6px] bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
+              <label className="text-xs font-medium text-ink block mb-1">
                 Years of Experience
               </label>
               <input
@@ -166,21 +163,21 @@ export default function AiCvAssistantModal({
                 value={yearsExperience}
                 onChange={(e) => setYearsExperience(e.target.value)}
                 placeholder="e.g. 8+ years"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                className="w-full px-3 py-2 rounded-[6px] bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
               />
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">Language:</span>
+              <span className="text-xs text-ink-3">Language:</span>
               <button
                 type="button"
                 onClick={() => setLanguage('en')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                className={`px-2.5 py-1 rounded-[6px] text-xs font-medium transition-colors ${
                   language === 'en'
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-accent text-on-accent'
+                    : 'bg-surface text-ink-2 hover:bg-surface-2 border border-line'
                 }`}
               >
                 English
@@ -188,10 +185,10 @@ export default function AiCvAssistantModal({
               <button
                 type="button"
                 onClick={() => setLanguage('ar')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                className={`px-2.5 py-1 rounded-[6px] text-xs font-medium transition-colors ${
                   language === 'ar'
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-accent text-on-accent'
+                    : 'bg-surface text-ink-2 hover:bg-surface-2 border border-line'
                 }`}
               >
                 العربية
@@ -202,7 +199,7 @@ export default function AiCvAssistantModal({
               type="button"
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-[6px] text-xs font-medium bg-accent hover:bg-accent-hover text-on-accent flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
             >
               {isGenerating ? (
                 <>
@@ -220,21 +217,21 @@ export default function AiCvAssistantModal({
 
           {/* Result Preview Box */}
           {generatedResult && (
-            <div className="mt-4 p-4 rounded-2xl bg-slate-950 border border-emerald-500/30 space-y-3 animate-fadeIn">
-              <div className="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-800">
-                <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+            <div className="mt-4 p-4 rounded-[8px] bg-surface-2 border border-line space-y-3 animate-fadeIn">
+              <div className="flex items-center justify-between text-xs text-ink-3 pb-2 border-b border-line">
+                <span className="text-accent font-semibold flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   Generated Content Ready
                 </span>
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="flex items-center gap-1 text-slate-400 hover:text-white transition-colors"
+                  className="flex items-center gap-1 text-ink-3 hover:text-ink transition-colors cursor-pointer"
                 >
                   {copied ? (
                     <>
-                      <Check className="w-3 h-3 text-emerald-400" />
-                      <span className="text-emerald-400">Copied</span>
+                      <Check className="w-3 h-3 text-accent" />
+                      <span className="text-accent">Copied</span>
                     </>
                   ) : (
                     <>
@@ -246,9 +243,7 @@ export default function AiCvAssistantModal({
               </div>
 
               <p
-                className={`text-xs text-slate-200 leading-relaxed whitespace-pre-line ${
-                  language === 'ar' ? 'text-right font-sans' : 'text-left'
-                }`}
+                className="text-xs text-ink leading-relaxed whitespace-pre-line text-start font-sans"
                 dir={language === 'ar' ? 'rtl' : 'ltr'}
               >
                 {generatedResult}
@@ -258,7 +253,7 @@ export default function AiCvAssistantModal({
                 <button
                   type="button"
                   onClick={handleApply}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2 shadow-md transition-all hover:scale-105 cursor-pointer"
+                  className="px-4 py-2 rounded-[6px] text-xs font-medium bg-accent hover:bg-accent-hover text-on-accent flex items-center gap-2 transition-colors cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Apply to My CV</span>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { CvData, CvThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: CvData;
@@ -223,7 +223,7 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                     <div className="flex justify-between items-baseline">
                       <span className="font-bold text-slate-900">{exp.position}</span>
                       <span className="text-[10.5px] text-slate-500 font-medium">
-                        {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                        {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                       </span>
                     </div>
                     <div className="flex justify-between text-slate-600 text-[11px] italic mb-1">
@@ -265,7 +265,9 @@ export default function ModernTwoColumnCvTemplate({ data, theme }: TemplateProps
                         {edu.institution} {edu.gpa && `• ${h.gpa}: ${edu.gpa}`}
                       </p>
                     </div>
-                    <span className="text-[10.5px] text-slate-500">{edu.startDate} – {edu.endDate}</span>
+                    <span className="text-[10.5px] text-slate-500">
+                      {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
+                    </span>
                   </div>
                 ))}
               </div>

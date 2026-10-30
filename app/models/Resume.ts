@@ -44,6 +44,8 @@ const ResumeSchema = new Schema<IResume>(
   }
 );
 
+ResumeSchema.index({ userId: 1, updatedAt: -1 });
+
 const Resume: Model<IResume> = mongoose.models.Resume || mongoose.model<IResume>('Resume', ResumeSchema);
 
 export default Resume;

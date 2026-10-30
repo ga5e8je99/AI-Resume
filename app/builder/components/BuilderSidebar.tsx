@@ -3,28 +3,66 @@
 import React, { useState } from 'react';
 import { TemplateId, ThemeConfig } from '../types';
 import {
+  User,
   FileText,
-  Layout,
-  Award,
-  AlignLeft,
+  Briefcase,
+  GraduationCap,
+  FolderGit2,
   Sparkles,
+  Award,
+  Languages as LanguagesIcon,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+  Layout,
   BookOpen,
+  AlignLeft,
   Palette,
   Type,
   RefreshCw,
   Trash2,
-  Printer,
-  Download,
-  ChevronLeft,
-  ChevronRight,
-  Check,
-  Sliders,
-  CheckCircle2,
   Cloud,
   Loader2,
-  Globe,
+  Check,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
-import { DOCUMENT_LANGUAGE_OPTIONS, DocumentLanguage } from '@/app/lib/documentI18n';
+import { PaperSize } from '../utils/exportPdf';
+import { useLanguage } from '@/app/context/LanguageContext';
+import {
+  DOCUMENT_LANGUAGE_OPTIONS,
+  DocumentLanguage,
+  setStoredDocumentLanguage,
+  getDocumentFontFamily,
+} from '@/app/lib/documentI18n';
+
+export type SectionKey =
+  | 'personal'
+  | 'summary'
+  | 'experience'
+  | 'education'
+  | 'projects'
+  | 'skills'
+  | 'languages'
+  | 'certifications';
+
+export interface SectionMeta {
+  id: SectionKey;
+  labelEn: string;
+  labelAr: string;
+  icon: React.ReactNode;
+}
+
+export const DEFAULT_SECTION_METAS: Record<SectionKey, { labelEn: string; labelAr: string; icon: any }> = {
+  personal: { labelEn: 'Personal Information', labelAr: 'البيانات الشخصية', icon: User },
+  summary: { labelEn: 'Professional Summary', labelAr: 'النبذة المهنية', icon: FileText },
+  experience: { labelEn: 'Work Experience', labelAr: 'الخبرات المهنية', icon: Briefcase },
+  education: { labelEn: 'Education', labelAr: 'التعليم والمؤهلات', icon: GraduationCap },
+  projects: { labelEn: 'Key Projects', labelAr: 'المشاريع البارزة', icon: FolderGit2 },
+  skills: { labelEn: 'Skills & Proficiencies', labelAr: 'المهارات والتقنيات', icon: Sparkles },
+  languages: { labelEn: 'Languages & Fluency', labelAr: 'اللغات ومستوى الإتقان', icon: LanguagesIcon },
+  certifications: { labelEn: 'Certifications', labelAr: 'الشهادات المهنية', icon: Award },
+};
 
 interface BuilderSidebarProps {
   selectedTemplate: TemplateId;
@@ -43,6 +81,14 @@ interface BuilderSidebarProps {
   onSaveCloud?: () => void;
   isSavingCloud?: boolean;
   saveMessage?: string | null;
+  sectionOrder: SectionKey[];
+  onReorderSections: (newOrder: SectionKey[]) => void;
+  activeSection?: SectionKey;
+  onSelectSection?: (section: SectionKey) => void;
+  paperSize?: PaperSize;
+  onChangePaperSize?: (size: PaperSize) => void;
+  lastSavedText?: string;
+  isRtl?: boolean;
 }
 
 export default function BuilderSidebar({
@@ -52,517 +98,482 @@ export default function BuilderSidebar({
   setTheme,
   onLoadSample,
   onClear,
-  onDownloadPdf,
-  onDownloadWord,
-  onPrint,
-  isExportingPdf = false,
-  isExportingWord = false,
   isCollapsed = false,
   onToggleCollapse,
-  onSaveCloud,
-  isSavingCloud = false,
-  saveMessage = null,
+  sectionOrder,
+  onReorderSections,
+  activeSection,
+  onSelectSection,
+  paperSize = 'a4',
+  onChangePaperSize,
+  lastSavedText,
+  isRtl = false,
 }: BuilderSidebarProps) {
-  const [activeTab, setActiveTab] = useState<'templates' | 'style'>('templates');
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState<'sections' | 'templates' | 'style'>('sections');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const getSectionLabel = (secId: SectionKey) => {
+    switch (secId) {
+      case 'personal': return t('builder_sec_personal');
+      case 'summary': return t('builder_sec_summary');
+      case 'experience': return t('builder_sec_experience');
+      case 'education': return t('builder_sec_education');
+      case 'projects': return t('builder_sec_projects');
+      case 'skills': return t('builder_sec_skills');
+      case 'languages': return t('builder_sec_languages');
+      case 'certifications': return t('builder_sec_certifications');
+      default: return secId;
+    }
+  };
 
   const templates: {
     id: TemplateId;
     name: string;
-    source: string;
     tag: string;
-    icon: React.ReactNode;
     desc: string;
   }[] = [
-    // ResumeForFree Official Templates
     {
       id: 'compact',
-      name: 'Compact',
-      source: 'ResumeForFree #1',
-      tag: 'ATS Friendly',
-      icon: <AlignLeft className="w-4 h-4" />,
-      desc: 'Single column ATS friendly template with clean typography and inline dates.',
+      name: 'Compact ATS',
+      tag: 'Single column',
+      desc: 'Clean typography, inline contact and dates.',
+    },
+    {
+      id: 'executive-blue',
+      name: 'Executive Studio',
+      tag: 'High whitespace',
+      desc: 'Spacious header with understated border accent.',
     },
     {
       id: 'two-column',
       name: 'Two Column',
-      source: 'ResumeForFree #2',
-      tag: 'Side by Side',
-      icon: <Layout className="w-4 h-4" />,
-      desc: 'A two-column resume layout with sections side by side.',
-    },
-    {
-      id: 'ats-friendly',
-      name: 'ATS Friendly',
-      source: 'ResumeForFree #3',
-      tag: 'Blue Accent',
-      icon: <Award className="w-4 h-4" />,
-      desc: 'Single-column template with blue accents, optimized for applicant tracking systems.',
+      tag: 'Side by side',
+      desc: 'Skills and education paired alongside experience.',
     },
     {
       id: 'simple',
-      name: 'Simple',
-      source: 'ResumeForFree #4',
-      tag: 'Academic CV',
-      icon: <BookOpen className="w-4 h-4" />,
-      desc: 'Traditional academic CV layout with labeled columns and horizontal rules.',
+      name: 'Simple Editorial',
+      tag: 'Classic',
+      desc: 'Traditional serif layout with horizontal division lines.',
     },
-    // Top ATS Models
     {
       id: 'oslo',
-      name: 'Oslo ATS',
-      source: 'Resume.io ATS #1',
-      tag: 'Max Parse Rate',
-      icon: <FileText className="w-4 h-4" />,
-      desc: 'Pure typography, zero graphics or icons. Passes Taleo & Workday with 100% accuracy.',
+      name: 'Oslo Minimal',
+      tag: '100% Text',
+      desc: 'Pure typography designed for strict ATS parsers.',
     },
     {
       id: 'amsterdam',
       name: 'Amsterdam',
-      source: 'Resume.io ATS #2',
-      tag: 'Modern + Photo',
-      icon: <Layout className="w-4 h-4" />,
-      desc: 'Sleek single-column with optional photo, soft accent divider, and clean text contact.',
+      tag: 'With photo',
+      desc: 'Modern layout with optional profile photograph.',
     },
     {
       id: 'stockholm',
       name: 'Stockholm',
-      source: 'Resume.io ATS #3',
-      tag: 'High Density',
-      icon: <FileText className="w-4 h-4" />,
-      desc: 'Compact layout built to fit maximum career experience cleanly onto 1-2 pages.',
+      tag: 'High density',
+      desc: 'Maximum content efficiency for extensive careers.',
     },
     {
       id: 'london',
-      name: 'London',
-      source: 'Resume.io ATS #4',
-      tag: 'Executive Serif',
-      icon: <Sparkles className="w-4 h-4" />,
-      desc: 'Generous whitespace with refined executive serif typography and optional photo.',
+      name: 'London Serif',
+      tag: 'Executive',
+      desc: 'Editorial serif headings with balanced margins.',
     },
   ];
 
   const colors = [
-    { name: 'Classic Slate', hex: '#1e293b' },
-    { name: 'Tech Blue', hex: '#2563eb' },
-    { name: 'Sky Cyan', hex: '#0284c7' },
-    { name: 'Emerald', hex: '#059669' },
-    { name: 'Indigo Purple', hex: '#6366f1' },
-    { name: 'Burgundy Rose', hex: '#be123c' },
-    { name: 'Amber Gold', hex: '#d97706' },
+    { name: 'Studio Green', hex: '#0F5C4D' },
+    { name: 'Deep Ink', hex: '#14181F' },
+    { name: 'Navy Blue', hex: '#1E3A5F' },
+    { name: 'Terra Cotta', hex: '#8C5A20' },
+    { name: 'Burgundy', hex: '#7A2021' },
+    { name: 'Graphite', hex: '#374151' },
   ];
 
   const fonts = [
-    { label: 'Clean Sans (Inter)', value: 'var(--font-sans), sans-serif', sample: 'Aa' },
-    { label: 'Executive Serif (Georgia)', value: 'Georgia, serif', sample: 'Ag' },
-    { label: 'Technical Mono', value: 'var(--font-mono), monospace', sample: '{;}' },
+    { label: 'Clean Sans (IBM Plex)', value: 'var(--font-sans), sans-serif' },
+    { label: 'Plex Arabic (العربية)', value: 'var(--font-arabic), "IBM Plex Sans Arabic", var(--font-sans), sans-serif' },
+    { label: 'Editorial Serif (Newsreader)', value: 'var(--font-serif), serif' },
+    { label: 'Technical Mono', value: 'var(--font-mono), monospace' },
   ];
 
-  const selectedTplObj = templates.find((t) => t.id === selectedTemplate) || templates[0];
+  const handleDocumentLanguageChange = (newLang: DocumentLanguage) => {
+    setStoredDocumentLanguage(newLang);
+    setTheme((prev) => ({
+      ...prev,
+      documentLanguage: newLang,
+      fontFamily:
+        newLang === 'ar'
+          ? getDocumentFontFamily('ar')
+          : prev.fontFamily.includes('font-arabic')
+          ? 'var(--font-sans), sans-serif'
+          : prev.fontFamily,
+    }));
+  };
 
-  // Collapsed Minimal Rail (Desktop)
+  // Keyboard reorder handlers
+  const moveSectionUp = (index: number) => {
+    if (index <= 0) return;
+    const newOrder = [...sectionOrder];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(index - 1, 0, moved);
+    onReorderSections(newOrder);
+  };
+
+  const moveSectionDown = (index: number) => {
+    if (index >= sectionOrder.length - 1) return;
+    const newOrder = [...sectionOrder];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(index + 1, 0, moved);
+    onReorderSections(newOrder);
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    const newOrder = [...sectionOrder];
+    const [moved] = newOrder.splice(draggedIndex, 1);
+    newOrder.splice(index, 0, moved);
+    setDraggedIndex(index);
+    onReorderSections(newOrder);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   if (isCollapsed) {
     return (
-      <aside className="w-16 shrink-0 bg-slate-900/90 border border-slate-800 rounded-2xl p-2 flex flex-col items-center gap-3 backdrop-blur-xl shadow-xl transition-all duration-300">
+      <aside className="w-12 shrink-0 bg-surface border border-line rounded-[10px] p-2 flex flex-col items-center gap-3 shadow-xs">
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-          title="Expand Sidebar"
+          className="p-1.5 rounded-[6px] hover:bg-surface-2 text-ink-2 hover:text-ink transition-colors"
+          title="Expand rail"
         >
-          <ChevronRight className="w-5 h-5 text-cyan-400" />
+          <ChevronRight className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`} strokeWidth={1.5} />
         </button>
-
-        <div className="w-8 h-px bg-slate-800 my-1" />
-
-        {/* Active Template Icon */}
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center hover:scale-105 transition-all shadow-md shadow-cyan-500/20"
-          title={`Template: ${selectedTplObj.name}`}
-        >
-          {selectedTplObj.icon}
-        </button>
-
-        {/* Active Accent Color Dot */}
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="w-6 h-6 rounded-full border-2 border-white/60 shadow-md transition-transform hover:scale-110"
+        <div className="w-6 h-px bg-line" />
+        <div
+          className="w-4 h-4 rounded-full border border-line"
           style={{ backgroundColor: theme.accentColor }}
-          title={`Color: ${theme.accentColor}`}
+          title={`Accent: ${theme.accentColor}`}
         />
-
-        <div className="w-8 h-px bg-slate-800 my-1" />
-
-        {/* Quick Sample Button */}
-        <button
-          type="button"
-          onClick={onLoadSample}
-          className="p-2 rounded-xl text-slate-400 hover:text-indigo-300 hover:bg-slate-800 transition-colors"
-          title="Fill Sample Data"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
-
-        {onPrint && (
-          <button
-            type="button"
-            onClick={onPrint}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title="Print Resume"
-          >
-            <Printer className="w-4 h-4" />
-          </button>
-        )}
       </aside>
     );
   }
 
   return (
-    <aside className="w-full lg:w-[320px] xl:w-[340px] shrink-0 bg-slate-900/95 border border-slate-800/90 rounded-2xl flex flex-col backdrop-blur-xl shadow-2xl overflow-hidden transition-all duration-300">
-      {/* Sidebar Header */}
-      <div className="p-3.5 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/25">
-            <Sliders className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-              <span>Templates & Style</span>
-            </h3>
-            <p className="text-[11px] text-slate-400">Custom ATS Styling</p>
-          </div>
+    <aside className="w-full lg:w-[280px] shrink-0 bg-surface border border-line rounded-[10px] flex flex-col shadow-xs overflow-hidden">
+      {/* Rail Header with Tabs & Collapse */}
+      <div className="p-3 border-b border-line flex items-center justify-between bg-surface-2/40">
+        <div className="flex items-center gap-1 bg-surface border border-line p-0.5 rounded-[6px] text-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab('sections')}
+            className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${
+              activeTab === 'sections'
+                ? 'bg-accent text-white'
+                : 'text-ink-2 hover:text-ink'
+            }`}
+          >
+            {t('builder_tab_sections')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('templates')}
+            className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${
+              activeTab === 'templates'
+                ? 'bg-accent text-white'
+                : 'text-ink-2 hover:text-ink'
+            }`}
+          >
+            {t('builder_tab_templates')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('style')}
+            className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${
+              activeTab === 'style'
+                ? 'bg-accent text-white'
+                : 'text-ink-2 hover:text-ink'
+            }`}
+          >
+            {t('builder_tab_style')}
+          </button>
         </div>
 
         {onToggleCollapse && (
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title="Collapse Sidebar"
+            className="hidden lg:flex p-1 rounded-[4px] text-ink-3 hover:text-ink hover:bg-surface-2 transition-colors"
+            title="Collapse rail"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`} strokeWidth={1.5} />
           </button>
         )}
       </div>
 
-      {/* Internal Sub-Tabs (Templates / Appearance) */}
-      <div className="px-3 pt-3 pb-1 border-b border-slate-800/60 flex items-center gap-1.5 bg-slate-950/20">
-        <button
-          type="button"
-          onClick={() => setActiveTab('templates')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'templates'
-              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <Layout className="w-3.5 h-3.5" />
-          <span>Templates</span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 font-bold">
-            {templates.length}
-          </span>
-        </button>
+      {/* TAB 1: SECTIONS REORDERING */}
+      {activeTab === 'sections' && (
+        <div className="p-3.5 space-y-3">
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs font-semibold text-ink">
+              {isRtl ? 'ترتيب الأقسام' : 'Section Order'}
+            </span>
+            <span className="text-[11px] text-ink-3">
+              {isRtl ? 'اسحب أو استخدم الأسهم' : 'Drag or use arrows'}
+            </span>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('style')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'style'
-              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <Palette className="w-3.5 h-3.5" />
-          <span>Design & Fonts</span>
-        </button>
-      </div>
+          <div className="space-y-1.5" role="list">
+            {sectionOrder.map((secId, idx) => {
+              const meta = DEFAULT_SECTION_METAS[secId];
+              const IconComponent = meta?.icon || FileText;
+              const isSelected = activeSection === secId;
 
-      {/* Sidebar Scrollable Body */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 max-h-[calc(100vh-14rem)] lg:max-h-[calc(100vh-12rem)] [scrollbar-width:thin] [scrollbar-color:#334155_transparent]">
-        {/* TAB 1: TEMPLATES */}
-        {activeTab === 'templates' && (
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium px-0.5">
-              <span>Choose Layout Model</span>
-              <span className="text-cyan-400 text-[10px] font-bold">100% ATS Safe</span>
+              return (
+                <div
+                  key={secId}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDragEnd={handleDragEnd}
+                  role="listitem"
+                  className={`group flex items-center justify-between gap-2 p-2 rounded-[6px] border transition-colors cursor-grab active:cursor-grabbing text-xs ${
+                    draggedIndex === idx
+                      ? 'opacity-40 border-dashed border-accent bg-accent-soft'
+                      : isSelected
+                      ? 'bg-accent-soft border-accent text-ink'
+                      : 'bg-surface hover:bg-surface-2/60 border-line text-ink-2'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onSelectSection?.(secId)}
+                    className="flex items-center gap-2 text-start flex-1 min-w-0"
+                  >
+                    <GripVertical className="w-3.5 h-3.5 text-ink-3 group-hover:text-ink shrink-0" strokeWidth={1.5} />
+                    <IconComponent className="w-3.5 h-3.5 text-accent shrink-0" strokeWidth={1.5} />
+                    <span className="truncate font-medium text-ink">
+                      {getSectionLabel(secId)}
+                    </span>
+                  </button>
+
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveSectionUp(idx)}
+                      className="p-1 rounded-[4px] text-ink-3 hover:text-ink hover:bg-surface disabled:opacity-30 cursor-pointer"
+                      title={isRtl ? 'تحريك للأعلى' : 'Move up'}
+                      aria-label={`${meta.labelEn} move up`}
+                    >
+                      <ChevronUp className="w-3 h-3" strokeWidth={2} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === sectionOrder.length - 1}
+                      onClick={() => moveSectionDown(idx)}
+                      className="p-1 rounded-[4px] text-ink-3 hover:text-ink hover:bg-surface disabled:opacity-30 cursor-pointer"
+                      title={isRtl ? 'تحريك للأسفل' : 'Move down'}
+                      aria-label={`${meta.labelEn} move down`}
+                    >
+                      <ChevronDown className="w-3 h-3" strokeWidth={2} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Paper Size Setting */}
+          {onChangePaperSize && (
+            <div className="pt-2 border-t border-line space-y-1.5">
+              <label className="block text-xs font-semibold text-ink">
+                {isRtl ? 'حجم الصفحة القياسي' : 'Paper Format'}
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-surface-2 rounded-[6px] border border-line text-xs font-medium">
+                <button
+                  type="button"
+                  onClick={() => onChangePaperSize('a4')}
+                  className={`py-1 text-center rounded-[4px] transition-colors cursor-pointer ${
+                    paperSize === 'a4'
+                      ? 'bg-surface text-ink font-semibold shadow-xs'
+                      : 'text-ink-2 hover:text-ink'
+                  }`}
+                >
+                  ISO A4
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangePaperSize('letter')}
+                  className={`py-1 text-center rounded-[4px] transition-colors cursor-pointer ${
+                    paperSize === 'letter'
+                      ? 'bg-surface text-ink font-semibold shadow-xs'
+                      : 'text-ink-2 hover:text-ink'
+                  }`}
+                >
+                  US Letter
+                </button>
+              </div>
             </div>
+          )}
 
-            <div className="space-y-2">
-              {templates.map((tpl) => {
-                const isSelected = selectedTemplate === tpl.id;
+          {/* Quick Actions (Sample / Reset) */}
+          <div className="pt-2 border-t border-line flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onLoadSample}
+              className="flex-1 py-1.5 px-2 rounded-[6px] bg-surface hover:bg-surface-2 border border-line text-xs font-medium text-ink-2 hover:text-ink transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className="w-3 h-3" strokeWidth={1.5} />
+              <span>{isRtl ? 'ملء بيانات تجريبية' : 'Sample data'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClear}
+              aria-label={isRtl ? 'مسح كافة الحقول' : 'Clear all fields'}
+              className="py-1.5 px-2 rounded-[6px] bg-surface hover:bg-red-50 border border-line text-xs font-medium text-ink-3 hover:text-danger transition-colors cursor-pointer"
+              title={isRtl ? 'مسح كافة الحقول' : 'Clear all fields'}
+            >
+              <Trash2 className="w-3 h-3" strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: TEMPLATES SELECTION */}
+      {activeTab === 'templates' && (
+        <div className="p-3.5 space-y-2 max-h-[500px] overflow-y-auto">
+          <span className="block text-xs font-semibold text-ink mb-1">
+            {isRtl ? 'اختر قالب السيرة' : 'Select Resume Layout'}
+          </span>
+          {templates.map((tpl) => {
+            const isSelected = selectedTemplate === tpl.id;
+            return (
+              <button
+                key={tpl.id}
+                type="button"
+                onClick={() => onSelectTemplate(tpl.id)}
+                className={`w-full p-2.5 rounded-[6px] border text-start transition-colors cursor-pointer flex flex-col justify-between ${
+                  isSelected
+                    ? 'bg-surface border-accent shadow-xs text-ink ring-1 ring-accent'
+                    : 'bg-surface-2/40 border-line hover:bg-surface text-ink-2'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className={`text-xs font-medium ${isSelected ? 'text-accent font-semibold' : 'text-ink'}`}>
+                    {tpl.name}
+                  </span>
+                  <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-surface border border-line text-ink-3">
+                    {tpl.tag}
+                  </span>
+                </div>
+                <p className="text-[11px] text-ink-3 mt-1 leading-snug">
+                  {tpl.desc}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* TAB 3: STYLE (COLORS & TYPOGRAPHY) */}
+      {activeTab === 'style' && (
+        <div className="p-3.5 space-y-4">
+          {/* Output Language Selector (6 Languages) */}
+          <div>
+            <label className="block text-xs font-semibold text-ink mb-2">
+              {isRtl ? 'لغة إخراج المستند' : 'Output Language'}
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {DOCUMENT_LANGUAGE_OPTIONS.map((opt) => {
+                const isSelected = (theme.documentLanguage || 'en') === opt.id;
                 return (
                   <button
-                    key={tpl.id}
+                    key={opt.id}
                     type="button"
-                    onClick={() => onSelectTemplate(tpl.id)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex flex-col gap-1.5 relative group ${
+                    onClick={() => handleDocumentLanguageChange(opt.id)}
+                    className={`p-2 rounded-[6px] border text-xs text-start transition-colors flex items-center justify-between cursor-pointer ${
                       isSelected
-                        ? 'border-cyan-500 bg-cyan-500/10 shadow-lg shadow-cyan-500/15 ring-2 ring-cyan-500/30'
-                        : 'border-slate-800/80 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-800/40 text-slate-300'
+                        ? 'bg-surface border-accent text-accent font-semibold shadow-xs'
+                        : 'bg-surface border-line text-ink-2 hover:bg-surface-2'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`p-1.5 rounded-lg shrink-0 transition-colors ${
-                            isSelected
-                              ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/30'
-                              : 'bg-slate-800 text-slate-400 group-hover:text-slate-200'
-                          }`}
-                        >
-                          {tpl.icon}
-                        </span>
-                        <div>
-                          <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                            {tpl.name}
-                          </h4>
-                          <span className="text-[10px] text-cyan-400/90 font-medium block">
-                            {tpl.source}
-                          </span>
-                        </div>
-                      </div>
-
-                      <span
-                        className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full border ${
-                          isSelected
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                            : 'bg-slate-800 text-slate-400 border-slate-700/60'
-                        }`}
-                      >
-                        {tpl.tag}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 leading-snug line-clamp-2 mt-0.5">
-                      {tpl.desc}
-                    </p>
-
-                    {isSelected && (
-                      <div className="flex items-center gap-1 text-[10px] text-cyan-400 font-semibold pt-1 border-t border-cyan-500/20">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                        <span>Active Template</span>
-                      </div>
-                    )}
+                    <span>{opt.nativeName}</span>
+                    <span className="text-[10px] font-mono text-ink-3">
+                      {opt.dir === 'rtl' ? 'RTL' : 'LTR'}
+                    </span>
                   </button>
                 );
               })}
             </div>
           </div>
-        )}
 
-        {/* TAB 2: STYLE & DESIGN */}
-        {activeTab === 'style' && (
-          <div className="space-y-4">
-            {/* Document Language Section (CV / Resume Document Language) */}
-            <div className="p-3.5 rounded-xl bg-slate-950/40 border border-slate-800/80 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Document Language</span>
-                </label>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
-                  {DOCUMENT_LANGUAGE_OPTIONS.find((l) => l.id === (theme.documentLanguage || 'en'))?.nativeName || 'English'}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 leading-snug">
-                Sets headings, dates, and text flow (LTR/RTL) for this document.
-              </p>
-
-              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                {DOCUMENT_LANGUAGE_OPTIONS.map((lang) => {
-                  const isLangActive = (theme.documentLanguage || 'en') === lang.id;
-                  return (
-                    <button
-                      key={lang.id}
-                      type="button"
-                      onClick={() => setTheme((prev) => ({ ...prev, documentLanguage: lang.id }))}
-                      className={`flex items-center justify-between px-2.5 py-2 rounded-lg border text-xs transition-all ${
-                        isLangActive
-                          ? 'border-cyan-500 bg-cyan-500/15 text-white font-bold shadow-sm shadow-cyan-500/10'
-                          : 'border-slate-800/80 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 truncate">
-                        <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300">
-                          {lang.code}
-                        </span>
-                        <span className="truncate">{lang.nativeName}</span>
-                      </div>
-                      {isLangActive && <Check className="w-3 h-3 text-cyan-400 shrink-0 stroke-[3]" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Accent Colors Section */}
-            <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/80 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Palette className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Accent Color</span>
-                </label>
-                <span className="text-[10px] font-mono uppercase text-slate-400">
-                  {colors.find((c) => c.hex === theme.accentColor)?.name || theme.accentColor}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-1.5 pt-1">
-                {colors.map((c) => {
-                  const isColorActive = theme.accentColor === c.hex;
-                  return (
-                    <button
-                      key={c.hex}
-                      type="button"
-                      title={c.name}
-                      onClick={() => setTheme((prev) => ({ ...prev, accentColor: c.hex }))}
-                      className={`w-7 h-7 rounded-full shrink-0 transition-all flex items-center justify-center ${
-                        isColorActive
-                          ? 'scale-115 ring-2 ring-cyan-400 ring-offset-2 ring-offset-slate-900 shadow-md shadow-cyan-500/30'
-                          : 'hover:scale-110 opacity-75 hover:opacity-100'
-                      }`}
-                      style={{ backgroundColor: c.hex }}
-                    >
-                      {isColorActive && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Typography Section */}
-            <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/80 space-y-2.5">
-              <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Type className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Typography & Font</span>
-              </label>
-
-              <div className="space-y-1.5">
-                {fonts.map((f) => {
-                  const isFontActive = theme.fontFamily === f.value;
-                  return (
-                    <button
-                      key={f.value}
-                      type="button"
-                      onClick={() => setTheme((prev) => ({ ...prev, fontFamily: f.value }))}
-                      className={`w-full text-left p-2.5 rounded-lg border text-xs flex items-center justify-between transition-all ${
-                        isFontActive
-                          ? 'border-cyan-500 bg-cyan-500/10 text-white font-semibold shadow-sm'
-                          : 'border-slate-800 text-slate-300 hover:bg-slate-800/50 hover:border-slate-700'
-                      }`}
-                    >
-                      <span style={{ fontFamily: f.value }}>{f.label}</span>
-                      <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
-                        {f.sample}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Quick Actions (Sample, Reset, Print) */}
-            <div className="p-3 rounded-xl bg-slate-950/40 border border-slate-800/80 space-y-2">
-              <span className="text-[11px] text-slate-400 font-semibold block">Presets & Tools</span>
-              <div className="grid grid-cols-2 gap-2">
+          {/* Accent Palette */}
+          <div>
+            <label className="block text-xs font-semibold text-ink mb-2">
+              {isRtl ? 'لون التمييز (Accent)' : 'Accent Color'}
+            </label>
+            <div className="grid grid-cols-6 gap-2">
+              {colors.map((c) => (
                 <button
+                  key={c.hex}
                   type="button"
-                  onClick={onLoadSample}
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition-colors"
-                  title="Fill form with sample data"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Sample</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onClear}
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold bg-slate-800/60 hover:bg-red-500/20 text-slate-400 hover:text-red-300 transition-colors"
-                  title="Clear all fields"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Clear</span>
-                </button>
-              </div>
-
-              {onSaveCloud && (
-                <button
-                  type="button"
-                  disabled={isSavingCloud}
-                  onClick={onSaveCloud}
-                  className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white transition-all ${
-                    saveMessage
-                      ? 'bg-emerald-600 shadow-md shadow-emerald-600/30'
-                      : 'bg-emerald-700 hover:bg-emerald-600'
+                  title={c.name}
+                  onClick={() => setTheme((prev) => ({ ...prev, accentColor: c.hex }))}
+                  className={`w-7 h-7 rounded-[4px] border transition-transform flex items-center justify-center ${
+                    theme.accentColor === c.hex
+                      ? 'scale-110 border-ink shadow-xs'
+                      : 'border-line hover:scale-105'
                   }`}
-                  title="Save resume to cloud"
+                  style={{ backgroundColor: c.hex }}
                 >
-                  {isSavingCloud ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : saveMessage ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{saveMessage}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Cloud className="w-3.5 h-3.5 text-emerald-200" />
-                      <span>Save to Cloud</span>
-                    </>
+                  {theme.accentColor === c.hex && (
+                    <Check className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
                   )}
                 </button>
-              )}
-
-              {onPrint && (
-                <button
-                  type="button"
-                  onClick={onPrint}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                  title="Print resume"
-                >
-                  <Printer className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Print Document</span>
-                </button>
-              )}
+              ))}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Sidebar Footer with Quick Export shortcuts */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/60 flex items-center gap-2">
-        {onDownloadWord && (
-          <button
-            type="button"
-            disabled={isExportingWord}
-            onClick={onDownloadWord}
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-blue-700/80 hover:bg-blue-600 disabled:opacity-50 text-white text-[11px] font-semibold transition-all"
-            title="Download Word Document"
-          >
-            <FileText className="w-3 h-3 text-blue-200" />
-            <span>Word</span>
-          </button>
-        )}
-
-        {onDownloadPdf && (
-          <button
-            type="button"
-            disabled={isExportingPdf}
-            onClick={onDownloadPdf}
-            className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-white text-[11px] font-semibold transition-all shadow-md shadow-cyan-500/20"
-            title="Download PDF"
-          >
-            <Download className="w-3 h-3 text-cyan-200" />
-            <span>PDF</span>
-          </button>
-        )}
-      </div>
+          {/* Typography */}
+          <div>
+            <label className="block text-xs font-semibold text-ink mb-2">
+              {isRtl ? 'عائلة الخط' : 'Typeface'}
+            </label>
+            <div className="space-y-1.5">
+              {fonts.map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => setTheme((prev) => ({ ...prev, fontFamily: f.value }))}
+                  className={`w-full p-2 rounded-[6px] border text-xs text-start transition-colors flex items-center justify-between ${
+                    theme.fontFamily === f.value
+                      ? 'bg-surface border-accent text-accent font-semibold shadow-xs'
+                      : 'bg-surface border-line text-ink-2 hover:bg-surface-2'
+                  }`}
+                >
+                  <span>{f.label}</span>
+                  {theme.fontFamily === f.value && (
+                    <Check className="w-3.5 h-3.5 text-accent" strokeWidth={2} />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

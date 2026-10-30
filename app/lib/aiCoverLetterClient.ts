@@ -229,11 +229,40 @@ export class AICoverLetterClient {
       throw new Error('Invalid JSON structure returned by AI');
     }
 
+    const lang = (req.language || 'en') as string;
+    const isAr = lang === 'ar';
+    const isFr = lang === 'fr';
+    const isDe = lang === 'de';
+    const isEs = lang === 'es';
+    const isTr = lang === 'tr';
+
+    const defaultSalutation = isAr
+      ? `عناية ${req.hiringManager || 'فريق التوظيف المحترم'}،`
+      : isFr
+      ? (req.hiringManager ? `À l'attention de ${req.hiringManager},` : 'Madame, Monsieur,')
+      : isDe
+      ? (req.hiringManager ? `Sehr geehrte(r) ${req.hiringManager},` : 'Sehr geehrte Damen und Herren,')
+      : isEs
+      ? (req.hiringManager ? `Estimado/a ${req.hiringManager}:` : 'Estimado/a responsable de selección:')
+      : isTr
+      ? (req.hiringManager ? `Sayın ${req.hiringManager},` : 'Sayın Yetkili,')
+      : `Dear ${req.hiringManager || 'Hiring Team'},`;
+
+    const defaultSignOff = isAr
+      ? 'مع خالص التحية والتقدير،'
+      : isFr
+      ? "Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées,"
+      : isDe
+      ? 'Mit freundlichen Grüßen,'
+      : isEs
+      ? 'Atentamente,'
+      : isTr
+      ? 'Saygılarımla,'
+      : 'Sincerely,';
+
     const salutation = typeof parsed.salutation === 'string' && parsed.salutation.trim()
       ? parsed.salutation.trim()
-      : req.language === 'ar'
-      ? `عناية ${req.hiringManager || 'فريق التوظيف المحترم'}،`
-      : `Dear ${req.hiringManager || 'Hiring Team'},`;
+      : defaultSalutation;
 
     const introduction = typeof parsed.introduction === 'string' && parsed.introduction.trim()
       ? parsed.introduction.trim()
@@ -249,18 +278,28 @@ export class AICoverLetterClient {
 
     const signOff = typeof parsed.signOff === 'string' && parsed.signOff.trim()
       ? parsed.signOff.trim()
-      : req.language === 'ar'
-      ? 'مع خالص التحية والتقدير،'
-      : 'Sincerely,';
+      : defaultSignOff;
 
     if (!introduction || bodyParagraphs.length === 0 || !conclusion) {
       throw new Error('AI response is missing core cover letter paragraphs');
     }
 
+    const subjectPrefix = isAr
+      ? 'الموضوع: '
+      : isFr
+      ? 'Objet : '
+      : isDe
+      ? 'Betreff: '
+      : isEs
+      ? 'Asunto: '
+      : isTr
+      ? 'Konu: '
+      : 'Subject: ';
+
     const fullText = typeof parsed.fullText === 'string' && parsed.fullText.trim().length > 100
       ? parsed.fullText.trim()
       : [
-          parsed.subject ? `الموضوع: ${parsed.subject}\n` : '',
+          parsed.subject ? `${subjectPrefix}${parsed.subject}\n` : '',
           salutation,
           '',
           introduction,
@@ -280,12 +319,28 @@ export class AICoverLetterClient {
       ? parsed.extractedKeywords.filter((k: any) => typeof k === 'string').slice(0, 15)
       : CoverLetterService.extractKeywords(req.jobDescription || '', 8);
 
-    const isAr = req.language === 'ar';
-    const company = req.companyName || (isAr ? 'الشركة الموقرة' : 'the Company');
-    const jobTitle = req.jobTitle || (isAr ? 'الوظيفة المطروحة' : 'the Role');
+    const defaultCompany = isAr ? 'الشركة الموقرة' : isFr ? "l'Entreprise" : isDe ? 'das Unternehmen' : isEs ? 'la Empresa' : isTr ? 'Şirket' : 'the Company';
+    const defaultRole = isAr ? 'الوظيفة المطروحة' : isFr ? 'le Poste' : isDe ? 'die Position' : isEs ? 'el Puesto' : isTr ? 'Pozisyon' : 'the Role';
+    const defaultManager = isAr ? 'فريق الموارد البشرية' : isFr ? 'Équipe de recrutement' : isDe ? 'Personalabteilung' : isEs ? 'Equipo de selección' : isTr ? 'İşe Alım Ekibi' : 'Hiring Team';
+    const defaultDocTitle = isAr ? 'خطاب تقديم' : isFr ? 'Lettre de motivation' : isDe ? 'Bewerbungsanschreiben' : isEs ? 'Carta de presentación' : isTr ? 'Ön Yazı' : 'Cover Letter';
+
+    const company = req.companyName || defaultCompany;
+    const jobTitle = req.jobTitle || defaultRole;
+
+    const defaultSubject = isAr
+      ? `طلب التقديم لشغل وظيفة: ${jobTitle}`
+      : isFr
+      ? `Candidature au poste de : ${jobTitle}`
+      : isDe
+      ? `Bewerbung als ${jobTitle}`
+      : isEs
+      ? `Candidatura para el puesto de: ${jobTitle}`
+      : isTr
+      ? `${jobTitle} Pozisyonu Başvurusu`
+      : `Application for ${jobTitle} Role`;
 
     const content: CoverLetterContent = {
-      subject: parsed.subject || (isAr ? `طلب التقديم لشغل وظيفة: ${jobTitle}` : `Application for ${jobTitle} Role`),
+      subject: parsed.subject || defaultSubject,
       salutation,
       introduction,
       bodyParagraphs,
@@ -295,7 +350,7 @@ export class AICoverLetterClient {
     };
 
     return {
-      title: `${isAr ? 'خطاب تقديم' : 'Cover Letter'} - ${company}`,
+      title: `${defaultDocTitle} - ${company}`,
       sender: {
         fullName: req.sender?.fullName || (isAr ? 'مقدم الطلب' : 'Applicant'),
         email: req.sender?.email || '',
@@ -304,12 +359,12 @@ export class AICoverLetterClient {
       recipient: {
         companyName: company,
         jobTitle,
-        hiringManager: req.hiringManager || (isAr ? 'فريق الموارد البشرية' : 'Hiring Team'),
+        hiringManager: req.hiringManager || defaultManager,
       },
       jobDescription: req.jobDescription || '',
       extractedKeywords: keywords,
       tone: req.tone || 'formal',
-      language: req.language || 'ar',
+      language: req.language || 'en',
       templateId: req.templateId || 'compact',
       content,
       linkedResumeId: req.resumeId,
@@ -323,57 +378,64 @@ export class AICoverLetterClient {
     req: GenerateCoverLetterRequest,
     resumeData: any
   ): { systemPrompt: string; userPrompt: string } {
-    const isAr = req.language === 'ar';
+    const lang = (req.language || 'en') as string;
     const tone = req.tone || 'formal';
 
-    const toneDescriptions: Record<CoverLetterTone, string> = {
-      formal: isAr
-        ? 'نبرة رسمية ومهنية راقية، تعكس الاحترام والموثوقية والالتزام بمعايير العمل المؤسسي.'
-        : 'Formal, polite, highly professional and respectful executive corporate tone.',
-      technical: isAr
-        ? 'نبرة تقنية دقيقة، تركز على المهارات العملية، الأدوات الهندسية، المعمارية البرمجية، والأثر بالأرقام.'
-        : 'Technical, analytical, highlighting practical tools, architecture, engineering methodologies, and quantifiable metrics.',
-      leadership: isAr
-        ? 'نبرة قيادية استراتيجية، تركز على قيادة الفرق، التخطيط بعيد المدى، اتخاذ القرارات، وتحقيق الأهداف المؤسسية.'
-        : 'Leadership and strategic tone, emphasizing vision, team empowerment, stakeholder management, and business outcomes.',
-      enthusiastic: isAr
-        ? 'نبرة حماسية ملهمة، تنبض بالشغف بثقافة الشركة والابتكار والرغبة الصادقة في صناعة فارق حقيقي.'
-        : 'Enthusiastic and energized tone, highlighting passion for company culture, drive for innovation, and high motivation.',
+    const langNameMap: Record<string, string> = {
+      en: 'English',
+      ar: 'Arabic (العربية الفصحى)',
+      fr: 'French (Français)',
+      de: 'German (Deutsch)',
+      es: 'Spanish (Español)',
+      tr: 'Turkish (Türkçe)',
     };
 
-    const systemPrompt = isAr
-      ? `أنت خبير محترف في الموارد البشرية (HR Expert) وصياغة خطابات التقديم المخصصة (Cover Letters) المتوافقة مع أنظمة التوظيف الحديثة (ATS).
-مهمتك: صياغة خطاب تقديم مخصص، احترافي، مقنع وجذاب بنسبة 100%، مستنداً إلى السيرة الذاتية للمتقدم ومتطلبات الوظيفة.
-القواعد الإلزامية:
-1. النبرة المطلوبة: ${toneDescriptions[tone]}
-2. اللغة: اللغة العربية السليمة دون ركاكة أو أخطاء إملائية.
-3. التوافق مع أنظمة ATS: تضمين المهارات والكلمات المفتاحية الأساسية للوظيفة بذكاء وسلاسة داخل سياق الفقرات.
-4. يجب أن تُرجع النتيجة بصيغة JSON فقط وحصراً وفق الهيكل التالي:
+    const conventionsMap: Record<string, { salutation: string; signOff: string }> = {
+      en: { salutation: 'Dear Hiring Team,', signOff: 'Sincerely,' },
+      ar: { salutation: 'السادة أعضاء لجنة التوظيف الموقرين،', signOff: 'وتفضلوا بقبول فائق الاحترام والتقدير،' },
+      fr: { salutation: 'Madame, Monsieur,', signOff: "Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées," },
+      de: { salutation: 'Sehr geehrte Damen und Herren,', signOff: 'Mit freundlichen Grüßen,' },
+      es: { salutation: 'Estimado/a responsable de selección:', signOff: 'Atentamente,' },
+      tr: { salutation: 'Sayın Yetkili,', signOff: 'Saygılarımla,' },
+    };
+
+    const targetLangName = langNameMap[lang] || 'English';
+    const targetConventions = conventionsMap[lang] || conventionsMap.en;
+
+    const toneInstruction =
+      tone === 'technical'
+        ? 'Focus heavily on technical precision, engineering methodologies, software architecture, tools, and quantifiable operational metrics.'
+        : tone === 'leadership'
+        ? 'Adopt an authoritative strategic tone emphasizing cross-functional leadership, team scaling, business outcomes, and stakeholder alignment.'
+        : tone === 'enthusiastic'
+        ? 'Inject genuine passion for the company vision, dynamic team collaboration, rapid learning agility, and positive energy.'
+        : 'Maintain a polished, respectful, formal executive business tone suited for enterprise corporate recruitment.';
+
+    const systemPrompt = `You are a world-class HR Director and Executive Job Application Specialist crafting high-impact, ATS-optimized cover letters.
+Your mission is to write a tailored, compelling cover letter grounded strictly in the candidate's actual qualifications and target job criteria.
+
+CRITICAL INSTRUCTIONS FOR TARGET LANGUAGE (${targetLangName}):
+1. WRITE NATIVELY: Write directly and naturally in ${targetLangName}. Do NOT perform literal machine translation. Use authentic native phrasing, idioms, and conventions expected in high-level job applications in that language.
+2. REGISTER & TONE: ${toneInstruction} Use the formal register appropriate for job applications.
+3. CONVENTIONS:
+   - Salutation convention: "${targetConventions.salutation}" (or address by name if provided).
+   - Sign-off convention: "${targetConventions.signOff}".
+4. PRESERVE TECHNICAL TERMS & PROPER NOUNS: Keep personal names, company names, tools, libraries, frameworks, and technical keywords (e.g. React, Next.js, TypeScript, Python, Docker, Kubernetes, AWS, PostgreSQL, Redis, CI/CD, Git) in their original Latin alphabet and spelling. Do NOT translate or transliterate them.
+5. STRICT FACTUAL ACCURACY: NEVER invent, extrapolate, or hallucinate degrees, former employers, certifications, metrics, or experiences not present in the provided candidate data. If specific information is absent, frame the narrative around the candidate's verified background and enthusiastic capacity to deliver value.
+
+MANDATORY OUTPUT FORMAT:
+You MUST respond strictly with valid JSON conforming to the following structure (no markdown fences, no explanatory preamble):
 {
-  "subject": "الموضوع",
-  "salutation": "التحية الافتتاحية",
-  "introduction": "فقرة المقدمة وجذب الانتباه",
-  "bodyParagraphs": ["فقرة الخبرات والمطابقة الأولى", "فقرة الإنجازات والقيمة المضافة الثانية"],
-  "conclusion": "فقرة الختام والدعوة للمقابلة",
-  "signOff": "عبارة الوداع الرسمية",
-  "fullText": "النص الكامل المتصل للخطاب مرتباً ومنسقاً بعناية",
-  "extractedKeywords": ["كلمة1", "كلمة2", "كلمة3"]
-}`
-      : `You are an expert HR Specialist and professional Cover Letter writer specialized in ATS-optimized, high-impact job applications.
-Your mission: Craft a 100% tailored, compelling, and professional cover letter directly grounded in the candidate's resume and target job requirements.
-Mandatory Rules:
-1. Target Tone: ${toneDescriptions[tone]}
-2. Language: English (clean, modern, grammatically flawless).
-3. ATS Optimization: Naturally weave relevant job keywords and candidate skills into the narrative.
-4. Output must be strictly valid JSON matching this exact schema:
-{
-  "subject": "Application Subject Line",
-  "salutation": "Salutation line",
-  "introduction": "Engaging introduction paragraph",
-  "bodyParagraphs": ["Paragraph 1 on relevant skills and experience", "Paragraph 2 on quantifiable impact and culture fit"],
-  "conclusion": "Strong closing paragraph with call to action",
-  "signOff": "Sign-off phrase",
-  "fullText": "Full formatted cover letter text",
+  "subject": "Clear, professional subject line in ${targetLangName}",
+  "salutation": "Proper formal salutation line",
+  "introduction": "Engaging opening paragraph outlining candidate interest and core value proposition",
+  "bodyParagraphs": [
+    "First body paragraph detailing relevant skills, projects, and work experience matching the job",
+    "Second body paragraph highlighting quantifiable achievements, problem-solving, and alignment with company culture"
+  ],
+  "conclusion": "Polite, confident closing paragraph with a proactive call to interview",
+  "signOff": "Proper formal sign-off phrase in ${targetLangName}",
+  "fullText": "Full formatted cover letter text with paragraphs cleanly arranged",
   "extractedKeywords": ["keyword1", "keyword2", "keyword3"]
 }`;
 

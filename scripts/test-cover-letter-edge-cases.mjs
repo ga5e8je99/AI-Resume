@@ -189,7 +189,7 @@ async function runEdgeCasesSuite() {
   try {
     const res = await fetch(`${BASE_URL}/api/cover-letter/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeadersA,
       body: JSON.stringify({}),
     });
     assert(res.status === 400, 'Failure: Empty body on /generate returns 400 Bad Request');
@@ -201,7 +201,7 @@ async function runEdgeCasesSuite() {
   try {
     const res = await fetch(`${BASE_URL}/api/cover-letter/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeadersA,
       body: JSON.stringify({ jobDescription: 'Short desc' }),
     });
     const data = await res.json();
@@ -214,7 +214,7 @@ async function runEdgeCasesSuite() {
   try {
     const res = await fetch(`${BASE_URL}/api/cover-letter/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeadersA,
       body: JSON.stringify({
         jobUrl: 'https://non-existent-unreachable-domain-123456789.org/job',
       }),

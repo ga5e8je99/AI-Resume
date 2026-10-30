@@ -1,6 +1,6 @@
 import React from 'react';
 import { CvData, CvThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: CvData;
@@ -323,7 +323,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                     <div className="flex justify-between items-baseline mb-0.5">
                       <h4 className="font-bold text-slate-900 text-xs">{exp.position}</h4>
                       <span className="text-[10px] font-medium text-slate-500">
-                        {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                        {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-slate-600 text-[11px] mb-1 font-medium">
@@ -362,7 +362,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                         {edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}
                       </h4>
                       <span className="text-[10px] font-medium text-slate-500">
-                        {edu.startDate} – {edu.endDate}
+                        {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                       </span>
                     </div>
                     <div className="text-slate-600 text-[11px] italic">
@@ -517,7 +517,7 @@ export default function EuropassCvTemplate({ data, theme }: TemplateProps) {
                     <div className="flex justify-between font-bold text-slate-900">
                       <span>{v.role}</span>
                       <span className="text-[10px] text-slate-500 font-normal">
-                        {v.startDate} – {v.current ? h.present : v.endDate}
+                        {formatDocumentDateRange(v.startDate, v.endDate, v.current, theme.documentLanguage)}
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-600 italic">

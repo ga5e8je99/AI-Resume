@@ -262,3 +262,226 @@ export function getDocumentHeadings(lang?: DocumentLanguage | string): DocumentH
   }
   return DOCUMENT_TRANSLATIONS.en;
 }
+
+export const DOCUMENT_OUTPUT_LANG_STORAGE_KEY = 'jobmatch_document_output_lang';
+
+export function isDocumentLanguage(val: unknown): val is DocumentLanguage {
+  return typeof val === 'string' && ['en', 'ar', 'fr', 'de', 'es', 'tr'].includes(val);
+}
+
+export function getStoredDocumentLanguage(fallback: DocumentLanguage = 'en'): DocumentLanguage {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const stored = localStorage.getItem(DOCUMENT_OUTPUT_LANG_STORAGE_KEY);
+    if (stored && isDocumentLanguage(stored)) {
+      return stored;
+    }
+  } catch {}
+  return fallback;
+}
+
+export function setStoredDocumentLanguage(lang: DocumentLanguage): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(DOCUMENT_OUTPUT_LANG_STORAGE_KEY, lang);
+  } catch {}
+}
+
+export function getDocumentDir(lang?: DocumentLanguage | string): 'ltr' | 'rtl' {
+  return lang === 'ar' ? 'rtl' : 'ltr';
+}
+
+export function isRtlDocument(lang?: DocumentLanguage | string): boolean {
+  return lang === 'ar';
+}
+
+export function getDocumentFontFamily(lang?: DocumentLanguage | string): string {
+  if (lang === 'ar') {
+    return 'var(--font-arabic), "IBM Plex Sans Arabic", var(--font-sans), sans-serif';
+  }
+  return 'var(--font-sans), sans-serif';
+}
+
+const LOCALE_DATE_MAP: Record<DocumentLanguage, string> = {
+  en: 'en-US',
+  ar: 'ar-EG',
+  fr: 'fr-FR',
+  de: 'de-DE',
+  es: 'es-ES',
+  tr: 'tr-TR',
+};
+
+const ARABIC_MONTH_NAMES = [
+  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+];
+
+/**
+ * Formats a resume/CV date string (e.g. "2023-08", "2023-08-15", "08/2023", "2023", "Jan 2023") into the localized representation.
+ */
+export function formatDocumentDate(dateStr?: string, lang: DocumentLanguage = 'en'): string {
+  if (!dateStr || !dateStr.trim()) return '';
+  const clean = dateStr.trim();
+
+  // 1. If only a 4-digit year like "2024"
+  if (/^\d{4}$/.test(clean)) {
+    return clean;
+  }
+
+  // 2. Handle YYYY-MM or YYYY-MM-DD or YYYY/MM/DD
+  const yyyyMmMatch = clean.match(/^(\d{4})[-/](\d{1,2})(?:[-/]\d{1,2})?$/);
+  if (yyyyMmMatch) {
+    const year = parseInt(yyyyMmMatch[1], 10);
+    const month = parseInt(yyyyMmMatch[2], 10);
+    if (month >= 1 && month <= 12) {
+      if (lang === 'ar') {
+        return `${ARABIC_MONTH_NAMES[month - 1]} ${year}`;
+      }
+      try {
+        const d = new Date(year, month - 1, 1);
+        const locale = LOCALE_DATE_MAP[lang] || 'en-US';
+        return d.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
+      } catch {
+        return `${month}/${year}`;
+      }
+    }
+  }
+
+  // 3. Handle MM/YYYY or MM-YYYY
+  const mmYyyyMatch = clean.match(/^(\d{1,2})[-/](\d{4})$/);
+  if (mmYyyyMatch) {
+    const month = parseInt(mmYyyyMatch[1], 10);
+    const year = parseInt(mmYyyyMatch[2], 10);
+    if (month >= 1 && month <= 12) {
+      if (lang === 'ar') {
+        return `${ARABIC_MONTH_NAMES[month - 1]} ${year}`;
+      }
+      try {
+        const d = new Date(year, month - 1, 1);
+        const locale = LOCALE_DATE_MAP[lang] || 'en-US';
+        return d.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
+      } catch {
+        return `${month}/${year}`;
+      }
+    }
+  }
+
+  // 4. Fallback attempt with standard Date constructor (e.g. "Jan 2023", "2023-05")
+  const parsedTime = Date.parse(clean);
+  if (!isNaN(parsedTime)) {
+    const d = new Date(parsedTime);
+    const year = d.getFullYear();
+    const month = d.getMonth(); // 0-indexed
+    if (year >= 1950 && year <= 2100) {
+      if (lang === 'ar') {
+        return `${ARABIC_MONTH_NAMES[month]} ${year}`;
+      }
+      try {
+        const locale = LOCALE_DATE_MAP[lang] || 'en-US';
+        return d.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
+      } catch {
+        return clean;
+      }
+    }
+  }
+
+  return clean;
+}
+
+/**
+ * Formats a start - end date range with proper localized "Present" text.
+ */
+export function formatDocumentDateRange(
+  startDate?: string,
+  endDate?: string,
+  current?: boolean,
+  lang: DocumentLanguage = 'en'
+): string {
+  const h = getDocumentHeadings(lang);
+  const formattedStart = formatDocumentDate(startDate, lang);
+  const formattedEnd = current ? h.present : formatDocumentDate(endDate, lang);
+
+  if (!formattedStart && !formattedEnd) return '';
+  if (formattedStart && !formattedEnd) return formattedStart;
+  if (!formattedStart && formattedEnd) return formattedEnd;
+
+  return `${formattedStart} – ${formattedEnd}`;
+}
+
+export interface CoverLetterConventions {
+  lang: DocumentLanguage;
+  dir: 'ltr' | 'rtl';
+  isRtl: boolean;
+  salutation: (hiringManager?: string) => string;
+  signOff: (senderName?: string, senderRole?: string) => string;
+  defaultSubject: (jobTitle?: string, companyName?: string) => string;
+  formalInstruction: string;
+}
+
+export const COVER_LETTER_CONVENTIONS: Record<DocumentLanguage, CoverLetterConventions> = {
+  en: {
+    lang: 'en',
+    dir: 'ltr',
+    isRtl: false,
+    salutation: (mgr) => (mgr ? `Dear ${mgr},` : 'Dear Hiring Team,'),
+    signOff: () => 'Sincerely,',
+    defaultSubject: (role) => (role ? `Application for ${role} Role` : 'Job Application'),
+    formalInstruction:
+      'Write in a polished, highly professional formal executive register appropriate for top-tier job applications. Use standard English corporate greetings and closings.',
+  },
+  ar: {
+    lang: 'ar',
+    dir: 'rtl',
+    isRtl: true,
+    salutation: (mgr) => (mgr ? `عناية ${mgr} المحترم،` : 'السادة أعضاء لجنة التوظيف الموقرين،'),
+    signOff: () => 'وتفضلوا بقبول فائق الاحترام والتقدير،',
+    defaultSubject: (role) => (role ? `طلب التقديم لشغل وظيفة: ${role}` : 'طلب توظيف'),
+    formalInstruction:
+      'اكتب باللغة العربية الفصحى المعاصرة برصانة واحترافية عالية تناسب بيئات العمل والشركات الكبرى. استخدم التحيات والختاميات الرسمية المعتمدة.',
+  },
+  fr: {
+    lang: 'fr',
+    dir: 'ltr',
+    isRtl: false,
+    salutation: (mgr) => (mgr ? `À l'attention de ${mgr},` : 'Madame, Monsieur,'),
+    signOff: () => "Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées,",
+    defaultSubject: (role) => (role ? `Candidature au poste de : ${role}` : 'Candidature'),
+    formalInstruction:
+      'Rédigez dans un registre formel et soutenu, parfaitement adapté aux candidatures professionnelles en France et dans la francophonie.',
+  },
+  de: {
+    lang: 'de',
+    dir: 'ltr',
+    isRtl: false,
+    salutation: (mgr) => (mgr ? `Sehr geehrte(r) ${mgr},` : 'Sehr geehrte Damen und Herren,'),
+    signOff: () => 'Mit freundlichen Grüßen,',
+    defaultSubject: (role) => (role ? `Bewerbung als ${role}` : 'Bewerbung'),
+    formalInstruction:
+      'Verfassen Sie das Anschreiben in einem gehobenen, hochprofessionellen Ton (Sie-Form), entsprechend den deutschen Bewerbungsstandards.',
+  },
+  es: {
+    lang: 'es',
+    dir: 'ltr',
+    isRtl: false,
+    salutation: (mgr) => (mgr ? `Estimado/a ${mgr}:` : 'Estimado/a responsable de selección:'),
+    signOff: () => 'Atentamente,',
+    defaultSubject: (role) => (role ? `Candidatura para el puesto de: ${role}` : 'Candidatura de empleo'),
+    formalInstruction:
+      'Redacte en un tono formal, profesional y respetuoso (tratamiento de usted), siguiendo los estándares corporativos de cartas de presentación.',
+  },
+  tr: {
+    lang: 'tr',
+    dir: 'ltr',
+    isRtl: false,
+    salutation: (mgr) => (mgr ? `Sayın ${mgr},` : 'Sayın Yetkili,'),
+    signOff: () => 'Saygılarımla,',
+    defaultSubject: (role) => (role ? `${role} Pozisyonu Başvurusu` : 'İş Başvurusu'),
+    formalInstruction:
+      'Resmi ve profesyonel bir iş mektubu üslubu (Saygılarımla) kullanarak, Türk iş dünyası standartlarına uygun şekilde yazınız.',
+  },
+};
+
+export function getCoverLetterConventions(lang: DocumentLanguage = 'en'): CoverLetterConventions {
+  return COVER_LETTER_CONVENTIONS[lang] || COVER_LETTER_CONVENTIONS.en;
+}
+

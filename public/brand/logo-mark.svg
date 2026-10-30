@@ -1,0 +1,16 @@
+<svg viewBox="0 0 32 32" width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Document Sheet -->
+  <path d="M 5,6.5 C 5,5.12 6.12,4 7.5,4 L 17,4 L 23,10 L 23,25.5 C 23,26.88 21.88,28 20.5,28 L 7.5,28 C 6.12,28 5,26.88 5,25.5 Z" fill="#E3EFEA" stroke="#0F5C4D" stroke-width="1.75" stroke-linejoin="round"/>
+  <!-- Folded Corner Flap -->
+  <path d="M 17,4 L 17,8.5 C 17,9.33 17.67,10 18.5,10 L 23,10 Z" fill="#D1E7DF" stroke="#0F5C4D" stroke-width="1.75" stroke-linejoin="round"/>
+  <!-- Resume text lines -->
+  <line x1="9" y1="14" x2="17" y2="14" stroke="#0F5C4D" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+  <line x1="9" y1="18" x2="14.5" y2="18" stroke="#0F5C4D" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+  <line x1="9" y1="22" x2="12" y2="22" stroke="#0F5C4D" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+  <!-- Amber AI Spark Accent -->
+  <path d="M 24.5,1.5 C 24.5,2.6 25.4,3.5 26.5,3.5 C 25.4,3.5 24.5,4.4 24.5,5.5 C 24.5,4.4 23.6,3.5 22.5,3.5 C 23.6,3.5 24.5,2.6 24.5,1.5 Z" fill="#C8892B"/>
+  <!-- ATS Pass Badge (Knockout Ring + Fill) -->
+  <circle cx="22" cy="22" r="5.5" fill="#0F5C4D" stroke="#FAF8F4" stroke-width="2"/>
+  <!-- Checkmark -->
+  <path d="M 19.3,22.2 L 21.1,24 L 24.8,20.2" stroke="#FFFFFF" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

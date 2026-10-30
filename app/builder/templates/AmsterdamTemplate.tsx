@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -90,7 +90,7 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-bold text-slate-900 text-sm">{exp.position}</span>
                   <span className={`text-slate-500 font-medium text-[11px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                    {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                   </span>
                 </div>
                 <div className="text-slate-600 font-semibold mb-1.5">
@@ -150,7 +150,7 @@ export default function AmsterdamTemplate({ data, theme }: TemplateProps) {
                   </div>
                 </div>
                 <span className={`text-slate-500 font-medium text-[11px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                  {edu.startDate} – {edu.endDate}
+                  {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                 </span>
               </div>
             ))}

@@ -1,210 +1,416 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Navbar from '../components/Navbar';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { trackAtsScanCompleted } from '@/lib/analytics';
+import { analyzeResumeText, ATSAnalysisResult } from '../lib/atsAnalyzer';
+import { getSampleProfile } from '../lib/sampleResumes';
+import { Button } from '../components/ui/Button';
+import { Dropzone } from '../components/ui/Dropzone';
+import { Dialog } from '../components/ui/Dialog';
+import { Textarea } from '../components/ui/Textarea';
+import { Toast, useToast } from '../components/ui/Toast';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+import { CircularGauge } from '@/components/ui/CircularGauge';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import Footer from '../components/Footer';
 import {
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
   Download,
   Edit,
-  CheckCircle,
-  AlertCircle,
-  TrendingUp,
-  FileText,
-  Search,
-  Target,
-  Zap,
-  Clock,
-  Star,
-  Copy,
-  Sparkles,
-  BarChart3,
-  Award,
-  ThumbsUp,
-  AlertTriangle,
-  Lightbulb,
-  RefreshCw,
   Upload,
-  ArrowLeft,
-  ChevronDown,
+  Search,
+  Copy,
   Check,
-  FileCode,
-  Cloud,
-  Loader2,
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import LogoLoader from "../components/LogoLoader";
-import Logo from "../components/Logo";
-import {
-  analyzeResumeText,
-  resumeDataToText,
-  ATSAnalysisResult,
-} from "../lib/atsAnalyzer";
-import { initialSampleData } from "../builder/initialData";
-import { extractTextFromFile } from "../lib/pdfExtractor";
-import { useAuth } from "../context/AuthContext";
-import { useLanguage } from "../context/LanguageContext";
-import LanguageSelector from "../components/LanguageSelector";
+  FileText,
+  ArrowRight,
+  ExternalLink,
+  Printer,
+  Sparkles,
+  Share2,
+  RefreshCw,
+  Sliders,
+  Layers,
+  FileCheck,
+  UserCheck,
+  Flame,
+  Globe,
+  Info,
+} from 'lucide-react';
+import { ResumeData } from '../builder/types';
+import { DOCUMENT_LANGUAGE_OPTIONS } from '../lib/documentI18n';
+
+export type ProcessingStage =
+  | 'idle'
+  | 'reading'
+  | 'extracting'
+  | 'analyzing'
+  | 'scoring'
+  | 'complete'
+  | 'error';
+
+interface StageDefinition {
+  id: ProcessingStage;
+  labelEn: string;
+  labelAr: string;
+  descEn: string;
+  descAr: string;
+}
+
+const STAGES: StageDefinition[] = [
+  {
+    id: 'reading',
+    labelEn: 'Reading file',
+    labelAr: 'قراءة الملف',
+    descEn: 'Validating format and loading document byte stream...',
+    descAr: 'التحقق من الصيغة وقراءة محتويات الملف الرقمية...',
+  },
+  {
+    id: 'extracting',
+    labelEn: 'Extracting text',
+    labelAr: 'استخراج النصوص',
+    descEn: 'Extracting digital text layers and normalizing Unicode/Arabic...',
+    descAr: 'استخراج الطبقات النصية ومعالجة الخطوط والاتجاهات...',
+  },
+  {
+    id: 'analyzing',
+    labelEn: 'Analyzing keywords',
+    labelAr: 'مطابقة الكلمات',
+    descEn: 'Comparing against 400+ industry skills & contact integrity...',
+    descAr: 'مطابقة المهارات مع معايير الصناعة والتأكد من بيانات الاتصال...',
+  },
+  {
+    id: 'scoring',
+    labelEn: 'Scoring',
+    labelAr: 'احتساب التقييم',
+    descEn: 'Computing ATS compatibility metrics & tailored suggestions...',
+    descAr: 'حساب نقاط التوافق مع أنظمة الفرز وتوليد التوصيات...',
+  },
+];
 
 export default function ReviewResultPage() {
+  const router = useRouter();
   const { user } = useAuth();
-  const [resumeText, setResumeText] = useState<string>("");
-  const [resumeFileName, setResumeFileName] = useState<string>("");
-  const [targetJobDescription, setTargetJobDescription] = useState<string>("");
-  const [targetRole, setTargetRole] = useState<string>("Full-Stack Developer");
-  const [analysisResult, setAnalysisResult] = useState<ATSAnalysisResult | null>(null);
+  const { t, isRtl, language } = useLanguage();
+  const isAr = language === 'ar';
+  const searchParams = useSearchParams();
+  const sampleParam =
+    searchParams.get('sample') || searchParams.get('template') || searchParams.get('role');
+  const initialProfile = getSampleProfile(sampleParam);
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isSavingAnalysis, setIsSavingAnalysis] = useState(false);
-  const [analysisSaved, setAnalysisSaved] = useState(false);
+  const [resumeText, setResumeText] = useState<string>(initialProfile.text);
+  const [resumeFileName, setResumeFileName] = useState<string>(initialProfile.fileName);
+  const [targetJobDescription, setTargetJobDescription] = useState<string>('');
+  const [targetRole, setTargetRole] = useState<string>(initialProfile.role);
+  const [analysisResult, setAnalysisResult] = useState<ATSAnalysisResult>(() =>
+    analyzeResumeText(initialProfile.text, initialProfile.role, '')
+  );
+
+  // Processing & Staged Progress states
+  const [processingStage, setProcessingStage] = useState<ProcessingStage>('idle');
+  const [processingProgress, setProcessingProgress] = useState<number>(0);
+  const [uploadError, setUploadError] = useState<{ message: string; isScanned: boolean } | null>(null);
+
+  // Modals & UI helpers
   const [showJdModal, setShowJdModal] = useState(false);
   const [showRawTextModal, setShowRawTextModal] = useState(false);
   const [copiedKeyword, setCopiedKeyword] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isCancelledRef = useRef<boolean>(false);
 
-  const handleSaveAnalysis = async () => {
-    if (!user) {
-      if (window.confirm("Please sign in to save your ATS review to your dashboard. Go to login?")) {
-        window.location.href = "/login?returnUrl=/review";
-      }
+  const handleCancelProcessing = () => {
+    isCancelledRef.current = true;
+    setProcessingStage('idle');
+    setProcessingProgress(0);
+  };
+
+  // Sync toastMessage with global toast
+  useEffect(() => {
+    if (toastMessage) {
+      toast.success(toastMessage);
+      const timer = setTimeout(() => setToastMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage, toast]);
+
+  // Sync uploadError with global toast
+  useEffect(() => {
+    if (uploadError) {
+      toast.error(uploadError.message);
+    }
+  }, [uploadError, toast]);
+
+  // Sync state on query param or session storage
+  useEffect(() => {
+    if (sampleParam) {
+      const profile = getSampleProfile(sampleParam);
+      setResumeText(profile.text);
+      setResumeFileName(profile.fileName);
+      setTargetRole(profile.role);
+      const res = analyzeResumeText(profile.text, profile.role, targetJobDescription);
+      setAnalysisResult(res);
+      trackAtsScanCompleted(res.overallScore, res.metrics.matchLabel);
       return;
     }
-    if (!analysisResult) return;
 
-    try {
-      setIsSavingAnalysis(true);
-      const res = await fetch("/api/analyses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resumeFileName: resumeFileName || "Uploaded_Resume.pdf",
-          targetRole,
-          targetJobDescription,
-          overallScore: analysisResult.overallScore,
-          grade: analysisResult.metrics.grade,
-          rankPercentile: analysisResult.metrics.rankPercentile,
-          matchLabel: analysisResult.metrics.matchLabel,
-          subScores: analysisResult.subScores,
-          result: analysisResult,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save analysis");
-      setAnalysisSaved(true);
-      setTimeout(() => setAnalysisSaved(false), 3000);
-    } catch (err: any) {
-      alert(err?.message || "Error saving analysis to cloud.");
-    } finally {
-      setIsSavingAnalysis(false);
-    }
-  };
-
-  // Initialize: load from sessionStorage or fallback to sample resume
-  useEffect(() => {
-    let initialText = "";
-    let initialFileName = "";
-
-    if (typeof window !== "undefined") {
-      const storedText = sessionStorage.getItem("jobmatch_resume_text");
-      const storedName = sessionStorage.getItem("jobmatch_resume_filename");
+    if (typeof window !== 'undefined') {
+      const storedText = sessionStorage.getItem('jobmatch_resume_text');
+      const storedName = sessionStorage.getItem('jobmatch_resume_filename');
       if (storedText && storedText.trim().length > 20) {
-        initialText = storedText;
-        initialFileName = storedName || "Uploaded_Resume.pdf";
+        setResumeText(storedText);
+        setResumeFileName(storedName || 'Uploaded_Resume.pdf');
+        const res = analyzeResumeText(storedText, targetRole, targetJobDescription);
+        setAnalysisResult(res);
+        trackAtsScanCompleted(res.overallScore, res.metrics.matchLabel);
       }
     }
+  }, [sampleParam]);
 
-    if (!initialText) {
-      initialText = resumeDataToText(initialSampleData);
-      initialFileName = "Alex_Morgan_Resume_Sample.pdf";
-    }
-
-    setResumeText(initialText);
-    setResumeFileName(initialFileName);
-
-    // Initial analysis
-    const timer = setTimeout(() => {
-      const result = analyzeResumeText(initialText, targetRole, targetJobDescription);
-      setAnalysisResult(result);
-      setIsLoading(false);
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Re-run analysis when text or JD changes
   const runAnalysis = (text: string, jd?: string, role?: string) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const result = analyzeResumeText(text, role || targetRole, jd !== undefined ? jd : targetJobDescription);
-      setAnalysisResult(result);
-      setIsLoading(false);
-    }, 800);
+    const res = analyzeResumeText(
+      text,
+      role || targetRole,
+      jd !== undefined ? jd : targetJobDescription
+    );
+    setAnalysisResult(res);
+    trackAtsScanCompleted(res.overallScore, res.metrics.matchLabel);
   };
 
-  // Handle new file upload directly on the review page
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Staged multi-step file processing
+  const processUploadedFile = async (file: File) => {
+    setUploadError(null);
+
+    // Initial validations
+    if (file.size === 0) {
+      setUploadError({
+        message: isAr
+          ? 'الملف فارغ (0 بايت). يرجى التأكد من اختيار ملف سيرة ذاتية صحيح.'
+          : 'The uploaded file is empty (0 bytes). Please upload a valid document.',
+        isScanned: false,
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError({
+        message: isAr
+          ? 'حجم الملف يتجاوز الحد الأقصى (5 ميجابايت). يرجى ضغط الملف أو استخدام منشئ السير الذاتية.'
+          : 'File size exceeds 5MB limit. Please compress the file or use our Resume Builder.',
+        isScanned: false,
+      });
+      return;
+    }
+
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (!['pdf', 'docx', 'txt'].includes(ext || '')) {
+      setUploadError({
+        message: isAr
+          ? `نوع الملف (.${ext}) غير مدعوم. يرجى اختيار ملف بصيغة PDF أو DOCX أو TXT.`
+          : `Unsupported file format (.${ext}). Please upload a PDF, DOCX, or TXT resume.`,
+        isScanned: false,
+      });
+      return;
+    }
 
     try {
-      setIsUploading(true);
+      isCancelledRef.current = false;
+
+      // Stage 1: Reading file
+      setProcessingStage('reading');
+      setProcessingProgress(25);
+      await new Promise((r) => setTimeout(r, 280));
+      if (isCancelledRef.current) return;
+
+      // Stage 2: Extracting text
+      setProcessingStage('extracting');
+      setProcessingProgress(50);
+      const { extractTextFromFile } = await import('../lib/pdfExtractor');
       const text = await extractTextFromFile(file);
+      if (isCancelledRef.current) return;
+
       if (!text || text.trim().length < 25) {
-        setShowRawTextModal(true);
-        alert("This PDF appears to be a scanned image or photo without selectable text. Please paste your resume text in the box to analyze.");
-        return;
+        throw new Error(
+          isAr
+            ? 'تعذر استخراج نصوص رقمية من هذا الملف. تأكد من أن المستند غير مصور ولا يحتاج لكلمة مرور.'
+            : 'Could not extract digital text. Please ensure the PDF is not an image-only scan or password-protected.'
+        );
       }
+
+      // Stage 3: Analyzing keywords
+      setProcessingStage('analyzing');
+      setProcessingProgress(75);
+      await new Promise((r) => setTimeout(r, 320));
+      if (isCancelledRef.current) return;
+
+      // Stage 4: Scoring
+      setProcessingStage('scoring');
+      setProcessingProgress(95);
+      await new Promise((r) => setTimeout(r, 260));
+      if (isCancelledRef.current) return;
 
       setResumeText(text);
       setResumeFileName(file.name);
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("jobmatch_resume_text", text);
-        sessionStorage.setItem("jobmatch_resume_filename", file.name);
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('jobmatch_resume_text', text);
+        sessionStorage.setItem('jobmatch_resume_filename', file.name);
       }
+
       runAnalysis(text, targetJobDescription);
+
+      setProcessingProgress(100);
+      setProcessingStage('complete');
+      setTimeout(() => setProcessingStage('idle'), 400);
+
+      setToastMessage(t('review_toast_scanned'));
     } catch (err: any) {
-      console.error(err);
-      setShowRawTextModal(true);
-      alert(err.message || "Could not read text. You can paste your resume text directly to analyze.");
-    } finally {
-      setIsUploading(false);
+      console.error('File extraction error:', err);
+      const msg = err.message || '';
+      const isScanned =
+        msg.includes('scanned image') ||
+        msg.includes('selectable text') ||
+        msg.includes('image-only');
+
+      setProcessingStage('error');
+      setUploadError({
+        message:
+          msg ||
+          (isAr
+            ? 'تعذر قراءة هذا المستند. يرجى التأكد من رفع ملف PDF رقمي قابل للتحديد.'
+            : 'Failed to read document contents. Please ensure the file has selectable text.'),
+        isScanned,
+      });
     }
   };
 
-  // Load Builder sample data
-  const handleLoadSample = () => {
-    const text = resumeDataToText(initialSampleData);
-    setResumeText(text);
-    setResumeFileName("Alex_Morgan_ATS_Sample.pdf");
-    runAnalysis(text);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processUploadedFile(file);
   };
 
-  // Copy keyword helper
+  const handleLoadSample = (sampleKey: string) => {
+    const profile = getSampleProfile(sampleKey);
+    setResumeText(profile.text);
+    setResumeFileName(profile.fileName);
+    setTargetRole(profile.role);
+    runAnalysis(profile.text, targetJobDescription, profile.role);
+    setToastMessage(`${profile.fileName}`);
+  };
+
   const handleCopyKeyword = (keyword: string) => {
     navigator.clipboard.writeText(keyword);
     setCopiedKeyword(keyword);
     setTimeout(() => setCopiedKeyword(null), 2000);
   };
 
-  // Download PDF Report
-  const handleDownloadReport = () => {
-    setIsExporting(true);
-    setTimeout(() => {
-      window.print();
-      setIsExporting(false);
-    }, 600);
+  const handlePrint = () => {
+    window.print();
   };
 
-  if (isLoading || !analysisResult) {
-    return (
-      <LogoLoader
-        text="Analyzing Your Resume..."
-        subtext="Scanning keyword frequency, quantifiable metrics & ATS compliance"
-        size="lg"
-        fullScreen
-      />
-    );
-  }
+  const handleShareReport = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.href);
+      setToastMessage(t('review_toast_link_copied'));
+    }
+  };
+
+  // Fix with Builder CTA Handler
+  const handleFixWithBuilder = () => {
+    const lines = resumeText.split('\n').map((l) => l.trim()).filter(Boolean);
+    const fullName = lines[0] && lines[0].length < 45 ? lines[0] : 'My Name';
+    const email = contactInfo.email || '';
+    const phone = contactInfo.phone || '';
+    const location = contactInfo.hasLocation
+      ? resumeText.match(/(?:[A-Z][a-zA-Z\s]+,\s*[A-Z]{2}|[A-Z][a-zA-Z\s]+,\s*[A-Za-z\s]+)/)?.[0] || ''
+      : '';
+    const linkedin = contactInfo.linkedIn || '';
+    const summaryLine = lines.slice(1, 5).join(' ').slice(0, 360);
+    const skills = keywordsDetected.map((k) => k.keyword);
+
+    const prefilledResume: ResumeData = {
+      personalInfo: {
+        fullName,
+        jobTitle: targetRole || 'Professional',
+        email,
+        phone,
+        location,
+        website: '',
+        linkedin,
+        github: contactInfo.hasGitHub ? 'github.com' : '',
+        summary: summaryLine || 'Experienced professional with a proven track record of delivering measurable outcomes.',
+        photoUrl: '',
+        showPhoto: false,
+      },
+      experience: [
+        {
+          id: 'exp-1',
+          company: 'Target Company / Organization',
+          position: targetRole || 'Role Title',
+          location: location || '',
+          startDate: '2022',
+          endDate: 'Present',
+          current: true,
+          description: weaknesses.slice(0, 3).map((w) => w.suggestion || 'Delivered scalable outcomes with measurable metrics.'),
+        },
+      ],
+      education: [
+        {
+          id: 'edu-1',
+          institution: 'University / College',
+          degree: 'Bachelor of Science',
+          fieldOfStudy: targetRole ? `${targetRole} Studies` : 'Field of Study',
+          startDate: '2018',
+          endDate: '2022',
+          gpa: '',
+        },
+      ],
+      projects: [],
+      skills: skills.length > 0 ? skills : ['Communication', 'Problem Solving', 'Strategic Planning'],
+      languages: [
+        { id: 'l1', name: isAr ? 'العربية' : 'English', proficiency: 'Native' },
+      ],
+      certifications: [],
+    };
+
+    try {
+      localStorage.setItem(
+        'jobmatch_resume_builder_cache',
+        JSON.stringify({
+          resumeTitle: `${prefilledResume.personalInfo.fullName} - ATS Resume`,
+          resumeData: prefilledResume,
+          selectedTemplate: 'compact',
+          paperSize: 'a4',
+          theme: {
+            accentColor: '#0F5C4D',
+            fontFamily: isAr ? 'var(--font-arabic), var(--font-sans), sans-serif' : 'var(--font-sans), sans-serif',
+            fontSize: 'base',
+            documentLanguage: isAr ? 'ar' : 'en',
+          },
+          sectionOrder: [
+            'personal',
+            'summary',
+            'experience',
+            'education',
+            'skills',
+            'projects',
+            'languages',
+            'certifications',
+          ],
+        })
+      );
+    } catch {}
+
+    router.push('/builder');
+  };
 
   const {
     overallScore,
@@ -216,845 +422,803 @@ export default function ReviewResultPage() {
     missingKeywords,
     strengths,
     weaknesses,
-    suggestions,
-    actionVerbsFound,
   } = analysisResult;
 
-  // Dynamic score color
-  const scoreColor =
-    overallScore >= 80
-      ? "text-emerald-400 stroke-emerald-500"
-      : overallScore >= 70
-      ? "text-cyan-400 stroke-cyan-500"
-      : overallScore >= 55
-      ? "text-amber-400 stroke-amber-500"
-      : "text-rose-400 stroke-rose-500";
+  // Score tier & color coding
+  const getScoreTier = (score: number) => {
+    if (score >= 85) {
+      return {
+        label: t('review_score_excellent'),
+        colorClass: 'text-emerald-500',
+        bgClass: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500',
+        title: t('review_score_excellent_desc'),
+        desc: isAr
+          ? 'سيرتك الذاتية مهيأة بالكامل لتجاوز فلاتر الفرز الآلي بنجاح والوصول مباشرة لأيدي مسؤولي التوظيف.'
+          : 'Your document structure, contact data, and key terminology align cleanly with enterprise ATS parsers like Taleo, Workday, and Greenhouse.',
+      };
+    }
+    if (score >= 70) {
+      return {
+        label: t('review_score_good'),
+        colorClass: 'text-sky-500',
+        bgClass: 'bg-sky-500/10 border-sky-500/30 text-sky-500',
+        title: t('review_score_good_desc'),
+        desc: isAr
+          ? 'المستند قابل للقراءة بواسطة الأنظمة الآلية، ولكن إضافة الكلمات المفتاحية الناقصة ونتائج قياسية سيرفع ترتيبك.'
+          : 'The document is readable by automated parsers, but adding missing role-specific keywords and quantifiable achievements will improve ranking.',
+      };
+    }
+    if (score >= 50) {
+      return {
+        label: t('review_score_fair'),
+        colorClass: 'text-amber-500',
+        bgClass: 'bg-amber-500/10 border-amber-500/30 text-amber-500',
+        title: t('review_score_fair_desc'),
+        desc: isAr
+          ? 'بعض الأقسام أو الكلمات المفتاحية مفقودة أو غير واضحة للأنظمة الآلية. يُنصح بمراجعة التوصيات أدناه.'
+          : 'Crucial structural sections or standard keywords are missing or difficult for automated parsers to classify accurately.',
+      };
+    }
+    return {
+      label: t('review_score_poor'),
+      colorClass: 'text-rose-500',
+      bgClass: 'bg-rose-500/10 border-rose-500/30 text-rose-500',
+      title: t('review_score_poor_desc'),
+      desc: isAr
+        ? 'بنية المستند الحالية غير متوافقة مع أنظمة التوظيف الآلية. استخدم منشئ السير الذاتية لإصلاح التنسيق فوراً.'
+        : 'The document lacks basic ATS formatting requirements or readable digital text layers. Use our Builder to reformat it correctly.',
+    };
+  };
+
+  const scoreTier = getScoreTier(overallScore);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 print:bg-white print:text-black">
-      {/* Hidden File Input */}
+    <div className="min-h-screen bg-bg text-text-primary flex flex-col justify-between selection:bg-brand/20 selection:text-brand print:bg-white print:text-black">
+      <Navbar />
+
+      {/* Hidden file input */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileUpload}
-        accept=".pdf,.doc,.docx,.txt"
+        accept=".pdf,.docx,.txt"
         className="hidden"
       />
 
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/80 px-4 sm:px-8 py-3.5 print:hidden">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Home</span>
-            </Link>
-            <div className="h-4 w-px bg-slate-800" />
-            <Logo size="sm" showText={false} />
-            <div>
-              <h1 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                ATS Analysis Report
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
-                  Real Engine
-                </span>
-              </h1>
-              <p className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-xs">
-                {resumeFileName}
-              </p>
-            </div>
-          </div>
+      {toastMessage && (
+        <Toast
+          type="info"
+          message={toastMessage}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
 
-          {/* Action Bar */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <LanguageSelector />
-
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm font-semibold text-slate-200 transition-all shadow-sm"
-              title="Upload any other PDF resume to test real analytics"
-            >
-              <Upload className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Upload New CV</span>
-              <span className="sm:hidden">Upload</span>
-            </button>
-
-            <button
-              onClick={() => setShowJdModal(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm font-semibold text-slate-200 transition-all shadow-sm"
-              title="Paste Job Description to match against"
-            >
-              <Target className="w-3.5 h-3.5 text-fuchsia-400" />
-              <span className="hidden md:inline">Match Job Target</span>
-              <span className="md:hidden">Target</span>
-            </button>
-
-            <button
-              onClick={handleSaveAnalysis}
-              disabled={isSavingAnalysis}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm ${
-                analysisSaved
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-emerald-700/80 hover:bg-emerald-600 text-white'
-              }`}
-              title="Save this analysis report to your cloud dashboard"
-            >
-              {isSavingAnalysis ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Saving...</span>
-                </>
-              ) : analysisSaved ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Saved!</span>
-                </>
-              ) : (
-                <>
-                  <Cloud className="w-3.5 h-3.5 text-emerald-200" />
-                  <span className="hidden sm:inline">Save Scan</span>
-                  <span className="sm:hidden">Save</span>
-                </>
-              )}
-            </button>
-
-            <Link
-              href="/builder"
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm font-semibold text-cyan-300 hover:text-white transition-all shadow-sm"
-            >
-              <Edit className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Edit in Builder</span>
-            </Link>
-            <button
-              onClick={handleDownloadReport}
-              disabled={isExporting}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-cyan-500/20 transition-all"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export PDF Report</span>
-              <span className="sm:hidden">Export</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Source Resume Notice Banner */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm print:hidden">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-              <FileCheck2 className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="font-semibold text-white">Analyzing: </span>
-              <span className="text-cyan-300 font-mono">{resumeFileName}</span>
-              <span className="text-slate-400 ml-2">
-                ({metrics.wordCount} words detected • {keywordsDetected.length} skills recognized)
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+      {/* 1. Document Action Ribbon */}
+      <div className="border-b border-line bg-surface/90 backdrop-blur-md py-3 px-4 sm:px-6 print:hidden w-full max-w-full overflow-x-hidden sticky top-14 z-30 shadow-xs box-border">
+        <div className="max-w-[1200px] w-full mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+            <span className="font-mono text-text-muted shrink-0">
+              {t('review_current_doc')}
+            </span>
+            <span className="font-semibold text-text-primary font-mono truncate max-w-[150px] sm:max-w-xs">
+              {resumeFileName}
+            </span>
+            <span className="text-line-strong">|</span>
             <button
               onClick={() => setShowRawTextModal(true)}
-              className="text-xs text-slate-400 hover:text-white underline"
+              className="text-text-secondary hover:text-text-primary underline cursor-pointer shrink-0"
             >
-              View Extracted Text
+              {t('review_view_raw_text')}
             </button>
-            <span className="text-slate-600">•</span>
-            <button
-              onClick={handleLoadSample}
-              className="text-xs text-indigo-400 hover:text-indigo-300"
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Compare with Job Description CTA */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowJdModal(true)}
+              leftIcon={<Search className="w-3.5 h-3.5" />}
+              title={t('review_compare_jd')}
             >
-              Load Sample Resume
-            </button>
+              {t('review_compare_jd')}
+            </Button>
+
+            {/* Upload Another CV */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              leftIcon={<Upload className="w-3.5 h-3.5" />}
+            >
+              {t('review_upload_another')}
+            </Button>
+
+            {/* Fix with Builder CTA */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleFixWithBuilder}
+              leftIcon={<Edit className="w-3.5 h-3.5 text-brand" />}
+              title={t('review_fix_in_builder')}
+            >
+              {t('review_fix_in_builder')}
+            </Button>
+
+            {/* Print / Share Report */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShareReport}
+              leftIcon={<Share2 className="w-3.5 h-3.5 text-text-secondary" />}
+              className="hidden sm:inline-flex"
+            >
+              {t('review_share')}
+            </Button>
+
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handlePrint}
+              leftIcon={<Printer className="w-3.5 h-3.5" />}
+            >
+              {t('review_print')}
+            </Button>
           </div>
         </div>
 
-        {/* Section 1: Top Hero Scores Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Circular ATS Score Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="lg:col-span-2 bg-slate-900/70 border border-slate-800/90 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-xl flex flex-col justify-between"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-                  ATS Compatibility Score
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-normal">
-                    {metrics.matchLabel}
-                  </span>
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                  Real algorithmic evaluation of contact details, formatting, keywords & metric density
-                </p>
-              </div>
-              <button
-                onClick={() => runAnalysis(resumeText)}
-                className="p-2 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-800/40 hover:bg-slate-800 text-slate-300 transition-colors"
-                title="Recalculate"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            </div>
+        {/* Sample Profile Switcher Ribbon */}
+        <div className="max-w-[1200px] w-full max-w-full mx-auto pt-2.5 mt-2.5 border-t border-line/60 flex items-center gap-2 text-xs overflow-x-auto min-w-0 pb-1">
+          <span className="text-text-muted shrink-0 font-mono text-[11px]">
+            {t('review_quick_samples')}
+          </span>
+          {[
+            { id: 'compact', label: isAr ? 'مهندس برمجيات' : 'Full-Stack Developer' },
+            { id: 'two-column', label: isAr ? 'مهندس سحابي (DevOps)' : 'DevOps Architect' },
+            { id: 'executive-blue', label: isAr ? 'مدير تقني تنفيذي' : 'Executive Director' },
+            { id: 'accountant', label: isAr ? 'محاسب مالي' : 'Corporate Accountant' },
+            { id: 'support', label: isAr ? 'دعم العملاء' : 'Customer Success' },
+            { id: 'analyst', label: isAr ? 'محلل بيانات' : 'Data Analyst' },
+          ].map((sample) => (
+            <button
+              key={sample.id}
+              onClick={() => handleLoadSample(sample.id)}
+              className="px-2.5 py-0.5 rounded-md border border-line bg-surface-2 hover:bg-surface text-text-secondary hover:text-text-primary text-[11px] font-medium transition-colors shrink-0 cursor-pointer"
+            >
+              {sample.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-8 py-2">
-              {/* Circular Gauge */}
-              <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
-                <svg className="w-44 h-44 -rotate-90" viewBox="0 0 100 100">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="42"
-                    strokeWidth="9"
-                    className="stroke-slate-800 fill-transparent"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="42"
-                    strokeWidth="9"
-                    strokeLinecap="round"
-                    className={`${scoreColor} fill-transparent transition-all duration-1000`}
-                    strokeDasharray={263.89}
-                    strokeDashoffset={263.89 - (overallScore / 100) * 263.89}
-                  />
-                </svg>
+      {/* Main Container */}
+      <main id="main-content" className="max-w-[1200px] mx-auto px-4 sm:px-6 py-8 w-full text-start space-y-6">
+        {/* Breadcrumbs & Header */}
+        <div className="print:hidden">
+          <Breadcrumbs
+            items={[{ label: t('nav_ats_review') }]}
+            title={t('review_header_title')}
+            description={t('review_header_subtitle')}
+          />
+        </div>
 
-                <div className="absolute inset-8 rounded-full bg-slate-950/80 border border-slate-800/80 flex flex-col items-center justify-center shadow-inner">
-                  <span className="text-4xl font-black text-white tracking-tight">
-                    {overallScore}%
-                  </span>
-                  <span className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mt-0.5">
-                    Grade {metrics.grade}
-                  </span>
-                </div>
-              </div>
-
-              {/* 4 Pillars Breakdown Progress Bars */}
-              <div className="flex-1 w-full space-y-3.5">
-                {[
-                  {
-                    label: "Keywords Match",
-                    value: subScores.keywordsMatch,
-                    color: "bg-cyan-500",
-                    detail: `${keywordsDetected.length} detected skills`,
-                  },
-                  {
-                    label: "Content Quality & Metrics",
-                    value: subScores.contentQuality,
-                    color: "bg-fuchsia-500",
-                    detail: `${metrics.quantifiedMetricsCount} metrics found`,
-                  },
-                  {
-                    label: "Structure & Sections",
-                    value: subScores.structure,
-                    color: "bg-blue-500",
-                    detail: `${sectionsDetected.filter((s) => s.found).length}/6 standard sections`,
-                  },
-                  {
-                    label: "ATS Formatting & Length",
-                    value: subScores.formatting,
-                    color: "bg-emerald-500",
-                    detail: `${metrics.wordCount} words (ideal: 450-900)`,
-                  },
-                ].map((item, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between items-center text-xs sm:text-sm">
-                      <span className="font-medium text-slate-200">{item.label}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-slate-400 hidden sm:inline">
-                          {item.detail}
-                        </span>
-                        <span className="font-bold text-white">{item.value}%</span>
-                      </div>
-                    </div>
-                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden p-0.2">
-                      <div
-                        className={`h-full rounded-full ${item.color} transition-all duration-1000`}
-                        style={{ width: `${item.value}%` }}
-                      />
-                    </div>
+        {/* 2. Upload Zone with Hints, Drag-and-Drop & Clear Error Handling */}
+        <div className="print:hidden space-y-3">
+          {/* Staged Processing Progress UI */}
+          {processingStage !== 'idle' && processingStage !== 'error' && (
+            <div className="rounded-xl border border-brand/30 bg-surface p-6 shadow-sm space-y-5 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center animate-pulse">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bottom 4 Quick Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-slate-800/80">
-              {[
-                {
-                  icon: <Target className="w-4 h-4 text-cyan-400" />,
-                  label: "Job Fit",
-                  value: metrics.matchLabel,
-                },
-                {
-                  icon: <Clock className="w-4 h-4 text-fuchsia-400" />,
-                  label: "Reading Time",
-                  value: metrics.readingTimeString,
-                },
-                {
-                  icon: <Award className="w-4 h-4 text-amber-400" />,
-                  label: "Percentile",
-                  value: metrics.rankPercentile,
-                },
-                {
-                  icon: <Zap className="w-4 h-4 text-emerald-400" />,
-                  label: "Action Verbs",
-                  value: `${actionVerbsFound.length} power verbs`,
-                },
-              ].map((stat, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 rounded-xl bg-slate-950/50 border border-slate-800/70 text-center"
-                >
-                  <div className="flex items-center justify-center mb-1">
-                    {stat.icon}
-                  </div>
-                  <div className="text-[11px] text-slate-400">{stat.label}</div>
-                  <div className="font-bold text-xs sm:text-sm text-white mt-0.5">
-                    {stat.value}
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">
+                      {isAr ? 'جاري فحص وتشخيص السيرة الذاتية...' : 'Analyzing Resume with ATS Engine...'}
+                    </h3>
+                    <p className="text-xs text-text-muted">
+                      {processingStage === 'reading'
+                        ? t('review_stage_reading_desc')
+                        : processingStage === 'extracting'
+                        ? t('review_stage_extracting_desc')
+                        : processingStage === 'analyzing'
+                        ? t('review_stage_analyzing_desc')
+                        : t('review_stage_scoring_desc')}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Contact & Structure Audit Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-slate-900/70 border border-slate-800/90 rounded-3xl p-6 sm:p-7 backdrop-blur-xl shadow-xl flex flex-col justify-between"
-          >
-            <div>
-              <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-400" />
-                Contact & Section Audit
-              </h3>
-              <p className="text-xs text-slate-400 mb-5">
-                Essential items ATS parsers look for on page 1
-              </p>
-
-              {/* Contact Checklist */}
-              <div className="space-y-2.5 mb-6">
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  Contact Information
-                </div>
-                {[
-                  { label: "Email Address", found: contactInfo.hasEmail, val: contactInfo.email },
-                  { label: "Phone Number", found: contactInfo.hasPhone, val: contactInfo.phone },
-                  { label: "LinkedIn Profile", found: contactInfo.hasLinkedIn, val: contactInfo.hasLinkedIn ? "Found" : "Missing" },
-                  { label: "Location / City", found: contactInfo.hasLocation, val: contactInfo.hasLocation ? "Found" : "Missing" },
-                ].map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 text-xs"
-                  >
-                    <div className="flex items-center gap-2">
-                      {item.found ? (
-                        <Check className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-amber-400" />
-                      )}
-                      <span className="text-slate-200">{item.label}</span>
-                    </div>
-                    <span className={`font-mono ${item.found ? "text-slate-300" : "text-amber-400"}`}>
-                      {item.val || "Not found"}
-                    </span>
-                  </div>
-                ))}
+                <span className="font-mono text-xs font-bold text-brand">{processingProgress}%</span>
               </div>
 
-              {/* Core Sections Checklist */}
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  Core Resume Sections
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {sectionsDetected.map((sec, idx) => (
+              <ProgressBar value={processingProgress} max={100} size="sm" variant="brand" />
+
+              {/* Staged 4-Step Progress UI */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                {STAGES.map((stg, idx) => {
+                  const stageIndex = STAGES.findIndex((s) => s.id === processingStage);
+                  const isPast = stageIndex > idx || processingStage === 'complete';
+                  const isCurrent = stageIndex === idx;
+
+                  return (
                     <div
-                      key={idx}
-                      className={`p-2 rounded-lg border flex items-center gap-1.5 ${
-                        sec.found
-                          ? "bg-slate-950/40 border-slate-800 text-slate-300"
-                          : "bg-rose-950/20 border-rose-900/40 text-rose-300"
+                      key={stg.id}
+                      className={`p-2.5 rounded-lg border text-xs transition-all ${
+                        isCurrent
+                          ? 'border-brand bg-brand/10 text-brand font-semibold shadow-xs'
+                          : isPast
+                          ? 'border-success/30 bg-success/5 text-success'
+                          : 'border-line bg-surface-2/40 text-text-muted opacity-70'
                       }`}
                     >
-                      {sec.found ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      ) : (
-                        <span className="w-3.5 h-3.5 text-rose-400 shrink-0 font-bold">×</span>
-                      )}
-                      <span className="truncate">{sec.name.split("/")[0]}</span>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        {isPast ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
+                        ) : isCurrent ? (
+                          <RefreshCw className="w-3.5 h-3.5 text-brand animate-spin shrink-0" />
+                        ) : (
+                          <span className="w-3.5 h-3.5 rounded-full border border-current text-[9px] flex items-center justify-center shrink-0">
+                            {idx + 1}
+                          </span>
+                        )}
+                        <span className="truncate">
+                          {stg.id === 'reading'
+                            ? t('review_stage_reading_label')
+                            : stg.id === 'extracting'
+                            ? t('review_stage_extracting_label')
+                            : stg.id === 'analyzing'
+                            ? t('review_stage_analyzing_label')
+                            : t('review_stage_scoring_label')}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelProcessing}
+                  className="text-xs text-text-muted hover:text-danger hover:border-danger"
+                >
+                  {t('loading_cancel')}
+                </Button>
               </div>
             </div>
+          )}
 
-            <div className="mt-6 pt-4 border-t border-slate-800">
-              <Link
-                href="/builder"
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-center text-cyan-300 hover:text-cyan-200 transition-colors block"
-              >
-                Edit & Fix in ATS Resume Builder →
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Section 2: Real Keywords Detected & Missing Keywords */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Real Keywords Detected */}
-          <motion.div
-            initial={{ opacity: 0, x: -15 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-900/70 border border-slate-800/90 rounded-3xl p-6 backdrop-blur-xl shadow-xl"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Search className="w-5 h-5 text-emerald-400" />
-                  Recognized Keywords ({keywordsDetected.length})
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Real skills extracted directly from your resume with exact frequencies
-                </p>
-              </div>
-            </div>
-
-            {keywordsDetected.length === 0 ? (
-              <p className="text-sm text-slate-400 py-6 text-center">
-                No recognized industry skills detected in this document.
-              </p>
-            ) : (
-              <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-                {keywordsDetected.map((kw, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-slate-700 transition-colors text-xs sm:text-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          kw.importance === "high"
-                            ? "bg-cyan-400"
-                            : kw.importance === "medium"
-                            ? "bg-blue-400"
-                            : "bg-slate-500"
-                        }`}
-                      />
-                      <span className="font-semibold text-white">{kw.keyword}</span>
-                      <span className="text-[11px] text-slate-500 hidden sm:inline">
-                        • {kw.category}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-slate-400 font-mono">
-                        {kw.count}× found
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
-                          kw.importance === "high"
-                            ? "bg-cyan-500/10 text-cyan-300 border border-cyan-500/30"
-                            : "bg-slate-800 text-slate-300 border border-slate-700"
-                        }`}
-                      >
-                        {kw.importance}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-
-          {/* Missing Keywords Benchmark */}
-          <motion.div
-            initial={{ opacity: 0, x: 15 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-900/70 border border-slate-800/90 rounded-3xl p-6 backdrop-blur-xl shadow-xl flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-rose-400" />
-                    Missing Target Keywords ({missingKeywords.length})
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    High-demand benchmark skills missing from your resume
+          {/* Upload Error Alert Card with Specific Recovery Instructions */}
+          {uploadError && (
+            <div className="p-4 rounded-xl border border-danger/30 bg-danger/10 text-danger space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="text-xs sm:text-sm font-semibold">
+                    {uploadError.isScanned
+                      ? isAr
+                        ? 'مستند مصوّر غير قابل للقراءة بواسطة أنظمة الـ ATS'
+                        : 'Scanned Image Document (Unreadable by ATS)'
+                      : isAr
+                      ? 'خطأ في معالجة المستند'
+                      : 'Unable to Process Document'}
+                  </h4>
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    {uploadError.message}
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowJdModal(true)}
-                  className="text-xs text-cyan-400 hover:text-cyan-300 underline"
+              </div>
+
+              {/* Recovery Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 ps-8">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => router.push('/builder')}
+                  leftIcon={<Sparkles className="w-3.5 h-3.5" />}
                 >
-                  Custom Job Target
-                </button>
-              </div>
-
-              <div className="space-y-2.5">
-                {missingKeywords.map((kw, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 rounded-xl bg-rose-950/15 border border-rose-900/40 text-xs sm:text-sm"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                      <span className="font-semibold text-white">{kw}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleCopyKeyword(kw)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-900/30 hover:bg-rose-900/50 text-rose-200 text-xs transition-colors"
-                        title="Copy to clipboard"
-                      >
-                        {copiedKeyword === kw ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>Copy</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  {isAr ? 'إنشاء سيرة متوافقة في المنشئ مباشرة' : 'Create with ATS Builder instead'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setUploadError(null);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  {isAr ? 'اختيار ملف آخر' : 'Choose another file'}
+                </Button>
               </div>
             </div>
+          )}
 
-            <div className="mt-5 p-3.5 rounded-xl bg-cyan-950/20 border border-cyan-800/40 text-xs text-cyan-300 flex items-start gap-2.5">
-              <Lightbulb className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-              <p>
-                <strong>ATS Tip:</strong> Adding 2-3 of these missing keywords in your work achievements or projects can boost your compatibility by <strong>15% to 25%</strong>.
-              </p>
-            </div>
-          </motion.div>
+          {/* Large Dropzone with hints */}
+          <Dropzone
+            onFileSelect={processUploadedFile}
+            state={processingStage === 'idle' || processingStage === 'error' ? 'idle' : 'parsing'}
+            fileName={resumeFileName}
+            isArabic={isAr}
+          />
         </div>
 
-        {/* Section 3: Real Strengths & Areas for Improvement */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Strengths Identified */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900/70 border border-slate-800/90 rounded-3xl p-6 backdrop-blur-xl shadow-xl"
-          >
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-1">
-              <ThumbsUp className="w-5 h-5 text-emerald-400" />
-              Verified Strengths ({strengths.length})
+        {/* 3. Main Printable Diagnostic Report Card */}
+        <div className="rounded-2xl border border-line bg-surface p-6 sm:p-10 shadow-sm print:border-none print:shadow-none print:p-0 space-y-8">
+          {/* Top Score Showcase & Verdict */}
+          <div className="border-b border-line pb-8 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              {/* Left: Big Circular Gauge + Score Tier Badge */}
+              <div className="flex items-center gap-6">
+                <div className="shrink-0 relative">
+                  <CircularGauge
+                    score={overallScore}
+                    size={135}
+                    strokeWidth={10}
+                    className="drop-shadow-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${scoreTier.bgClass}`}>
+                      {scoreTier.label}
+                    </span>
+                    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border border-line bg-surface-2 text-text-secondary flex items-center gap-1.5 shadow-2xs">
+                      <Globe className="w-3 h-3 text-brand" />
+                      <span>
+                        {t('review_doc_language')}{' '}
+                        <strong className="text-text-primary font-semibold">
+                          {DOCUMENT_LANGUAGE_OPTIONS.find(
+                            (o) => o.id === (analysisResult.detectedLanguage || 'en')
+                          )?.nativeName || (analysisResult.detectedLanguage || 'en').toUpperCase()}
+                        </strong>
+                      </span>
+                    </span>
+                    <span className="text-xs font-mono text-text-muted">
+                      {`${t('review_rank')} ${metrics.rankPercentile}`}
+                    </span>
+                  </div>
+
+                  <h2 className="font-serif text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
+                    {scoreTier.title}
+                  </h2>
+
+                  <p className="text-xs sm:text-sm text-text-secondary max-w-xl leading-relaxed">
+                    {scoreTier.desc}
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: Primary "Fix with Builder" Action Button */}
+              <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 print:hidden">
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleFixWithBuilder}
+                  leftIcon={<Edit className="w-4 h-4" />}
+                  className="shadow-sm"
+                >
+                  {t('review_fix_with_builder')}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowJdModal(true)}
+                  leftIcon={<Search className="w-3.5 h-3.5" />}
+                >
+                  {t('review_compare_job_match')}
+                </Button>
+              </div>
+            </div>
+
+            {/* Multilingual ATS Notice Banner */}
+            {analysisResult.languageNotice && (
+              <div className="rounded-lg border border-brand/20 bg-brand/5 p-3.5 flex items-start gap-3 text-xs leading-relaxed text-text-secondary animate-in fade-in duration-200">
+                <Info className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-text-primary block">
+                    {t('review_multilingual_notice')}
+                  </span>
+                  <p>{isAr ? analysisResult.languageNotice.ar : analysisResult.languageNotice.en}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Document Statistics Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+              <div className="p-3 rounded-lg border border-line bg-surface-2/40">
+                <span className="text-text-muted block font-mono text-[10px] uppercase">
+                  {t('review_stat_words')}
+                </span>
+                <span className="font-mono text-base font-bold text-text-primary tabular-nums">
+                  {metrics.wordCount}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-lg border border-line bg-surface-2/40">
+                <span className="text-text-muted block font-mono text-[10px] uppercase">
+                  {t('review_stat_reading_time')}
+                </span>
+                <span className="font-mono text-base font-bold text-text-primary tabular-nums">
+                  {metrics.readingTimeString}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-lg border border-line bg-surface-2/40">
+                <span className="text-text-muted block font-mono text-[10px] uppercase">
+                  {t('review_stat_metrics')}
+                </span>
+                <span className="font-mono text-base font-bold text-text-primary tabular-nums">
+                  {metrics.quantifiedMetricsCount}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-lg border border-line bg-surface-2/40">
+                <span className="text-text-muted block font-mono text-[10px] uppercase">
+                  {t('review_stat_keywords')}
+                </span>
+                <span className="font-mono text-base font-bold text-text-primary tabular-nums">
+                  {keywordsDetected.length}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Five Diagnostic Breakdown Cards */}
+          <div className="space-y-4">
+            <h3 className="font-serif text-lg font-semibold text-text-primary flex items-center gap-2">
+              <Layers className="w-4 h-4 text-brand" />
+              <span>{t('review_breakdown_title')}</span>
             </h3>
-            <p className="text-xs text-slate-400 mb-5">
-              Concrete competitive advantages detected in this resume
-            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Pillar 1: Keywords Match */}
+              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text-primary">
+                    {t('review_pillar_keywords')}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-text-primary">
+                    {subScores.keywordsMatch}%
+                  </span>
+                </div>
+                <ProgressBar
+                  value={subScores.keywordsMatch}
+                  size="sm"
+                  variant={subScores.keywordsMatch >= 75 ? 'success' : subScores.keywordsMatch >= 50 ? 'brand' : 'warning'}
+                />
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  {t('review_pillar_keywords_desc')}
+                </p>
+              </div>
+
+              {/* Pillar 2: Formatting & ATS Readability */}
+              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text-primary">
+                    {t('review_pillar_formatting')}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-text-primary">
+                    {subScores.formatting}%
+                  </span>
+                </div>
+                <ProgressBar
+                  value={subScores.formatting}
+                  size="sm"
+                  variant={subScores.formatting >= 80 ? 'success' : subScores.formatting >= 60 ? 'brand' : 'warning'}
+                />
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  {t('review_pillar_formatting_desc')}
+                </p>
+              </div>
+
+              {/* Pillar 3: Section Structure & Standard Headings */}
+              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text-primary">
+                    {t('review_pillar_structure')}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-text-primary">
+                    {subScores.structure}%
+                  </span>
+                </div>
+                <ProgressBar
+                  value={subScores.structure}
+                  size="sm"
+                  variant={subScores.structure >= 80 ? 'success' : subScores.structure >= 60 ? 'brand' : 'warning'}
+                />
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  {t('review_pillar_structure_desc')}
+                </p>
+              </div>
+
+              {/* Pillar 4: Readability & Content Quality */}
+              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text-primary">
+                    {t('review_pillar_content')}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-text-primary">
+                    {subScores.contentQuality}%
+                  </span>
+                </div>
+                <ProgressBar
+                  value={subScores.contentQuality}
+                  size="sm"
+                  variant={subScores.contentQuality >= 75 ? 'success' : subScores.contentQuality >= 50 ? 'brand' : 'warning'}
+                />
+                <p className="text-[11px] text-text-muted leading-relaxed">
+                  {t('review_pillar_content_desc')}
+                </p>
+              </div>
+
+              {/* Pillar 5: Contact Information Integrity */}
+              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3 md:col-span-2 lg:col-span-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text-primary">
+                    {t('review_pillar_contact')}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-text-primary">
+                    {contactInfo.completenessScore}%
+                  </span>
+                </div>
+                <ProgressBar
+                  value={contactInfo.completenessScore}
+                  size="sm"
+                  variant={contactInfo.completenessScore >= 80 ? 'success' : 'warning'}
+                />
+                <div className="flex flex-wrap gap-3 text-[11px] text-text-muted pt-0.5">
+                  <span className="flex items-center gap-1">
+                    {contactInfo.hasEmail ? <Check className="w-3 h-3 text-success" /> : <AlertCircle className="w-3 h-3 text-danger" />}
+                    {t('review_contact_email')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    {contactInfo.hasPhone ? <Check className="w-3 h-3 text-success" /> : <AlertCircle className="w-3 h-3 text-danger" />}
+                    {t('review_contact_phone')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    {contactInfo.hasLocation ? <Check className="w-3 h-3 text-success" /> : <AlertCircle className="w-3 h-3 text-warning" />}
+                    {t('review_contact_location')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    {contactInfo.hasLinkedIn ? <Check className="w-3 h-3 text-success" /> : <AlertCircle className="w-3 h-3 text-text-muted" />}
+                    {t('review_contact_linkedin')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Matched vs Missing Keywords Section */}
+          <div className="space-y-5 pt-2 border-t border-line">
+            <h3 className="font-serif text-lg font-semibold text-text-primary flex items-center justify-between">
+              <span>{isAr ? 'تحليل الكلمات المفتاحية والمهارات' : 'Keyword Alignment & Skill Matching'}</span>
+              <span className="font-mono text-xs font-normal text-text-muted">
+                {keywordsDetected.length} {isAr ? 'مطابقة' : 'matched'} • {missingKeywords.length} {isAr ? 'مقترحة' : 'missing'}
+              </span>
+            </h3>
+
+            {/* Matched Keywords Group */}
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                <span>{t('review_keywords_detected_title')}</span>
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {keywordsDetected.map((km, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-line bg-surface-2 text-text-primary text-xs font-mono"
+                  >
+                    <span>{km.keyword}</span>
+                    <span className="text-[10px] text-text-muted">({km.count}x)</span>
+                  </span>
+                ))}
+                {keywordsDetected.length === 0 && (
+                  <span className="text-xs text-text-muted italic">
+                    {t('review_keywords_none')}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Missing Keywords Group with Click-to-Copy */}
+            {missingKeywords.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-brand flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-brand" />
+                    <span>
+                      {`${t('review_keywords_missing_title')} (${targetRole}):`}
+                    </span>
+                  </span>
+                  <span className="text-[11px] text-text-muted print:hidden">
+                    {t('review_keywords_click_to_copy')}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {missingKeywords.slice(0, 18).map((kw, idx) => {
+                    const isCopied = copiedKeyword === kw;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleCopyKeyword(kw)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-brand/20 hover:border-brand bg-brand/5 text-text-primary text-xs font-mono transition-colors cursor-pointer"
+                        title={kw}
+                      >
+                        <span>{kw}</span>
+                        {isCopied ? (
+                          <Check className="w-3 h-3 text-success shrink-0" />
+                        ) : (
+                          <Copy className="w-3 h-3 text-text-muted shrink-0 print:hidden" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 6. Prioritized Suggestions with Severity Badges */}
+          <div className="space-y-4 pt-2 border-t border-line">
+            <h3 className="font-serif text-lg font-semibold text-text-primary flex items-center gap-2">
+              <Flame className="w-4 h-4 text-warning" />
+              <span>{t('review_suggestions_title')}</span>
+            </h3>
 
             <div className="space-y-3">
+              {/* Weaknesses / Improvements with Severity Badges */}
+              {weaknesses.map((weakness, idx) => {
+                const badge =
+                  weakness.severity === 'high'
+                    ? {
+                        label: t('review_priority_high'),
+                        class: 'bg-rose-500/10 text-rose-500 border-rose-500/30',
+                      }
+                    : weakness.severity === 'medium'
+                    ? {
+                        label: t('review_priority_medium'),
+                        class: 'bg-amber-500/10 text-amber-500 border-amber-500/30',
+                      }
+                    : {
+                        label: t('review_priority_low'),
+                        class: 'bg-sky-500/10 text-sky-500 border-sky-500/30',
+                      };
+
+                return (
+                  <div
+                    key={idx}
+                    className={`p-4 rounded-xl border border-line bg-surface-2/40 space-y-2 text-xs list-item-enter ${
+                      idx < 8 ? `stagger-${idx + 1}` : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 font-semibold text-text-primary text-sm">
+                        <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+                        <span>{weakness.title}</span>
+                      </div>
+                      <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${badge.class}`}>
+                        {badge.label}
+                      </span>
+                    </div>
+
+                    <p className="text-text-secondary leading-relaxed ps-6">
+                      {weakness.description}
+                    </p>
+
+                    <div className="ps-6 pt-1 text-brand font-medium flex items-start gap-1">
+                      <span>→</span>
+                      <span>
+                        <strong>{t('review_how_to_fix')}</strong>{' '}
+                        {weakness.suggestion}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Strengths */}
               {strengths.map((str, idx) => (
                 <div
                   key={idx}
-                  className="p-4 rounded-xl bg-emerald-950/15 border border-emerald-900/40 space-y-1 text-xs sm:text-sm"
+                  className={`p-4 rounded-xl border border-success/20 bg-success/5 space-y-1 text-xs list-item-enter ${
+                    (weaknesses.length + idx) < 8 ? `stagger-${weaknesses.length + idx + 1}` : ''
+                  }`}
                 >
-                  <div className="flex items-center gap-2 font-semibold text-emerald-300">
-                    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div className="flex items-center gap-2 text-text-primary font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                     <span>{str.title}</span>
                   </div>
-                  <p className="text-slate-300 pl-6 leading-relaxed">
-                    {str.description}
-                  </p>
+                  <p className="text-text-secondary ps-6 leading-relaxed">{str.description}</p>
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
 
-          {/* Areas for Improvement */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900/70 border border-slate-800/90 rounded-3xl p-6 backdrop-blur-xl shadow-xl"
-          >
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-5 h-5 text-amber-400" />
-              Areas for Improvement ({weaknesses.length})
-            </h3>
-            <p className="text-xs text-slate-400 mb-5">
-              Issues that may trigger ATS filtering or recruiter red flags
-            </p>
+          {/* 7. Report Footer & Call-to-Action */}
+          <div className="pt-6 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
+            <span className="font-mono">
+              {t('review_diagnostic_engine')}
+            </span>
 
-            <div className="space-y-3">
-              {weaknesses.map((w, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2 text-xs sm:text-sm"
-                >
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-white">{w.title}</h4>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        w.severity === "high"
-                          ? "bg-rose-500/10 text-rose-300 border border-rose-500/30"
-                          : "bg-amber-500/10 text-amber-300 border border-amber-500/30"
-                      }`}
-                    >
-                      {w.severity} priority
-                    </span>
-                  </div>
-                  <p className="text-slate-400 leading-relaxed">{w.description}</p>
-                  <p className="text-cyan-300 font-medium text-xs pt-1 border-t border-slate-800/80">
-                    💡 Solution: {w.suggestion}
-                  </p>
-                </div>
-              ))}
+            <div className="flex items-center gap-3 print:hidden">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleFixWithBuilder}
+                leftIcon={<Sparkles className="w-3.5 h-3.5" />}
+              >
+                {t('review_apply_fixes_builder')}
+              </Button>
             </div>
-          </motion.div>
+          </div>
         </div>
-
-        {/* Section 4: Actionable Recommendations by Category */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-900/70 border border-slate-800/90 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-xl"
-        >
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 text-purple-400" />
-              Personalized Improvement Action Plan
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Step-by-step checklist to increase your interview callback rate
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {suggestions.map((cat, idx) => (
-              <div
-                key={idx}
-                className="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 space-y-4"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center font-bold text-xs">
-                    {cat.priority}
-                  </div>
-                  <h4 className="font-bold text-sm sm:text-base text-white">
-                    {cat.category}
-                  </h4>
-                </div>
-
-                <ul className="space-y-2.5 text-xs sm:text-sm">
-                  {cat.suggestions.map((s, sIdx) => (
-                    <li key={sIdx} className="flex items-start gap-2 text-slate-300">
-                      <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">{s}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom Action Bar */}
-          <div className="mt-8 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <h4 className="font-bold text-white text-sm sm:text-base">
-                Ready to optimize your CV?
-              </h4>
-              <p className="text-xs text-slate-400">
-                You can apply these updates in the built-in free ATS builder
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/builder"
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center gap-2"
-              >
-                <Sparkles className="w-4 h-4" />
-                Open ATS Resume Builder
-              </Link>
-            </div>
-          </div>
-        </motion.div>
       </main>
 
-      {/* Target Job Description Modal */}
-      <AnimatePresence>
-        {showJdModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-4"
+      {/* Compare with Job Description Modal */}
+      <Dialog
+        isOpen={showJdModal}
+        onClose={() => setShowJdModal(false)}
+        title={t('review_modal_jd_title')}
+        description={t('review_modal_jd_desc')}
+      >
+        <div className="space-y-4">
+          <Textarea
+            label={t('review_modal_jd_label')}
+            rows={8}
+            placeholder={t('review_modal_jd_placeholder')}
+            value={targetJobDescription}
+            onChange={(e) => setTargetJobDescription(e.target.value)}
+          />
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowJdModal(false)}>
+              {t('dashboard_cancel_btn')}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                runAnalysis(resumeText, targetJobDescription);
+                setShowJdModal(false);
+                setToastMessage(t('review_modal_jd_toast'));
+              }}
             >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Target className="w-5 h-5 text-fuchsia-400" />
-                  Target Job Matching
-                </h3>
-                <button
-                  onClick={() => setShowJdModal(false)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1 text-xs text-slate-300">
-                <p className="font-semibold text-white">How Target Job Matching Works:</p>
-                <p className="text-slate-400 leading-relaxed">
-                  ATS scanners compare applicants directly against specific job postings. 
-                  If you only enter a <strong className="text-slate-200">Job Title</strong>, your resume is benchmarked against our general 400+ industry skills catalog. 
-                  Pasting a complete <strong className="text-slate-200">Job Description</strong> calculates exact keyword alignment and flags high-priority missing terms.
-                </p>
-                <div className="pt-2 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">Need an example?</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTargetRole("Senior Full-Stack Developer");
-                      setTargetJobDescription("We are looking for a Senior Full-Stack Developer with 4+ years of experience in React, Next.js, TypeScript, and Node.js. Experience with REST APIs, GraphQL, PostgreSQL, MongoDB, Docker, CI/CD pipelines, and cloud platforms like AWS or GCP is required. The ideal candidate has strong problem-solving skills, understands unit testing with Jest/Playwright, and has proven experience optimizing web application performance and accessibility (WCAG).");
-                    }}
-                    className="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 underline"
-                  >
-                    + Load Sample Job Description
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Target Job Title
-                </label>
-                <input
-                  type="text"
-                  value={targetRole}
-                  onChange={(e) => setTargetRole(e.target.value)}
-                  placeholder="e.g. Senior Frontend Engineer"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Job Description Text
-                </label>
-                <textarea
-                  rows={6}
-                  value={targetJobDescription}
-                  onChange={(e) => setTargetJobDescription(e.target.value)}
-                  placeholder="Paste the job requirements, responsibilities, and qualifications here..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-500 font-mono text-xs"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  onClick={() => setShowJdModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    setShowJdModal(false);
-                    runAnalysis(resumeText, targetJobDescription, targetRole);
-                  }}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-semibold"
-                >
-                  Apply & Re-Analyze
-                </button>
-              </div>
-            </motion.div>
+              {t('review_modal_jd_analyze')}
+            </Button>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      </Dialog>
 
-      {/* Raw Extracted Text Modal */}
-      <AnimatePresence>
-        {showRawTextModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <FileCode className="w-5 h-5 text-cyan-400" />
-                  Extracted Resume Text
-                </h3>
-                <button
-                  onClick={() => setShowRawTextModal(false)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-              <p className="text-xs text-slate-400">
-                This is the actual text parsed from your file by the ATS parser:
-              </p>
-
-              <textarea
-                rows={12}
-                value={resumeText}
-                onChange={(e) => setResumeText(e.target.value)}
-                className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 font-mono text-xs focus:outline-none focus:border-cyan-500 leading-relaxed"
-              />
-
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-xs text-slate-500">
-                  {metrics.wordCount} words • {resumeText.length} characters
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowRawTextModal(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowRawTextModal(false);
-                      runAnalysis(resumeText);
-                    }}
-                    className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold"
-                  >
-                    Save & Re-Analyze
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+      {/* View Extracted Text Modal */}
+      <Dialog
+        isOpen={showRawTextModal}
+        onClose={() => setShowRawTextModal(false)}
+        title={t('review_modal_raw_title')}
+        description={t('review_modal_raw_desc')}
+        maxWidth="lg"
+      >
+        <div className="space-y-4">
+          <div className="max-h-96 overflow-y-auto p-4 rounded-lg border border-line bg-surface-2 font-mono text-xs text-text-primary leading-relaxed whitespace-pre-wrap select-all">
+            {resumeText}
           </div>
-        )}
-      </AnimatePresence>
+
+          <div className="flex items-center justify-between text-xs text-text-muted">
+            <span>
+              {resumeText.length} {t('review_modal_raw_chars')}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setShowRawTextModal(false)}>
+              {t('dashboard_cancel_btn')}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Footer />
     </div>
-  );
-}
-
-// Icon helper
-function FileCheck2(props: any) {
-  return (
-    <svg
-      {...props}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      viewBox="0 0 24 24"
-    >
-      <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" />
-      <polyline points="14 2 14 8 20 8" />
-      <path d="m3 15 2 2 4-4" />
-    </svg>
   );
 }

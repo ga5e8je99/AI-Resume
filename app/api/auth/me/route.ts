@@ -20,6 +20,13 @@ export async function GET(req: NextRequest) {
         name: user.name,
         email: user.email,
         role: user.role || 'user',
+        isDemo: Boolean((user as any).isDemo),
+        plan: (user as any).plan || 'free',
+        aiCredits: typeof (user as any).aiCredits === 'number' ? (user as any).aiCredits : 3,
+        aiResumeGenerationsCount: typeof (user as any).aiResumeGenerationsCount === 'number' ? (user as any).aiResumeGenerationsCount : 0,
+        jobMatchFreeUsed: typeof (user as any).jobMatchFreeUsed === 'number' ? (user as any).jobMatchFreeUsed : 0,
+        billingCycle: (user as any).billingCycle || 'none',
+        planExpiresAt: (user as any).planExpiresAt || null,
         createdAt: user.createdAt,
       },
     });

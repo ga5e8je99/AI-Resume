@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -12,7 +12,7 @@ interface TemplateProps {
  * Clean typography with subtle colored indicators, zero icons or emojis, ATS-safe format.
  */
 export default function ModernTemplate({ data, theme }: TemplateProps) {
-  const { personalInfo, experience, education, projects, skills, certifications } = data;
+  const { personalInfo, experience, education, projects, skills, certifications, languages } = data;
   const accent = theme.accentColor || '#2563eb';
   const h = getDocumentHeadings(theme.documentLanguage);
 
@@ -39,7 +39,7 @@ export default function ModernTemplate({ data, theme }: TemplateProps) {
 
           {/* Optional Profile Photo */}
           {personalInfo.showPhoto && personalInfo.photoUrl && (
-            <div className="ml-5 shrink-0">
+            <div className="ms-5 shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={personalInfo.photoUrl}
@@ -116,7 +116,7 @@ export default function ModernTemplate({ data, theme }: TemplateProps) {
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-bold text-slate-900 text-sm">{exp.position}</span>
                   <span className={`text-slate-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                    {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                   </span>
                 </div>
                 <div className="flex justify-between items-baseline text-slate-600 mb-1.5 font-medium">
@@ -215,7 +215,7 @@ export default function ModernTemplate({ data, theme }: TemplateProps) {
                   </div>
                 </div>
                 <span className={`text-slate-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                  {edu.startDate} – {edu.endDate}
+                  {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                 </span>
               </div>
             ))}
@@ -237,6 +237,25 @@ export default function ModernTemplate({ data, theme }: TemplateProps) {
               <li key={idx}>{cert}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Languages */}
+      {languages && languages.length > 0 && (
+        <div className="mt-5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-1.5 h-4 rounded-full" style={{ backgroundColor: accent }} />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+              {h.languages}
+            </h2>
+          </div>
+          <div className={`flex flex-wrap gap-1.5 ${h.isRtl ? 'pr-3.5' : 'pl-3.5'}`}>
+            {languages.map((l, idx) => (
+              <span key={idx} className="text-xs px-2.5 py-1 rounded bg-slate-100 text-slate-700 font-medium">
+                {l.name} <span className="text-slate-500 font-normal">({l.proficiency})</span>
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>

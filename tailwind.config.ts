@@ -1,0 +1,78 @@
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  darkMode: ['selector', '[data-theme="dark"]'],
+  content: [
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './lib/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        bg: 'var(--bg)',
+        paper: 'var(--paper)',
+        surface: 'var(--surface)',
+        'surface-2': 'var(--surface-2)',
+        elevated: 'var(--elevated)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        'text-muted': 'var(--text-muted)',
+        ink: 'var(--ink)',
+        'ink-2': 'var(--ink-2)',
+        'ink-3': 'var(--ink-3)',
+        border: 'var(--border)',
+        'border-strong': 'var(--border-strong)',
+        'border-subtle': 'var(--border-subtle)',
+        line: 'var(--line)',
+        'line-strong': 'var(--line-strong)',
+        brand: 'var(--brand)',
+        'brand-hover': 'var(--brand-hover)',
+        'brand-soft': 'var(--brand-soft)',
+        accent: 'var(--accent)',
+        'accent-hover': 'var(--accent-hover)',
+        'accent-soft': 'var(--accent-soft)',
+        'on-accent': 'var(--on-accent)',
+        highlight: 'var(--highlight)',
+        info: 'var(--info)',
+        'info-soft': 'var(--info-soft)',
+        danger: 'var(--danger)',
+        'danger-soft': 'var(--danger-soft)',
+        success: 'var(--success)',
+        'success-soft': 'var(--success-soft)',
+        warning: 'var(--warning)',
+        'warning-soft': 'var(--warning-soft)',
+        focus: 'var(--focus)',
+      },
+      borderRadius: {
+        xs: 'var(--radius-xs)',
+        sm: 'var(--radius-sm)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
+      },
+      boxShadow: {
+        subtle: 'var(--shadow-subtle)',
+        card: 'var(--shadow-card)',
+        elevated: 'var(--shadow-elevated)',
+        glow: 'var(--shadow-glow)',
+      },
+      zIndex: {
+        sticky: '40',
+        dropdown: '50',
+        modal: '100',
+        tooltip: '110',
+        toast: '120',
+      },
+      fontFamily: {
+        serif: ['var(--font-serif)', 'Newsreader', 'Georgia', 'serif'],
+        sans: ['var(--font-sans)', 'Inter', 'IBM Plex Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        arabic: ['var(--font-arabic)', 'IBM Plex Sans Arabic', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+};
+
+export default config;

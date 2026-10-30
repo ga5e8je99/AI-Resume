@@ -101,19 +101,19 @@ assert(allTonesValid, 'Accepts all 4 supported tone values');
 // Test 1.10: Invalid language
 const resInvalidLang = CoverLetterService.validateRequest({
   jobDescription: 'Valid job description that exceeds twenty-five characters.',
-  language: 'es',
+  language: 'xx',
 });
 assert(!resInvalidLang.valid && resInvalidLang.error.includes('اللغة'), 'Rejects unsupported language');
 
 // Test 1.11: Valid languages
-const validLangs = ['ar', 'en'];
+const validLangs = ['ar', 'en', 'fr', 'de', 'es', 'tr'];
 const allLangsValid = validLangs.every((l) => {
   return CoverLetterService.validateRequest({
     jobDescription: 'Valid job description that exceeds twenty-five characters.',
     language: l,
   }).valid;
 });
-assert(allLangsValid, 'Accepts supported languages (ar, en)');
+assert(allLangsValid, 'Accepts supported languages (ar, en, fr, de, es, tr)');
 
 // Test 1.12: Invalid templateId
 const resInvalidTemplate = CoverLetterService.validateRequest({

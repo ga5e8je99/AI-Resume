@@ -59,7 +59,7 @@ for (const preset of TONE_PRESETS) {
 // -------------------------------------------------------------
 console.log('\n[Suite 2] Language Options & Directionality:');
 
-assert(LANGUAGE_OPTIONS.length === 2, 'LanguageOptions: Contains Arabic and English');
+assert(LANGUAGE_OPTIONS.some((l) => l.id === 'ar') && LANGUAGE_OPTIONS.some((l) => l.id === 'en'), 'LanguageOptions: Contains Arabic and English');
 const arOption = LANGUAGE_OPTIONS.find((l) => l.id === 'ar');
 const enOption = LANGUAGE_OPTIONS.find((l) => l.id === 'en');
 assert(arOption?.dir === 'rtl', 'LanguageOptions: Arabic direction is "rtl"');

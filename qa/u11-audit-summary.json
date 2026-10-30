@@ -1,0 +1,357 @@
+[
+  {
+    "page": "Landing",
+    "path": "/",
+    "performance": 44,
+    "accessibility": 96,
+    "bestPractices": 96,
+    "seo": 91,
+    "issues": [
+      {
+        "id": "errors-in-console",
+        "title": "Browser errors were logged to the console",
+        "score": 0
+      },
+      {
+        "id": "server-response-time",
+        "title": "Reduce initial server response time",
+        "score": 0
+      },
+      {
+        "id": "mainthread-work-breakdown",
+        "title": "Minimize main-thread work",
+        "score": 0
+      },
+      {
+        "id": "bootup-time",
+        "title": "Reduce JavaScript execution time",
+        "score": 0
+      },
+      {
+        "id": "valid-source-maps",
+        "title": "Missing source maps for large first-party JavaScript",
+        "score": 0
+      },
+      {
+        "id": "color-contrast",
+        "title": "Background and foreground colors do not have a sufficient contrast ratio.",
+        "score": 0
+      },
+      {
+        "id": "unminified-css",
+        "title": "Minify CSS",
+        "score": 0
+      },
+      {
+        "id": "unminified-javascript",
+        "title": "Minify JavaScript",
+        "score": 0
+      },
+      {
+        "id": "unused-javascript",
+        "title": "Reduce unused JavaScript",
+        "score": 0
+      },
+      {
+        "id": "bf-cache",
+        "title": "Page prevented back/forward cache restoration",
+        "score": 0
+      },
+      {
+        "id": "document-latency-insight",
+        "title": "Document request latency",
+        "score": 0
+      },
+      {
+        "id": "forced-reflow-insight",
+        "title": "Forced reflow",
+        "score": 0
+      },
+      {
+        "id": "lcp-breakdown-insight",
+        "title": "LCP breakdown",
+        "score": 0
+      },
+      {
+        "id": "legacy-javascript-insight",
+        "title": "Legacy JavaScript",
+        "score": 0.5
+      },
+      {
+        "id": "network-dependency-tree-insight",
+        "title": "Network dependency tree",
+        "score": 0
+      },
+      {
+        "id": "render-blocking-insight",
+        "title": "Render-blocking requests",
+        "score": 0.5
+      }
+    ]
+  },
+  {
+    "page": "Login",
+    "path": "/login",
+    "performance": 44,
+    "accessibility": 98,
+    "bestPractices": 96,
+    "seo": 91,
+    "issues": [
+      {
+        "id": "errors-in-console",
+        "title": "Browser errors were logged to the console",
+        "score": 0
+      },
+      {
+        "id": "server-response-time",
+        "title": "Reduce initial server response time",
+        "score": 0
+      },
+      {
+        "id": "mainthread-work-breakdown",
+        "title": "Minimize main-thread work",
+        "score": 0
+      },
+      {
+        "id": "bootup-time",
+        "title": "Reduce JavaScript execution time",
+        "score": 0
+      },
+      {
+        "id": "valid-source-maps",
+        "title": "Missing source maps for large first-party JavaScript",
+        "score": 0
+      },
+      {
+        "id": "heading-order",
+        "title": "Heading elements are not in a sequentially-descending order",
+        "score": 0
+      },
+      {
+        "id": "unminified-css",
+        "title": "Minify CSS",
+        "score": 0.5
+      },
+      {
+        "id": "unminified-javascript",
+        "title": "Minify JavaScript",
+        "score": 0
+      },
+      {
+        "id": "unused-javascript",
+        "title": "Reduce unused JavaScript",
+        "score": 0
+      },
+      {
+        "id": "bf-cache",
+        "title": "Page prevented back/forward cache restoration",
+        "score": 0
+      },
+      {
+        "id": "document-latency-insight",
+        "title": "Document request latency",
+        "score": 0
+      },
+      {
+        "id": "lcp-breakdown-insight",
+        "title": "LCP breakdown",
+        "score": 0
+      },
+      {
+        "id": "legacy-javascript-insight",
+        "title": "Legacy JavaScript",
+        "score": 0.5
+      },
+      {
+        "id": "network-dependency-tree-insight",
+        "title": "Network dependency tree",
+        "score": 0
+      },
+      {
+        "id": "render-blocking-insight",
+        "title": "Render-blocking requests",
+        "score": 0.5
+      }
+    ]
+  },
+  {
+    "page": "Dashboard",
+    "path": "/dashboard",
+    "performance": 37,
+    "accessibility": 98,
+    "bestPractices": 96,
+    "seo": 100,
+    "issues": [
+      {
+        "id": "errors-in-console",
+        "title": "Browser errors were logged to the console",
+        "score": 0
+      },
+      {
+        "id": "server-response-time",
+        "title": "Reduce initial server response time",
+        "score": 0
+      },
+      {
+        "id": "mainthread-work-breakdown",
+        "title": "Minimize main-thread work",
+        "score": 0
+      },
+      {
+        "id": "bootup-time",
+        "title": "Reduce JavaScript execution time",
+        "score": 0
+      },
+      {
+        "id": "valid-source-maps",
+        "title": "Missing source maps for large first-party JavaScript",
+        "score": 0
+      },
+      {
+        "id": "heading-order",
+        "title": "Heading elements are not in a sequentially-descending order",
+        "score": 0
+      },
+      {
+        "id": "unminified-css",
+        "title": "Minify CSS",
+        "score": 0
+      },
+      {
+        "id": "unminified-javascript",
+        "title": "Minify JavaScript",
+        "score": 0
+      },
+      {
+        "id": "unused-javascript",
+        "title": "Reduce unused JavaScript",
+        "score": 0
+      },
+      {
+        "id": "bf-cache",
+        "title": "Page prevented back/forward cache restoration",
+        "score": 0
+      },
+      {
+        "id": "document-latency-insight",
+        "title": "Document request latency",
+        "score": 0
+      },
+      {
+        "id": "forced-reflow-insight",
+        "title": "Forced reflow",
+        "score": 0
+      },
+      {
+        "id": "lcp-breakdown-insight",
+        "title": "LCP breakdown",
+        "score": 0
+      },
+      {
+        "id": "legacy-javascript-insight",
+        "title": "Legacy JavaScript",
+        "score": 0.5
+      },
+      {
+        "id": "network-dependency-tree-insight",
+        "title": "Network dependency tree",
+        "score": 0
+      },
+      {
+        "id": "render-blocking-insight",
+        "title": "Render-blocking requests",
+        "score": 0.5
+      }
+    ]
+  },
+  {
+    "page": "Builder",
+    "path": "/builder",
+    "performance": 36,
+    "accessibility": 96,
+    "bestPractices": 96,
+    "seo": 91,
+    "issues": [
+      {
+        "id": "errors-in-console",
+        "title": "Browser errors were logged to the console",
+        "score": 0
+      },
+      {
+        "id": "server-response-time",
+        "title": "Reduce initial server response time",
+        "score": 0
+      },
+      {
+        "id": "mainthread-work-breakdown",
+        "title": "Minimize main-thread work",
+        "score": 0
+      },
+      {
+        "id": "bootup-time",
+        "title": "Reduce JavaScript execution time",
+        "score": 0
+      },
+      {
+        "id": "valid-source-maps",
+        "title": "Missing source maps for large first-party JavaScript",
+        "score": 0
+      },
+      {
+        "id": "target-size",
+        "title": "Touch targets do not have sufficient size or spacing.",
+        "score": 0
+      },
+      {
+        "id": "unminified-css",
+        "title": "Minify CSS",
+        "score": 0
+      },
+      {
+        "id": "unminified-javascript",
+        "title": "Minify JavaScript",
+        "score": 0
+      },
+      {
+        "id": "unused-javascript",
+        "title": "Reduce unused JavaScript",
+        "score": 0
+      },
+      {
+        "id": "bf-cache",
+        "title": "Page prevented back/forward cache restoration",
+        "score": 0
+      },
+      {
+        "id": "document-latency-insight",
+        "title": "Document request latency",
+        "score": 0
+      },
+      {
+        "id": "forced-reflow-insight",
+        "title": "Forced reflow",
+        "score": 0
+      },
+      {
+        "id": "lcp-breakdown-insight",
+        "title": "LCP breakdown",
+        "score": 0
+      },
+      {
+        "id": "legacy-javascript-insight",
+        "title": "Legacy JavaScript",
+        "score": 0
+      },
+      {
+        "id": "network-dependency-tree-insight",
+        "title": "Network dependency tree",
+        "score": 0
+      },
+      {
+        "id": "render-blocking-insight",
+        "title": "Render-blocking requests",
+        "score": 0.5
+      }
+    ]
+  }
+]

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -48,7 +48,7 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
 
         {/* Optional Profile Photo */}
         {personalInfo.showPhoto && personalInfo.photoUrl && (
-          <div className="ml-5 shrink-0">
+          <div className="ms-5 shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={personalInfo.photoUrl}
@@ -89,7 +89,7 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
                 <div className="flex justify-between items-baseline mb-0.5">
                   <span className="font-bold text-gray-900">{exp.position}</span>
                   <span className={`text-gray-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                    {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                   </span>
                 </div>
                 <div className="flex justify-between items-baseline text-gray-700 mb-1.5 font-medium italic">
@@ -172,7 +172,7 @@ export default function ClassicTemplate({ data, theme }: TemplateProps) {
                   <div className="text-gray-600 italic">{edu.institution} {edu.gpa && `• ${h.gpa}: ${edu.gpa}`}</div>
                 </div>
                 <span className={`text-gray-500 font-medium ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                  {edu.startDate} – {edu.endDate}
+                  {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                 </span>
               </div>
             ))}

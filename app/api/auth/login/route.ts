@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { comparePassword, signToken } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
+import { applyRateLimit } from '@/app/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
   try {
+    const rateLimit = applyRateLimit(
+      req,
+      { limit: 30, windowMs: 60 * 1000, keyPrefix: 'auth_login' }
+    );
+    if (!rateLimit.allowed && rateLimit.errorResponse) {
+      return rateLimit.errorResponse;
+    }
+
     const body = await req.json();
     const { email, password } = body;
 

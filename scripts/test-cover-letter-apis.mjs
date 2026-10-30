@@ -5,8 +5,8 @@ const BASE_URL = 'http://localhost:3000';
 const JWT_SECRET = process.env.JWT_SECRET || 'jobmatch_ats_ai_resume_super_secret_jwt_key_2026';
 
 // Helper to generate a valid user token
-function createTestToken(userId = 'usr_002', email = 'sarah.jenkins@example.com', name = 'Sarah Jenkins') {
-  return sign({ userId, email, name, role: 'user' }, JWT_SECRET, { expiresIn: '1h' });
+function createTestToken(userId = 'usr_mvpabfxqsnc5', email = 'demo@jobmatch.ai', name = 'Alex Rivera (Demo)') {
+  return sign({ userId, email, name, role: 'user', isDemo: true }, JWT_SECRET, { expiresIn: '1h' });
 }
 
 async function runTests() {
@@ -30,11 +30,23 @@ async function runTests() {
     }
   }
 
-  // 1. POST /api/cover-letter/generate (Validation error - empty body)
+  // 1a. POST /api/cover-letter/generate (Unauthenticated returns 401)
   try {
     const res = await fetch(`${BASE_URL}/api/cover-letter/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    assert(res.status === 401, 'POST /generate without token returns 401 Unauthorized');
+  } catch (err) {
+    assert(false, `POST /generate unauthenticated check failed: ${err.message}`);
+  }
+
+  // 1b. POST /api/cover-letter/generate (Validation error - empty body)
+  try {
+    const res = await fetch(`${BASE_URL}/api/cover-letter/generate`, {
+      method: 'POST',
+      headers: authHeaders,
       body: JSON.stringify({}),
     });
     const data = await res.json();
@@ -47,7 +59,7 @@ async function runTests() {
   try {
     const res = await fetch(`${BASE_URL}/api/cover-letter/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify({
         jobUrl: 'http://127.0.0.1:8080/internal-api',
         tone: 'formal',
@@ -65,7 +77,7 @@ async function runTests() {
   try {
     const res = await fetch(`${BASE_URL}/api/cover-letter/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify({
         jobDescription: 'مطلوب مدير مشروعات تقنية لقيادة فرق هندسة البرمجيات وتطبيق Agile وScrum وتطوير الأنظمة السحابية وإدارة الميزانيات وتحليل المخاطر.',
         companyName: 'شركة تقنية الرياض',

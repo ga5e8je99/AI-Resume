@@ -5,6 +5,7 @@ import { CoverLetterService } from '@/app/lib/coverLetterService';
 import { AICoverLetterClient } from '@/app/lib/aiCoverLetterClient';
 import { GenerateCoverLetterRequest } from '@/app/cover-letter/types';
 import { applyRateLimit } from '@/app/lib/rateLimit';
+import { requireCredits, consumeCredit, CreditCheckResult } from '@/lib/credit-guard';
 
 // POST /api/cover-letter/generate - Synthesize an AI-tailored cover letter with server-side AI and robust fallback
 export async function POST(req: NextRequest) {
@@ -17,8 +18,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Rate Limiting: 40 AI generations per minute per user/IP
+    // 2. Authentication & AI Generation Credit Guard
     const authUser = getAuthenticatedUser(req);
+    if (!authUser?.userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'يرجى تسجيل الدخول أو تجربة وضع الديمو لتوليد خطابات التقديم بالذكاء الاصطناعي (Please sign in or use Demo mode to generate AI cover letters)',
+          loginUrl: '/login',
+        },
+        { status: 401 }
+      );
+    }
+
+    const creditCheck = await requireCredits(authUser.userId, req);
+    if (!creditCheck.allowed && creditCheck.errorResponse) {
+      return creditCheck.errorResponse;
+    }
+
+    // 3. Rate Limiting: 40 AI generations per minute per user/IP
     const rateLimit = applyRateLimit(
       req,
       { limit: 40, windowMs: 60 * 1000, keyPrefix: 'gen' },
@@ -105,12 +123,22 @@ export async function POST(req: NextRequest) {
 
     const aiResult = await AICoverLetterClient.generateCoverLetter(synthesizedBody, resumeData);
 
+    // 7. Atomic Credit Deduction (Only on successful generation)
+    let creditsLeft: number | undefined;
+    if (authUser?.userId && creditCheck && !creditCheck.unlimited) {
+      const consumeResult = await consumeCredit(authUser.userId);
+      creditsLeft = consumeResult.remaining;
+    } else if (creditCheck?.unlimited) {
+      creditsLeft = Infinity;
+    }
+
     return NextResponse.json({
       success: true,
       coverLetter: aiResult.coverLetter,
       extractedKeywords: aiResult.coverLetter.extractedKeywords,
       provider: aiResult.provider,
       aiGenerated: aiResult.aiGenerated,
+      creditsLeft,
     });
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);

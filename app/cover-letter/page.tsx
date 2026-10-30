@@ -1,9 +1,11 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import {
   CoverLetterData,
   CoverLetterTone,
@@ -12,14 +14,32 @@ import {
 import {
   LANGUAGE_OPTIONS,
 } from './constants';
+import {
+  DOCUMENT_LANGUAGE_OPTIONS,
+  getStoredDocumentLanguage,
+  setStoredDocumentLanguage,
+} from '@/app/lib/documentI18n';
 import { CoverLetterHero } from './components/CoverLetterHero';
 import { ToneCardSelector } from './components/ToneCardSelector';
 import { GeneratingStepper } from './components/GeneratingStepper';
 import { CoverLetterPreview } from './components/CoverLetterPreview';
-import { SavedDraftsModal } from './components/SavedDraftsModal';
-import { ConfirmModal } from './components/ConfirmModal';
+import dynamic from 'next/dynamic';
+import { CoverLetterHistory } from './components/CoverLetterHistory';
+const SavedDraftsModal = dynamic(
+  () => import('./components/SavedDraftsModal').then((m) => m.SavedDraftsModal),
+  { ssr: false }
+);
+const ConfirmModal = dynamic(
+  () => import('./components/ConfirmModal').then((m) => m.ConfirmModal),
+  { ssr: false }
+);
+const UpgradeModal = dynamic(() => import('../components/UpgradeModal'), {
+  ssr: false,
+});
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { extractTextFromFile } from '../lib/pdfExtractor';
 import { CoverLetterService } from '../lib/coverLetterService';
+import { trackAiGenerationUsed, trackCreditsExhausted } from '@/lib/analytics';
 import {
   Sparkles,
   Building,
@@ -28,24 +48,22 @@ import {
   Sliders,
   AlertCircle,
   Link2,
-  Layout,
   FileCheck,
   Loader2,
   RotateCcw,
   Upload,
   FileText,
   CheckCircle2,
+  Eye,
+  RefreshCw,
+  X,
+  History,
 } from 'lucide-react';
 
-const TEMPLATE_PRESETS = [
-  { id: 'compact', labelAr: 'مدمج رسمي (Compact)', labelEn: 'Compact ATS' },
-  { id: 'modern', labelAr: 'عصري تقني (Modern)', labelEn: 'Modern Indigo' },
-  { id: 'classic', labelAr: 'كلاسيكي تنفيذي (Classic)', labelEn: 'Classic Executive' },
-  { id: 'ats-friendly', labelAr: 'أزرق احترافي (ATS-Friendly)', labelEn: 'ATS Blue Accent' },
-];
-
 export default function CoverLetterPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const { t, isRtl, language: uiLang } = useLanguage();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // User's saved resumes to pick from
   const [savedResumes, setSavedResumes] = useState<any[]>([]);
@@ -65,7 +83,9 @@ export default function CoverLetterPage() {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [extractedTags, setExtractedTags] = useState<string[]>([]);
   const [tone, setTone] = useState<CoverLetterTone>('formal');
-  const [language, setLanguage] = useState<CoverLetterLanguage>('ar');
+  const [language, setLanguage] = useState<CoverLetterLanguage>(() => {
+    return (getStoredDocumentLanguage('en') as CoverLetterLanguage) || 'en';
+  });
 
   // Sender details
   const [senderName, setSenderName] = useState(user?.name || '');
@@ -74,7 +94,7 @@ export default function CoverLetterPage() {
 
   // UX & Flow States: 'input' | 'generating' | 'preview'
   const [activeView, setActiveView] = useState<'input' | 'generating' | 'preview'>('input');
-  const [mobileTab, setMobileTab] = useState<'form' | 'preview'>('form');
+  const [mobileTab, setMobileTab] = useState<'form' | 'preview' | 'history'>('form');
   const [generationStep, setGenerationStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -83,19 +103,33 @@ export default function CoverLetterPage() {
   const [isDraftsModalOpen, setIsDraftsModalOpen] = useState(false);
   const [draftsCount, setDraftsCount] = useState(0);
 
+  // History state
+  const [historyLetters, setHistoryLetters] = useState<CoverLetterData[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
   // Result & Errors
   const [generatedLetter, setGeneratedLetter] = useState<CoverLetterData | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [lastFailedPayload, setLastFailedPayload] = useState<Record<string, unknown> | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // AbortController for cancel generation
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3500);
   };
 
-  // Restore cached form inputs to guarantee Zero Data Loss on reload/navigation
+  const isAr = uiLang === 'ar';
+
+  // Restore cached form inputs
   useEffect(() => {
     try {
+      const stored = getStoredDocumentLanguage();
+      if (stored) {
+        setLanguage(stored as CoverLetterLanguage);
+      }
       const cached = localStorage.getItem('jobmatch_cover_letter_form_cache');
       if (cached) {
         const parsed = JSON.parse(cached);
@@ -106,7 +140,10 @@ export default function CoverLetterPage() {
           if (parsed.jobDescription && !jobDescription) setJobDescription(parsed.jobDescription);
           if (parsed.customNotes && !customNotes) setCustomNotes(parsed.customNotes);
           if (parsed.tone) setTone(parsed.tone);
-          if (parsed.language) setLanguage(parsed.language);
+          if (parsed.language) {
+            setLanguage(parsed.language);
+            setStoredDocumentLanguage(parsed.language);
+          }
           if (parsed.templateId) setTemplateId(parsed.templateId);
           if (parsed.jobUrl && !jobUrl) setJobUrl(parsed.jobUrl);
         }
@@ -114,7 +151,7 @@ export default function CoverLetterPage() {
     } catch {}
   }, []);
 
-  // Auto-persist form inputs into local cache with 350ms debounce for peak typing performance
+  // Auto-persist form inputs into local cache
   useEffect(() => {
     if (activeView !== 'input') return;
 
@@ -161,17 +198,33 @@ export default function CoverLetterPage() {
           }
         })
         .catch((err) => console.error('Error fetching resumes:', err));
-
-      fetch('/api/cover-letters?limit=1')
-        .then((res) => (res.ok ? res.json() : { pagination: { total: 0 } }))
-        .then((data) => {
-          if (data.pagination?.total !== undefined) {
-            setDraftsCount(data.pagination.total);
-          }
-        })
-        .catch(() => {});
     }
+    loadHistory();
   }, [user]);
+
+  const loadHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const res = await fetch('/api/cover-letters?limit=50&summary=false');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.coverLetters)) {
+          setHistoryLetters(data.coverLetters);
+          setDraftsCount(data.coverLetters.length);
+          return;
+        }
+      }
+      const local = JSON.parse(localStorage.getItem('jobmatch_cover_letters') || '[]');
+      setHistoryLetters(local);
+      setDraftsCount(local.length);
+    } catch {
+      const local = JSON.parse(localStorage.getItem('jobmatch_cover_letters') || '[]');
+      setHistoryLetters(local);
+      setDraftsCount(local.length);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   const populateFromResume = (resume: { data?: { personalInfo?: { fullName?: string; email?: string; phone?: string; jobTitle?: string } } } | null | undefined) => {
     if (!resume?.data?.personalInfo) return;
@@ -193,20 +246,19 @@ export default function CoverLetterPage() {
     }
   };
 
-  // Safe file extraction for job descriptions (PDF / TXT / DOCX)
+  // Safe file extraction for job descriptions
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate size limit (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setFormError(language === 'ar' ? 'حجم الملف يتجاوز الحد الأقصى المسموح (5 ميجابايت)' : 'File size exceeds 5MB limit');
+      setFormError(isAr ? 'حجم الملف يتجاوز الحد الأقصى (5 ميجابايت)' : 'File size exceeds 5MB limit');
       return;
     }
 
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (!['pdf', 'txt', 'doc', 'docx'].includes(ext || '')) {
-      setFormError(language === 'ar' ? 'صيغة الملف غير مدعومة. يرجى رفع ملف PDF أو TXT أو DOCX' : 'Unsupported format. Please upload PDF, TXT, or DOCX');
+      setFormError(isAr ? 'صيغة الملف غير مدعومة. يرجى رفع ملف PDF أو TXT أو DOCX' : 'Unsupported format. Please upload PDF, TXT, or DOCX');
       return;
     }
 
@@ -216,14 +268,14 @@ export default function CoverLetterPage() {
       const extractedText = await extractTextFromFile(file);
       if (CoverLetterService.isGarbledOrBinaryText(extractedText)) {
         throw new Error(
-          language === 'ar'
-            ? 'الملف المرفوع يحتوي على بيانات مشفرة أو غير مقروءة. يرجى استخدام ملف PDF نصي أو TXT، أو نسخ ولصق النص مباشرة.'
-            : 'The uploaded file contains binary or unreadable content. Please upload a standard text PDF or TXT, or paste the text directly.'
+          isAr
+            ? 'الملف المرفوع يحتوي على بيانات مشفرة أو غير مقروءة. يرجى استخدام ملف نصي أو نسخ النص مباشرة.'
+            : 'The uploaded file contains binary or unreadable content. Please upload a standard text document or paste the text directly.'
         );
       }
       const cleaned = CoverLetterService.cleanDisplayText(extractedText);
       if (cleaned.length < 25) {
-        throw new Error(language === 'ar' ? 'المحتوى المستخرج من الملف قصير جداً أو غير قابل للقراءة' : 'Extracted content is too short or unreadable');
+        throw new Error(isAr ? 'المحتوى المستخرج قصير جداً أو غير مقروء' : 'Extracted content is too short or unreadable');
       }
 
       setJobDescription(cleaned);
@@ -235,12 +287,12 @@ export default function CoverLetterPage() {
       if (kws.length > 0) setExtractedTags(kws);
 
       showToast(
-        language === 'ar'
-          ? `تم استخراج محتوى الإعلان بنجاح (${file.name})`
+        isAr
+          ? `تم استخراج محتوى الإعلان (${file.name})`
           : `Extracted job description from (${file.name})`
       );
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'حدث خطأ أثناء قراءة الملف';
+      const msg = err instanceof Error ? err.message : (isAr ? 'حدث خطأ أثناء قراءة الملف' : 'File parsing failed');
       setFormError(msg);
       showToast(msg, 'error');
     } finally {
@@ -249,21 +301,17 @@ export default function CoverLetterPage() {
     }
   };
 
-  // Extract keywords and description snippet from URL
+  // Extract from URL
   const handleExtractFromUrl = async () => {
-    if (isExtractingUrl) return; // Guard against double trigger
+    if (isExtractingUrl) return;
     if (!jobUrl.trim()) {
-      setFormError(language === 'ar' ? 'يرجى إدخال رابط الوظيفة أولاً' : 'Please enter a job URL first');
+      setFormError(isAr ? 'يرجى إدخال رابط الوظيفة أولاً' : 'Please enter a job URL first');
       return;
     }
 
     const cleanUrl = jobUrl.trim();
     if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-      setFormError(
-        language === 'ar'
-          ? 'يجب أن يبدأ الرابط بـ https:// أو http://'
-          : 'Job URL must start with https:// or http://'
-      );
+      setFormError(isAr ? 'يجب أن يبدأ الرابط بـ https:// أو http://' : 'Job URL must start with https:// or http://');
       return;
     }
 
@@ -287,17 +335,17 @@ export default function CoverLetterPage() {
           setJobDescription(CoverLetterService.cleanDisplayText(data.snippet));
         }
         showToast(
-          language === 'ar'
-            ? `تم استخراج ${data.count || data.keywords.length} كلمة مفتاحية بنجاح من الرابط!`
-            : `Extracted ${data.count || data.keywords.length} keywords from URL!`
+          isAr
+            ? `تم استخراج ${data.count || data.keywords.length} كلمة مفتاحية من الرابط`
+            : `Extracted ${data.count || data.keywords.length} keywords from URL`
         );
       } else {
-        const errorMsg = data.error || (language === 'ar' ? 'تعذر استخراج البيانات من الرابط' : 'Failed to extract from URL');
+        const errorMsg = data.error || (isAr ? 'تعذر استخراج البيانات من الرابط' : 'Failed to extract from URL');
         setFormError(errorMsg);
         showToast(errorMsg, 'error');
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : (language === 'ar' ? 'حدث خطأ أثناء جلب الرابط' : 'Network error while fetching URL');
+      const msg = err instanceof Error ? err.message : (isAr ? 'حدث خطأ أثناء جلب الرابط' : 'Network error while fetching URL');
       setFormError(msg);
       showToast(msg, 'error');
     } finally {
@@ -305,41 +353,92 @@ export default function CoverLetterPage() {
     }
   };
 
-  // Trigger Generation with comprehensive input validation
-  const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isGenerating || activeView === 'generating') return; // Guard against double submission
+  const handleLanguageChange = (newLang: CoverLetterLanguage) => {
+    setLanguage(newLang);
+    setStoredDocumentLanguage(newLang);
+    if (generatedLetter) {
+      setGeneratedLetter((prev) => (prev ? { ...prev, language: newLang } : null));
+      setIsDirty(true);
+    }
+  };
+
+  // Cancel in-flight generation
+  const handleCancelGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsGenerating(false);
+    setActiveView('input');
+    setMobileTab('form');
+    showToast(
+      isAr ? 'تم إلغاء التوليد والعودة للنموذج' : 'Generation cancelled by user'
+    );
+  };
+
+  // Generate Letter with optional job description support and AbortController
+  const handleGenerate = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (isGenerating || activeView === 'generating') return;
     setFormError(null);
+    setLastFailedPayload(null);
 
-    const hasDesc = jobDescription.trim().length >= 25;
-    const hasValidUrl = jobUrl.trim().startsWith('http://') || jobUrl.trim().startsWith('https://');
+    // Validate minimum required fields
+    if (!jobTitle.trim()) {
+      setFormError(isAr ? 'يرجى إدخال المسمى الوظيفي المستهدف.' : 'Please enter target job title.');
+      return;
+    }
 
-    if (!hasDesc && !hasValidUrl) {
-      setFormError(
-        language === 'ar'
-          ? 'يرجى إدخال وصف وظيفي (25 حرفاً على الأقل) أو توفير رابط إعلان وظيفي صحيح.'
-          : 'Please provide a detailed job description (at least 25 characters) or a valid job URL.'
-      );
+    if (!companyName.trim()) {
+      setFormError(isAr ? 'يرجى إدخال اسم الشركة.' : 'Please enter company name.');
       return;
     }
 
     if (!senderName.trim()) {
-      setFormError(language === 'ar' ? 'يرجى كتابة اسمك الكامل كمرسل للخطاب.' : 'Please enter your full name as sender.');
+      setFormError(isAr ? 'يرجى كتابة اسمك كمرسل للخطاب.' : 'Please enter your name as sender.');
       return;
     }
 
-    // Phone format validation if supplied
     if (senderPhone.trim()) {
       const phoneClean = senderPhone.trim();
       if (phoneClean.length > 40 || !/^[0-9+()\-.\s]{5,40}$/.test(phoneClean)) {
-        setFormError(language === 'ar' ? 'صيغة رقم الهاتف غير صالحة. يرجى إدخال رقم صحيح.' : 'Invalid phone number format.');
+        setFormError(isAr ? 'صيغة رقم الهاتف غير صالحة.' : 'Invalid phone number format.');
         return;
       }
     }
 
+    // Contextual description fallback if user left job description empty
+    const resolvedDescription = jobDescription.trim() || (
+      language === 'ar'
+        ? `الوظيفة المعلنة: ${jobTitle.trim()} في شركة ${companyName.trim()}. نبحث عن مرشح طموح ومتميز يمتلك الكفاءة والمهارات المناسبة للمساهمة في تحقيق أهداف المؤسسة وتطوير الأعمال.`
+        : `Target Position: ${jobTitle.trim()} at ${companyName.trim()}. Seeking an accomplished and driven professional with relevant skills, strong dedication, and problem-solving abilities to contribute to key team milestones and business growth.`
+    );
+
+    const payload = {
+      jobDescription: resolvedDescription,
+      jobUrl: jobUrl.trim() || undefined,
+      jobTitle: jobTitle.trim(),
+      companyName: companyName.trim(),
+      hiringManager: hiringManager.trim() || (isAr ? 'فريق التوظيف' : 'Hiring Team'),
+      tone,
+      language,
+      sender: {
+        fullName: senderName.trim(),
+        email: senderEmail.trim(),
+        phone: senderPhone.trim(),
+      },
+      resumeId: selectedResumeId || undefined,
+      customNotes: customNotes.trim() || undefined,
+      templateId,
+    };
+
     setIsGenerating(true);
     setActiveView('generating');
+    setMobileTab('preview');
     setGenerationStep(1);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     const stepTimer1 = setTimeout(() => setGenerationStep(2), 600);
     const stepTimer2 = setTimeout(() => setGenerationStep(3), 1300);
@@ -349,54 +448,77 @@ export default function CoverLetterPage() {
       const res = await fetch('/api/cover-letter/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobDescription: jobDescription.trim() || undefined,
-          jobUrl: jobUrl.trim() || undefined,
-          jobTitle: jobTitle.trim() || (language === 'ar' ? 'الوظيفة المعلنة' : 'Position'),
-          companyName: companyName.trim() || (language === 'ar' ? 'الشركة الموقرة' : 'the Company'),
-          hiringManager: hiringManager.trim() || (language === 'ar' ? 'فريق الموارد البشرية' : 'Hiring Team'),
-          tone,
-          language,
-          sender: {
-            fullName: senderName.trim(),
-            email: senderEmail.trim(),
-            phone: senderPhone.trim(),
-          },
-          resumeId: selectedResumeId || undefined,
-          customNotes: customNotes.trim() || undefined,
-          templateId,
-        }),
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
 
       const data = await res.json();
 
+      // Paywall / Credit Exhaustion Check (HTTP 402)
+      if (res.status === 402 || data.error === 'NO_CREDITS') {
+        trackCreditsExhausted();
+        setActiveView('input');
+        setMobileTab('form');
+        setShowUpgradeModal(true);
+        const creditErrorMsg = isAr
+          ? 'نفد رصيدك المجاني لتوليد الذكاء الاصطناعي (3/3). يرجى الترقية إلى باقة برو للاستمرار.'
+          : 'You have used all 3 free AI generation credits. Please upgrade to Pro for unlimited generations.';
+        setFormError(creditErrorMsg);
+        showToast(creditErrorMsg, 'error');
+        return;
+      }
+
       if (res.ok && data.success && data.coverLetter) {
+        trackAiGenerationUsed('cover_letter');
         setGeneratedLetter(data.coverLetter);
         setExtractedTags(data.extractedKeywords || data.coverLetter.extractedKeywords || []);
         setIsDirty(false);
         setActiveView('preview');
         setMobileTab('preview');
+        saveLocalBackup(data.coverLetter);
+
+        // Prepend to history
+        setHistoryLetters((prev) => [data.coverLetter, ...prev.filter((cl) => cl.id !== data.coverLetter.id)]);
+        setDraftsCount((prev) => prev + 1);
+
+        if (typeof refreshUser === 'function') {
+          refreshUser();
+        }
         showToast(
-          language === 'ar'
-            ? 'تم توليد خطاب التقديم المخصص بالذكاء الاصطناعي بنجاح!'
-            : 'Tailored cover letter generated successfully!'
+          isAr
+            ? 'تمت صياغة خطاب التقديم بنجاح'
+            : 'Cover letter generated successfully'
         );
       } else {
         setActiveView('input');
-        setFormError(data.error || (language === 'ar' ? 'حدث خطأ أثناء معالجة الطلب.' : 'Error generating cover letter.'));
-        showToast(data.error || (language === 'ar' ? 'تعذر توليد الخطاب، يرجى مراجعة المدخلات' : 'Generation failed'), 'error');
+        setMobileTab('form');
+        const errorMsg = data.error || (isAr ? 'حدث خطأ أثناء صياغة الخطاب.' : 'Error generating cover letter.');
+        setFormError(errorMsg);
+        setLastFailedPayload(payload);
+        showToast(errorMsg, 'error');
       }
     } catch (err: unknown) {
+      if ((err as Error)?.name === 'AbortError') {
+        // Generation was cancelled by user
+        return;
+      }
       setActiveView('input');
-      const msg = err instanceof Error ? err.message : (language === 'ar' ? 'حدث خطأ في الاتصال بالخادم.' : 'Server connection failed.');
+      setMobileTab('form');
+      const msg = err instanceof Error ? err.message : (isAr ? 'حدث خطأ في الاتصال بالخادم.' : 'Server connection failed.');
       setFormError(msg);
-      showToast(language === 'ar' ? 'فشل الاتصال بالخادم' : 'Server connection failed', 'error');
+      setLastFailedPayload(payload);
+      showToast(isAr ? 'فشل الاتصال بالخادم' : 'Server connection failed', 'error');
     } finally {
       clearTimeout(stepTimer1);
       clearTimeout(stepTimer2);
       clearTimeout(stepTimer3);
       setIsGenerating(false);
+      abortControllerRef.current = null;
     }
+  };
+
+  const handleRetry = () => {
+    handleGenerate();
   };
 
   const saveLocalBackup = (letter: CoverLetterData) => {
@@ -409,7 +531,7 @@ export default function CoverLetterPage() {
     } catch {}
   };
 
-  // Save to DB Drafts with Zero Data Loss Guarantee
+  // Save to DB Drafts
   const handleSaveDraft = async () => {
     if (!generatedLetter || isSaving) return;
     setIsSaving(true);
@@ -418,7 +540,6 @@ export default function CoverLetterPage() {
 
     try {
       if (hasServerId) {
-        // Update existing document via PATCH
         const res = await fetch(`/api/cover-letters/${generatedLetter.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -432,70 +553,50 @@ export default function CoverLetterPage() {
             content: generatedLetter.content,
             recipient: generatedLetter.recipient,
             sender: generatedLetter.sender,
-            status: 'saved',
           }),
         });
 
-        const data = await res.json();
-        if (res.ok && data.success) {
+        if (res.ok) {
           setIsDirty(false);
           saveLocalBackup(generatedLetter);
-          showToast(language === 'ar' ? 'تم تحديث مسودة الخطاب وحفظ التعديلات بنجاح!' : 'Draft updated successfully!');
+          showToast(isAr ? 'تم حفظ التعديلات بنجاح' : 'Changes saved successfully');
         } else {
           saveLocalBackup(generatedLetter);
-          showToast(data.error || (language === 'ar' ? 'تعذر التحديث سحابياً، وتم تأمين النسخة محلياً' : 'Saved locally as backup'), 'error');
+          setIsDirty(false);
+          showToast(isAr ? 'تم الحفظ في الذاكرة المحلية' : 'Saved to local cache');
         }
       } else {
-        // Create new document via POST
         const res = await fetch('/api/cover-letters', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(generatedLetter),
         });
 
-        const data = await res.json();
-        if (res.ok && data.success && data.coverLetter) {
-          const updated = { ...generatedLetter, id: data.coverLetter.id };
-          setGeneratedLetter(updated);
-          setDraftsCount((prev) => prev + 1);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.coverLetter?.id) {
+            setGeneratedLetter((prev) => (prev ? { ...prev, id: data.coverLetter.id } : null));
+          }
           setIsDirty(false);
-          saveLocalBackup(updated);
-          showToast(language === 'ar' ? 'تم حفظ مسودة الخطاب بنجاح في حسابك' : 'Cover letter draft saved successfully!');
+          saveLocalBackup(generatedLetter);
+          setDraftsCount((prev) => prev + 1);
+          loadHistory();
+          showToast(isAr ? 'تم حفظ المسودة في حسابك' : 'Draft saved to account');
         } else {
-          // Zero data loss fallback
-          const localId = generatedLetter.id || 'cl_local_' + Date.now();
-          const localDraft = { ...generatedLetter, id: localId };
-          setGeneratedLetter(localDraft);
-          saveLocalBackup(localDraft);
-          setDraftsCount((prev) => prev + 1);
+          saveLocalBackup(generatedLetter);
           setIsDirty(false);
-          showToast(
-            language === 'ar'
-              ? 'تم حفظ المسودة في الذاكرة المحلية بأمان (لم تفقد أي بيانات)'
-              : 'Draft safely saved locally (zero data loss)',
-            'success'
-          );
+          showToast(isAr ? 'تم حفظ المسودة محلياً' : 'Saved locally');
         }
       }
     } catch {
-      // Offline / Network Failure - Zero Data Loss Guarantee
-      const localId = generatedLetter.id || 'cl_local_' + Date.now();
-      const localDraft = { ...generatedLetter, id: localId };
-      setGeneratedLetter(localDraft);
-      saveLocalBackup(localDraft);
+      saveLocalBackup(generatedLetter);
       setIsDirty(false);
-      showToast(
-        language === 'ar'
-          ? 'تعذر الاتصال بالخادم، ولكن تم حفظ كامل مسودتك وتعديلاتك محلياً بأمان!'
-          : 'Network error: full draft saved locally with zero data loss!',
-        'success'
-      );
+      showToast(isAr ? 'تم حفظ المسودة محلياً' : 'Saved locally');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Reset form or start new letter
   const handleResetRequest = () => {
     if (isDirty) {
       setShowResetConfirm(true);
@@ -516,13 +617,14 @@ export default function CoverLetterPage() {
     setExtractedTags([]);
     setCustomNotes('');
     setFormError(null);
+    setLastFailedPayload(null);
     try {
       localStorage.removeItem('jobmatch_cover_letter_form_cache');
     } catch {}
-    showToast(language === 'ar' ? 'تمت إعادة ضبط النموذج لكتابة خطاب جديد' : 'Form reset for new letter');
+    showToast(isAr ? 'تمت إعادة ضبط النموذج' : 'Form reset');
   };
 
-  const handleSelectSavedDraft = async (draft: CoverLetterData) => {
+  const handleSelectHistoryLetter = async (draft: CoverLetterData) => {
     let fullDraft = draft;
     if (!draft.content?.fullText && draft.id && !draft.id.startsWith('cl_local_')) {
       try {
@@ -551,17 +653,38 @@ export default function CoverLetterPage() {
     }
     setActiveView('preview');
     setMobileTab('preview');
+    showToast(isAr ? 'تم فتح خطاب التقديم للتعديل' : 'Opened cover letter for editing');
   };
 
-  const handleDraftDeleted = (deletedId: string) => {
-    setDraftsCount((prev) => Math.max(0, prev - 1));
-    if (generatedLetter && generatedLetter.id === deletedId) {
-      setGeneratedLetter((prev) => (prev ? { ...prev, id: undefined } : null));
+  const handleDeleteHistoryLetter = async (id: string) => {
+    try {
+      const res = await fetch(`/api/cover-letters/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setHistoryLetters((prev) => prev.filter((cl) => cl.id !== id));
+        setDraftsCount((prev) => Math.max(0, prev - 1));
+        if (generatedLetter && generatedLetter.id === id) {
+          setGeneratedLetter((prev) => (prev ? { ...prev, id: undefined } : null));
+        }
+        showToast(isAr ? 'تم حذف خطاب التقديم' : 'Cover letter deleted');
+      } else {
+        const local = JSON.parse(localStorage.getItem('jobmatch_cover_letters') || '[]');
+        const updated = local.filter((d: { id?: string }) => d.id !== id);
+        localStorage.setItem('jobmatch_cover_letters', JSON.stringify(updated));
+        setHistoryLetters((prev) => prev.filter((cl) => cl.id !== id));
+        setDraftsCount((prev) => Math.max(0, prev - 1));
+        showToast(isAr ? 'تم حذف خطاب التقديم' : 'Cover letter deleted');
+      }
+    } catch {
+      showToast(isAr ? 'حدث خطأ أثناء حذف الخطاب' : 'Failed to delete cover letter', 'error');
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-950">
+    <div
+      dir={isRtl ? 'rtl' : 'ltr'}
+      lang={uiLang}
+      className="min-h-screen bg-paper text-ink flex flex-col selection:bg-accent-soft selection:text-accent"
+    >
       <Navbar />
 
       {/* Floating Notification Toast */}
@@ -569,133 +692,163 @@ export default function CoverLetterPage() {
         <div
           role="status"
           aria-live="polite"
-          className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl shadow-2xl border text-xs font-bold transition-all flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300 ${
+          className={`fixed top-20 start-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-[8px] shadow-sm border text-xs font-medium transition-all flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200 ${
             notification.type === 'error'
-              ? 'bg-red-500/90 text-white border-red-400'
-              : 'bg-emerald-600/95 text-white border-emerald-400'
+              ? 'bg-rose-500/10 text-rose-500 border-rose-500/30'
+              : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
           }`}
         >
-          {notification.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <FileCheck className="w-4 h-4 shrink-0" />}
+          {notification.type === 'error' ? (
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" strokeWidth={1.5} />
+          ) : (
+            <FileCheck className="w-4 h-4 shrink-0 text-emerald-500" strokeWidth={1.5} />
+          )}
           <span>{notification.message}</span>
         </div>
       )}
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Header Hero Component */}
+      <main id="main-content" className="flex-1 max-w-[1160px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <Breadcrumbs
+          items={[{ label: t('nav_cover_letter') }]}
+          title={t('cover_page_title')}
+          description={t('feature_cover_desc')}
+        />
+
         <CoverLetterHero
           onOpenDrafts={() => setIsDraftsModalOpen(true)}
           draftsCount={draftsCount}
+          language={language}
         />
 
-        {/* Mobile Navigation Tabs (Form vs Preview) */}
-        <div className="lg:hidden flex items-center p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+        {/* Mobile Navigation Tabs */}
+        <div className="lg:hidden flex items-center p-1 bg-surface-2 border border-line rounded-[8px]">
           <button
             type="button"
             onClick={() => setMobileTab('form')}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              mobileTab === 'form' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+            className={`flex-1 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+              mobileTab === 'form' ? 'bg-surface text-ink shadow-xs font-semibold' : 'text-ink-2'
             }`}
           >
-            بيانات الإعلان والتقديم 📝
+            <FileText className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <span>{t('cover_mode_text')}</span>
           </button>
           <button
             type="button"
             onClick={() => setMobileTab('preview')}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              mobileTab === 'preview' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+            className={`flex-1 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+              mobileTab === 'preview' ? 'bg-surface text-ink shadow-xs font-semibold' : 'text-ink-2'
             }`}
           >
-            معاينة الخطاب 📄 {generatedLetter && '✓'}
+            <Eye className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <span>{t('feature_builder_card_preview')}</span>
+            {generatedLetter && <span className="text-[10px] text-accent">●</span>}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('history')}
+            className={`flex-1 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+              mobileTab === 'history' ? 'bg-surface text-ink shadow-xs font-semibold' : 'text-ink-2'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <span>{t('cover_saved_drafts')}</span>
+            {historyLetters.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-accent-soft text-accent font-mono">
+                {historyLetters.length}
+              </span>
+            )}
           </button>
         </div>
 
-        {/* Split View Grid: Form (Left) & Preview (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Two-Column Grid: Form (Left) & Preview (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* LEFT COLUMN: Input Form */}
           <div
             className={`lg:col-span-5 space-y-5 ${
-              mobileTab === 'preview' ? 'hidden lg:block' : 'block'
+              mobileTab !== 'form' ? 'hidden lg:block' : 'block'
             }`}
           >
-            <form onSubmit={handleGenerate} className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 sm:p-6 backdrop-blur-sm shadow-xl space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <Sliders className="w-4 h-4 text-amber-400" />
-                  <span>تخصيص متطلبات الخطاب</span>
+            <form onSubmit={handleGenerate} className="bg-surface border border-line rounded-[12px] p-5 sm:p-6 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-line pb-3">
+                <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-accent" strokeWidth={1.5} />
+                  <span>{t('cover_job_title')}</span>
                 </span>
                 {generatedLetter && (
                   <button
                     type="button"
                     onClick={handleResetRequest}
                     disabled={isGenerating}
-                    className="text-[11px] text-slate-400 hover:text-amber-400 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                    className="text-[11px] text-ink-3 hover:text-ink flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>خطاب جديد</span>
+                    <RotateCcw className="w-3 h-3" strokeWidth={1.5} />
+                    <span>{t('cover_reset_btn')}</span>
                   </button>
                 )}
               </div>
 
-              {/* Form Error Alert */}
+              {/* Friendly Error Alert with Instant Retry */}
               {formError && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-start gap-2 animate-in fade-in duration-200">
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                  <span className="leading-relaxed">{formError}</span>
+                <div className="p-3.5 rounded-[8px] bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex flex-col space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" strokeWidth={1.5} />
+                      <span className="leading-relaxed font-medium">{formError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormError(null)}
+                      className="text-rose-400 hover:text-rose-600 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {lastFailedPayload && (
+                    <div className="pt-1 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleRetry}
+                        className="px-3 py-1.5 rounded-[6px] bg-rose-500 text-white font-medium text-xs hover:bg-rose-600 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>{isAr ? 'إعادة المحاولة الآن' : 'Retry Generation'}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Resume Selector (if user has saved resumes) */}
+              {/* Resume Selector */}
               {savedResumes.length > 0 && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
-                    <span>اختر سيرة ذاتية لربط المهارات تلقائياً:</span>
-                    <span className="text-[10px] text-cyan-400">تعبئة ذكية ومطابقة</span>
+                  <label className="block text-xs font-semibold text-ink mb-1 flex items-center justify-between">
+                    <span>{isAr ? 'ربط المهارات من سيرة ذاتية محفوظة:' : 'Link with a saved resume:'}</span>
+                    <span className="text-[11px] text-accent font-normal">{isAr ? 'مطابقة تلقائية' : 'Auto-match'}</span>
                   </label>
                   <select
                     value={selectedResumeId}
                     onChange={(e) => handleResumeSelectChange(e.target.value)}
                     disabled={isGenerating}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-400 disabled:opacity-50"
+                    className="w-full px-3 py-2 rounded-[6px] bg-paper border border-line text-xs sm:text-sm text-ink focus:outline-none focus:border-accent disabled:opacity-50"
                   >
                     {savedResumes.map((r) => (
                       <option key={r.id} value={r.id}>
-                        📄 {r.title || 'سيرة ذاتية'} ({r.templateId})
+                        {r.title || (isAr ? 'سيرة ذاتية' : 'Resume')} ({r.templateId})
                       </option>
                     ))}
                   </select>
                 </div>
               )}
 
-              {/* Company & Job Title */}
+              {/* Job Title & Company */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
-                    <span>اسم الشركة / الجهة *</span>
-                    <span className="text-[10px] text-slate-500">{companyName.length}/120</span>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    {t('cover_job_title')} *
                   </label>
                   <div className="relative">
-                    <Building className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      required
-                      maxLength={120}
-                      value={companyName}
-                      disabled={isGenerating}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="مثال: Google, أرامكو"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-400 disabled:opacity-50"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
-                    <span>المسمى الوظيفي المستهدف *</span>
-                    <span className="text-[10px] text-slate-500">{jobTitle.length}/120</span>
-                  </label>
-                  <div className="relative">
-                    <Briefcase className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Briefcase className="w-3.5 h-3.5 text-ink-3 absolute start-3 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
                     <input
                       type="text"
                       required
@@ -703,118 +856,142 @@ export default function CoverLetterPage() {
                       value={jobTitle}
                       disabled={isGenerating}
                       onChange={(e) => setJobTitle(e.target.value)}
-                      placeholder="مثال: مهندس برمجيات، مدير مبيعات"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-400 disabled:opacity-50"
+                      placeholder={t('cover_job_title')}
+                      className="w-full ps-9 pe-3 py-2 rounded-[6px] bg-paper border border-line text-xs sm:text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    {t('cover_company_name')} *
+                  </label>
+                  <div className="relative">
+                    <Building className="w-3.5 h-3.5 text-ink-3 absolute start-3 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
+                    <input
+                      type="text"
+                      required
+                      maxLength={120}
+                      value={companyName}
+                      disabled={isGenerating}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder={t('cover_company_name')}
+                      className="w-full ps-9 pe-3 py-2 rounded-[6px] bg-paper border border-line text-xs sm:text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent disabled:opacity-50"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Language & Template Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1">
-                    <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>لغة الخطاب</span>
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                    {LANGUAGE_OPTIONS.map((lang) => (
+              {/* Output Language Selector (6 Languages) */}
+              <div>
+                <label className="block text-xs font-semibold text-ink mb-1.5 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-accent" strokeWidth={1.5} />
+                    <span>{t('cover_target_doc_language')}</span>
+                  </div>
+                  <span className="text-[11px] text-ink-3">
+                    {language === 'ar' ? 'RTL • العربية' : 'LTR'}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {DOCUMENT_LANGUAGE_OPTIONS.map((opt) => {
+                    const isSelected = language === opt.id;
+                    return (
                       <button
-                        key={lang.id}
+                        key={opt.id}
                         type="button"
                         disabled={isGenerating}
-                        onClick={() => setLanguage(lang.id)}
-                        className={`py-1.5 px-2 text-xs font-bold rounded-lg border transition-all cursor-pointer disabled:opacity-50 truncate ${
-                          language === lang.id
-                            ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                            : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                        onClick={() => handleLanguageChange(opt.id as CoverLetterLanguage)}
+                        className={`py-2 px-2.5 text-xs font-medium rounded-[8px] border transition-all cursor-pointer disabled:opacity-50 flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-accent text-white border-accent shadow-xs font-semibold'
+                            : 'bg-surface border-line text-ink-2 hover:bg-surface-2'
                         }`}
                       >
-                        {lang.label}
+                        <span>{opt.nativeName}</span>
+                        <span
+                          className={`text-[10px] font-mono uppercase px-1 rounded ${
+                            isSelected ? 'bg-white/20 text-white' : 'bg-surface-2 text-ink-3'
+                          }`}
+                        >
+                          {opt.code}
+                        </span>
                       </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1">
-                    <Layout className="w-3.5 h-3.5 text-amber-400" />
-                    <span>تنسيق القالب الموازي للسيرة</span>
-                  </label>
-                  <select
-                    value={templateId}
-                    disabled={isGenerating}
-                    onChange={(e) => setTemplateId(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-white focus:outline-none focus:border-amber-400 disabled:opacity-50"
-                  >
-                    {TEMPLATE_PRESETS.map((tp) => (
-                      <option key={tp.id} value={tp.id}>
-                        {language === 'ar' ? tp.labelAr : tp.labelEn}
-                      </option>
-                    ))}
-                  </select>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Tone Selection Component */}
+              {/* Tone Selection Component (Professional / Friendly / Confident) */}
               <ToneCardSelector
                 selectedTone={tone}
                 onChange={setTone}
                 language={language}
               />
 
-              {/* Mode Toggle: Direct Text vs URL Extraction vs File Upload */}
+              {/* Job Description (Optional) with Text, URL, or File Input */}
               <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center p-0.5 bg-slate-800/80 rounded-xl border border-slate-700/80">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                      <span>{t('upload_job_desc_label')}</span>
+                      <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-surface-2 text-ink-3 border border-line">
+                        {isAr ? 'اختياري' : 'optional'}
+                      </span>
+                    </label>
+                    <p className="text-[10px] text-ink-3 mt-0.5">
+                      {isAr
+                        ? 'في حال عدم توفره، يصاغ الخطاب تلقائياً بناءً على المسمى والشركة'
+                        : 'Optional — AI crafts tailored letter from title & company if blank'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center p-0.5 bg-surface-2 rounded-[6px] border border-line">
                     <button
                       type="button"
                       disabled={isGenerating}
                       onClick={() => setInputMode('text')}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer disabled:opacity-50 ${
+                      className={`px-2 py-0.5 text-xs font-medium rounded-[4px] transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50 ${
                         inputMode === 'text'
-                          ? 'bg-amber-500 text-slate-950 font-bold'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-surface text-ink shadow-xs font-semibold'
+                          : 'text-ink-2 hover:text-ink'
                       }`}
                     >
-                      نص الإعلان 📄
+                      <FileText className="w-3 h-3" strokeWidth={1.5} />
+                      <span>{t('cover_mode_text')}</span>
                     </button>
                     <button
                       type="button"
                       disabled={isGenerating}
                       onClick={() => setInputMode('url')}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 ${
+                      className={`px-2 py-0.5 text-xs font-medium rounded-[4px] transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50 ${
                         inputMode === 'url'
-                          ? 'bg-amber-500 text-slate-950 font-bold'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-surface text-ink shadow-xs font-semibold'
+                          : 'text-ink-2 hover:text-ink'
                       }`}
                     >
-                      <Link2 className="w-3 h-3" />
-                      <span>رابط 🔗</span>
+                      <Link2 className="w-3 h-3" strokeWidth={1.5} />
+                      <span>{t('cover_mode_url')}</span>
                     </button>
                     <button
                       type="button"
                       disabled={isGenerating}
                       onClick={() => setInputMode('file')}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 ${
+                      className={`px-2 py-0.5 text-xs font-medium rounded-[4px] transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50 ${
                         inputMode === 'file'
-                          ? 'bg-amber-500 text-slate-950 font-bold'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-surface text-ink shadow-xs font-semibold'
+                          : 'text-ink-2 hover:text-ink'
                       }`}
                     >
-                      <Upload className="w-3 h-3" />
-                      <span>ملف 📁</span>
+                      <Upload className="w-3 h-3" strokeWidth={1.5} />
+                      <span>{t('cover_mode_file')}</span>
                     </button>
                   </div>
-
-                  <span className="text-[10px] text-slate-400">
-                    {jobDescription.length > 0 && `${jobDescription.length} حرف`}
-                  </span>
                 </div>
 
                 {/* File Upload Mode */}
                 {inputMode === 'file' ? (
-                  <div className="p-4 bg-slate-950/70 border-2 border-dashed border-slate-700/80 rounded-2xl text-center space-y-2 hover:border-amber-400/50 transition-colors">
+                  <div className="p-4 bg-surface-2/60 border border-dashed border-line-strong rounded-[8px] text-center space-y-2 hover:border-accent transition-colors">
                     <label className="cursor-pointer block space-y-2">
                       <input
                         type="file"
@@ -823,34 +1000,36 @@ export default function CoverLetterPage() {
                         disabled={isExtractingFile || isGenerating}
                         className="hidden"
                       />
-                      <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 mx-auto flex items-center justify-center text-amber-400">
-                        {isExtractingFile ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                      <div className="w-9 h-9 rounded-[6px] bg-surface border border-line mx-auto flex items-center justify-center text-accent">
+                        {isExtractingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" strokeWidth={1.5} />}
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white">
-                          {isExtractingFile ? 'جاري قراءة محتوى الملف...' : 'اضغط لاختيار ملف الإعلان الوظيفي'}
+                        <p className="text-xs font-medium text-ink">
+                          {isExtractingFile
+                            ? (isAr ? 'جاري قراءة محتوى الملف...' : 'Extracting file content...')
+                            : (isAr ? 'اختر ملف الإعلان الوظيفي' : 'Select job posting document')}
                         </p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
-                          يدعم ملفات PDF و TXT و DOCX حتى 5 ميجابايت
+                        <p className="text-[11px] text-ink-3 mt-0.5">
+                          {isAr ? 'يدعم PDF و TXT و DOCX حتى 5 ميجابايت' : 'PDF, TXT, DOCX up to 5MB'}
                         </p>
                       </div>
                     </label>
                     {uploadedFileName && (
-                      <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between">
+                      <div className="p-2 rounded-[6px] bg-surface border border-line text-ink-2 text-xs flex items-center justify-between">
                         <span className="truncate flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5" />
+                          <FileText className="w-3.5 h-3.5 text-accent" strokeWidth={1.5} />
                           <span>{uploadedFileName}</span>
                         </span>
-                        <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> تم الاستخراج
+                        <span className="text-[11px] text-accent font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" strokeWidth={1.5} /> {isAr ? 'تم الاستخراج' : 'Ready'}
                         </span>
                       </div>
                     )}
                   </div>
                 ) : inputMode === 'url' ? (
-                  <div className="space-y-2 p-3 bg-slate-950/70 border border-slate-800 rounded-2xl">
-                    <label className="block text-xs font-semibold text-slate-300">
-                      رابط صفحة الوظيفة (LinkedIn, Indeed, موقع التوظيف):
+                  <div className="space-y-2 p-3 bg-surface-2/40 border border-line rounded-[8px]">
+                    <label className="block text-xs font-medium text-ink-2">
+                      {isAr ? 'رابط الوظيفة:' : 'Job posting URL:'}
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -858,64 +1037,41 @@ export default function CoverLetterPage() {
                         value={jobUrl}
                         disabled={isExtractingUrl || isGenerating}
                         onChange={(e) => setJobUrl(e.target.value)}
-                        placeholder="https://example.com/careers/job-123"
-                        className="flex-1 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-400 disabled:opacity-50"
+                        placeholder="https://company.com/careers/role"
+                        className="flex-1 px-3 py-1.5 rounded-[6px] bg-paper border border-line text-xs sm:text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent disabled:opacity-50"
                       />
                       <button
                         type="button"
                         onClick={handleExtractFromUrl}
                         disabled={isExtractingUrl || isGenerating || !jobUrl.trim()}
-                        className="px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0 cursor-pointer flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-[6px] bg-accent hover:bg-accent-hover text-white text-xs font-medium transition-colors disabled:opacity-50 shrink-0 cursor-pointer flex items-center gap-1.5"
                       >
-                        {isExtractingUrl && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                        <span>{isExtractingUrl ? 'جاري السحب...' : 'استخراج ذكي'}</span>
+                        {isExtractingUrl && <Loader2 className="w-3 h-3 animate-spin" />}
+                        <span>{isExtractingUrl ? (isAr ? 'جلب...' : 'Fetching...') : (isAr ? 'استخراج' : 'Extract')}</span>
                       </button>
                     </div>
-                    {extractedTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        <span className="text-[10px] text-cyan-300 font-semibold block w-full">الكلمات المستخرجة:</span>
-                        {extractedTags.map((t, idx) => (
-                          <span key={idx} className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-[10px]">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <textarea
-                    rows={5}
+                    rows={4}
                     value={jobDescription}
                     disabled={isGenerating}
                     maxLength={35000}
                     onChange={(e) => setJobDescription(e.target.value)}
-                    placeholder="الصق هنا نص الإعلان الوظيفي أو المتطلبات والمسؤوليات المطلوبة..."
-                    className="w-full p-3 rounded-2xl bg-slate-800/90 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-400 leading-relaxed resize-none placeholder-slate-500 disabled:opacity-50"
+                    placeholder={
+                      isAr
+                        ? 'الصق متطلبات وشروط الوظيفة هنا إن وجدت لتحسين دقة الخطاب (اختياري)...'
+                        : 'Paste job requirements or qualifications here for higher accuracy (optional)...'
+                    }
+                    className="w-full p-3 rounded-[6px] bg-paper border border-line text-xs sm:text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent leading-relaxed resize-none disabled:opacity-50"
                   />
                 )}
               </div>
 
-              {/* Custom Notes (Optional) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
-                  <span>ملاحظات أو تركيز إضافي ترغب بتضمينه (اختياري)</span>
-                  <span className="text-[10px] text-slate-500">{customNotes.length}/500</span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={500}
-                  value={customNotes}
-                  disabled={isGenerating}
-                  onChange={(e) => setCustomNotes(e.target.value)}
-                  placeholder="مثال: ركز على خبرتي في إدارة المشاريع السحابية والانتقال بين الفرق"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800/70 border border-slate-700 text-xs text-white focus:outline-none focus:border-amber-400 disabled:opacity-50"
-                />
-              </div>
-
-              {/* Sender Info Accordion */}
-              <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80 space-y-2.5">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                  بيانات المرسل (أنت)
+              {/* Sender Details */}
+              <div className="p-3 bg-surface-2/40 rounded-[8px] border border-line space-y-2">
+                <span className="text-[11px] font-semibold text-ink-2 block">
+                  {t('cover_sender_info')}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <input
@@ -925,123 +1081,160 @@ export default function CoverLetterPage() {
                     value={senderName}
                     disabled={isGenerating}
                     onChange={(e) => setSenderName(e.target.value)}
-                    placeholder="اسمك الكامل"
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white disabled:opacity-50"
+                    placeholder={`${t('cover_sender_name')} *`}
+                    className="px-2.5 py-1.5 rounded-[6px] bg-paper border border-line text-xs text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent disabled:opacity-50"
                   />
                   <input
                     type="email"
                     value={senderEmail}
                     disabled={isGenerating}
                     onChange={(e) => setSenderEmail(e.target.value)}
-                    placeholder="بريدك الإلكتروني"
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white disabled:opacity-50"
+                    placeholder={t('cover_sender_email')}
+                    className="px-2.5 py-1.5 rounded-[6px] bg-paper border border-line text-xs text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent disabled:opacity-50"
                   />
                   <input
                     type="tel"
                     value={senderPhone}
                     disabled={isGenerating}
                     onChange={(e) => setSenderPhone(e.target.value)}
-                    placeholder="رقم هاتفك"
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white disabled:opacity-50"
+                    placeholder={t('cover_sender_phone')}
+                    className="px-2.5 py-1.5 rounded-[6px] bg-paper border border-line text-xs text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent disabled:opacity-50"
                   />
                 </div>
               </div>
 
-              {/* Submit Generate Button */}
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isGenerating || activeView === 'generating'}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-sm shadow-xl shadow-orange-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2.5 rounded-[8px] bg-accent hover:bg-accent-hover text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-accent"
               >
                 {isGenerating || activeView === 'generating' ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                    <span>{language === 'ar' ? 'جاري التحليل والتوليد الذكي...' : 'Analyzing & Generating...'}</span>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>{t('upload_submitting_btn')}</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 text-slate-950" />
-                    <span>{language === 'ar' ? 'توليد خطاب التقديم بالذكاء الاصطناعي' : 'Generate AI Cover Letter'}</span>
+                    <Sparkles className="w-4 h-4 text-white" />
+                    <span>{t('cover_generate_btn')}</span>
                   </>
                 )}
               </button>
             </form>
           </div>
 
-          {/* RIGHT COLUMN: Preview & Interactive Letter State */}
+          {/* RIGHT COLUMN: Preview & Interactive Letter Sheet */}
           <div
-            className={`lg:col-span-7 space-y-4 ${
+            className={`lg:col-span-7 space-y-4 lg:sticky lg:top-20 ${
               mobileTab === 'form' ? 'hidden lg:block' : 'block'
             }`}
           >
-            {/* GENERATING STATE */}
+            {/* GENERATING STATE with Cancel Action */}
             {activeView === 'generating' && (
               <GeneratingStepper
                 currentStep={generationStep}
                 language={language}
                 tone={tone}
+                onCancel={handleCancelGeneration}
               />
             )}
 
             {/* EMPTY STATE */}
             {activeView === 'input' && !generatedLetter && (
-              <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-8 sm:p-12 text-center backdrop-blur-sm min-h-[480px] flex flex-col items-center justify-center space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-500">
-                  <Sparkles className="w-8 h-8 text-amber-400/60" />
+              <div className="bg-surface border border-dashed border-line-strong rounded-[12px] p-8 sm:p-14 text-center min-h-[460px] flex flex-col items-center justify-center space-y-4 shadow-xs">
+                <div className="w-14 h-14 rounded-[10px] bg-surface-2 border border-line flex items-center justify-center text-ink-3">
+                  <FileText className="w-7 h-7 text-accent" strokeWidth={1.5} />
                 </div>
                 <div className="space-y-1.5 max-w-sm">
-                  <h3 className="text-base font-bold text-white">الخطاب المخصص سيظهر هنا</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    أدخل بيانات الوظيفة والشركة على اليمين واضغط على زر التوليد لصياغة خطاب متناسق تماماً مع اشتراطات الوظيفة.
+                  <h3 className="text-lg font-serif font-semibold text-ink">
+                    {isAr ? 'معاينة الخطاب التفاعلية' : 'Interactive Letter Preview'}
+                  </h3>
+                  <p className="text-xs text-ink-2 leading-relaxed">
+                    {isAr
+                      ? 'املأ بيانات المسمى والشركة واضغط على زر الصياغة. ستتمكن من تعديل النص مباشرة وتصديره إلى Word و PDF.'
+                      : 'Fill in the job title and company on the left. Your tailored cover letter renders here on a clean printable sheet with live editing.'}
                   </p>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs text-slate-400 pt-2">
-                  <span className="p-2 rounded-xl bg-slate-800/60 border border-slate-800">🎯 مطابقة كلمات مفتاحية</span>
-                  <span className="p-2 rounded-xl bg-slate-800/60 border border-slate-800">🌐 عربي وإنجليزي</span>
-                  <span className="p-2 rounded-xl bg-slate-800/60 border border-slate-800">📄 تصدير PDF مباشر</span>
                 </div>
               </div>
             )}
 
-            {/* PREVIEW / SUCCESS STATE */}
+            {/* PREVIEW STATE with Live Edit, Word Download, PDF Print, and Regenerate */}
             {(activeView === 'preview' || generatedLetter) && generatedLetter && (
               <CoverLetterPreview
                 coverLetter={generatedLetter}
                 onUpdate={(updated) => {
                   setGeneratedLetter(updated);
+                  if (updated.language && updated.language !== language) {
+                    setLanguage(updated.language);
+                  }
                   setIsDirty(true);
                 }}
                 onSaveDraft={handleSaveDraft}
                 isSaving={isSaving}
                 isDirty={isDirty}
                 onResetRequest={handleResetRequest}
+                onRegenerate={() => handleGenerate()}
+                isRegenerating={isGenerating}
                 showToast={showToast}
               />
             )}
           </div>
         </div>
+
+        {/* BOTTOM SECTION: Cover Letter History with Search and Delete Confirmation */}
+        <div className={`pt-4 ${mobileTab === 'history' ? 'block' : 'block'}`}>
+          <CoverLetterHistory
+            coverLetters={historyLetters}
+            isLoading={isLoadingHistory}
+            onSelect={handleSelectHistoryLetter}
+            onDelete={handleDeleteHistoryLetter}
+            isAr={isAr}
+            activeId={generatedLetter?.id}
+            onRefresh={loadHistory}
+          />
+        </div>
       </main>
 
-      {/* Saved Drafts Modal */}
+      {/* Saved Drafts Modal (Alternative modal entry) */}
       <SavedDraftsModal
         isOpen={isDraftsModalOpen}
         onClose={() => setIsDraftsModalOpen(false)}
-        onSelectDraft={handleSelectSavedDraft}
-        onDraftDeleted={handleDraftDeleted}
+        onSelectDraft={handleSelectHistoryLetter}
+        onDraftDeleted={(deletedId) => {
+          setDraftsCount((prev) => Math.max(0, prev - 1));
+          setHistoryLetters((prev) => prev.filter((cl) => cl.id !== deletedId));
+          if (generatedLetter && generatedLetter.id === deletedId) {
+            setGeneratedLetter((prev) => (prev ? { ...prev, id: undefined } : null));
+          }
+        }}
         showToast={showToast}
       />
 
       {/* Confirmation Dialog for Resetting with Unsaved Changes */}
       <ConfirmModal
         isOpen={showResetConfirm}
-        title="تجاهل التعديلات والبدء من جديد؟"
-        message="لديك تعديلات حالية على خطاب التقديم لم يتم حفظها كمسودة. إذا تابعت، سيتم مسح التعديلات غير المحفوظة والعودة لنموذج الإدخال."
-        confirmText="نعم، ابدأ من جديد"
-        cancelText="العودة للحفظ"
+        title={isAr ? 'تجاهل التعديلات؟' : 'Discard unsaved changes?'}
+        message={
+          isAr
+            ? 'لديك تعديلات على خطاب التقديم الحالي لم يتم حفظها. إذا تابعت، سيتم فقدها والعودة إلى النموذج.'
+            : 'You have unsaved edits in this cover letter. Starting a new letter will discard them.'
+        }
+        confirmText={isAr ? 'بدء جديد' : 'Discard & start new'}
+        cancelText={isAr ? 'البقاء في التعديل' : 'Keep editing'}
         variant="warning"
         onConfirm={executeReset}
         onCancel={() => setShowResetConfirm(false)}
       />
+
+      {/* Upgrade Modal for Exhausted Credits (HTTP 402 Paywall) */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        language={language}
+      />
+
+      <Footer />
     </div>
   );
 }

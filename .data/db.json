@@ -7,7 +7,30 @@
       "password": "$2a$10$wT8m9aHn9q6XqZvZl0lPbe4E7mO8QGqVw1jG6w6rD7eF9tY1yM8aW",
       "role": "admin",
       "createdAt": "2026-10-09T12:27:52.488Z",
-      "updatedAt": "2026-10-23T12:27:52.488Z"
+      "updatedAt": "2026-10-26T15:04:04.424Z",
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": ""
+    },
+    {
+      "id": "usr_002",
+      "name": "Sarah Jenkins",
+      "email": "sarah.jenkins@example.com",
+      "password": "$2b$10$sF3s9v3qd8JCQImmZJ0ST.Qhla89vTJiLd0GyuMAqoDAcrhS5J0M2",
+      "role": "user",
+      "createdAt": "2026-10-23T17:30:25.261Z",
+      "updatedAt": "2026-10-27T09:10:14.221Z",
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": ""
     },
     {
       "id": "usr_mvl8wx9p0rt4",
@@ -16,7 +39,14 @@
       "password": "$2b$10$sF3s9v3qd8JCQImmZJ0ST.Qhla89vTJiLd0GyuMAqoDAcrhS5J0M2",
       "role": "user",
       "createdAt": "2026-10-23T17:30:25.261Z",
-      "updatedAt": "2026-10-23T17:30:25.261Z"
+      "updatedAt": "2026-10-26T15:04:04.425Z",
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": ""
     },
     {
       "id": "usr_mvl8x5ln2e6f",
@@ -25,7 +55,14 @@
       "password": "$2b$10$p/n0CjIaLr2U5iI5CE/gheAFvBUH7mgwuDu.m5A9s.7UolaLa0Af6",
       "role": "user",
       "createdAt": "2026-10-23T17:30:36.059Z",
-      "updatedAt": "2026-10-23T17:30:36.059Z"
+      "updatedAt": "2026-10-26T15:04:04.426Z",
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": ""
     },
     {
       "id": "usr_mvl8xqfs4xbj",
@@ -34,12 +71,1920 @@
       "password": "$2b$10$M7uQG7P8Ano4PRBSFCh4Z.9b0aELo9Ndrp0ypqViqc6qGVvKuPW/2",
       "role": "user",
       "createdAt": "2026-10-23T17:31:03.064Z",
-      "updatedAt": "2026-10-23T17:31:03.064Z"
+      "updatedAt": "2026-10-26T15:04:04.426Z",
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": ""
+    },
+    {
+      "id": "usr_mvpabfxqsnc5",
+      "name": "Alex Rivera (Demo)",
+      "email": "demo@jobmatch.ai",
+      "password": "$2b$10$xY63EGOqgJ32/1K9bZOsKuoPCT0Bs77YI77nsITRbT8KqvNZ/.16a",
+      "role": "user",
+      "isDemo": true,
+      "createdAt": "2026-10-26T13:20:46.958Z",
+      "updatedAt": "2026-10-26T15:04:04.426Z",
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": ""
+    },
+    {
+      "id": "usr_mvpfcxu38wps",
+      "name": "Payment Tester",
+      "email": "pay_test_1793029306846@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-25T15:41:54.893Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-26T15:41:54.891Z",
+      "updatedAt": "2026-10-26T15:41:54.932Z"
+    },
+    {
+      "id": "usr_mvpfsfa97gay",
+      "name": "Reset Tester",
+      "email": "email_test_1793030029010@example.com",
+      "password": "$2b$10$owmc6oy/Jl4j36Gasq3fkeZDH28awd9W310wzPd5l5sgY.6Pu2I/K",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-26T15:53:57.345Z",
+      "updatedAt": "2026-10-26T15:53:57.888Z",
+      "resetPasswordToken": "0d64eb2c7b7d395ee992518261475dda85d098ce0333647047bd076adae1403c",
+      "resetPasswordExpires": "2026-10-26T15:52:57.887Z"
+    },
+    {
+      "id": "usr_mvpft9bgkcwf",
+      "name": "API Tester",
+      "email": "api_user_1793030067978@test.com",
+      "password": "$2b$10$Kk4.uqIWru2/Z3arrQ8w4us0AqVK/2bVUC1yvesU1L.fXWdinlmv.",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-26T15:54:36.268Z",
+      "updatedAt": "2026-10-26T15:54:36.720Z"
+    },
+    {
+      "id": "usr_mvqfr4d92hp0",
+      "name": "Beta Pioneer",
+      "email": "beta_user_1793090434405@jobmatch.ai",
+      "password": "$2b$10$nUCh0ce2vO9u.ONER6Jnr.BzpMw0Jxr8zwp8lcSfkiJDxrmeTpzfS",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T08:40:42.717Z",
+      "updatedAt": "2026-10-27T08:40:42.717Z"
+    },
+    {
+      "id": "usr_mvqfsda4qe1q",
+      "name": "Beta Pioneer",
+      "email": "beta_user_1793090492616@jobmatch.ai",
+      "password": "$2b$10$T8TBPGBimNGLyXhqBnkz/.2IgAVyeq87RtSmr.Qim0BzQQlqDMCx.",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T08:41:40.924Z",
+      "updatedAt": "2026-10-27T08:41:40.924Z"
+    },
+    {
+      "id": "usr_mvqftjsjuimy",
+      "name": "Beta Pioneer",
+      "email": "beta_user_1793090547727@jobmatch.ai",
+      "password": "$2b$10$9NbSseZ4Gn7uxN2EpcyyO.xQL37CzevfUIoHMGeJ.mjUyl..zUZT.",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T08:42:36.037Z",
+      "updatedAt": "2026-10-27T08:42:36.037Z"
+    },
+    {
+      "id": "usr_mvqfurchb4h8",
+      "name": "Beta Pioneer",
+      "email": "beta_user_1793090604194@jobmatch.ai",
+      "password": "$2b$10$IhBaCwuGBeSh0Lv0CqDFrOffXp4p45prRLWxFrbzHomOlrpT8IcqK",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 0,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T08:43:32.655Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test",
+      "providerSubscriptionId": "sub_test",
+      "createdAt": "2026-10-27T08:43:32.488Z",
+      "updatedAt": "2026-10-27T08:43:32.657Z"
+    },
+    {
+      "id": "usr_mvqfvhen2tsv",
+      "name": "Beta Pioneer",
+      "email": "beta_user_1793090637878@jobmatch.ai",
+      "password": "$2b$10$vM8MqtPstXEjgoS9Xe7NA.UBbAKrliVUR1rs4PW69OTOZ3LO9unl.",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 0,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T08:44:06.507Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test",
+      "providerSubscriptionId": "sub_test",
+      "createdAt": "2026-10-27T08:44:06.239Z",
+      "updatedAt": "2026-10-27T08:44:06.847Z",
+      "resetPasswordToken": "72533d9f09c93f0779466a1810ff1a99058471ed45cd6427053e938224fe6add",
+      "resetPasswordExpires": "2026-10-27T08:59:06.845Z"
+    },
+    {
+      "id": "usr_mvqfxszby4wz",
+      "name": "Beta Pioneer",
+      "email": "beta_user_1793090746262@jobmatch.ai",
+      "password": "$2b$10$9EHS6FMxRCUvrYOES3E/VeBxUmJqhkgvhGV4mgqKUg0UW/wi5N91y",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 0,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T08:45:54.937Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test",
+      "providerSubscriptionId": "sub_test",
+      "createdAt": "2026-10-27T08:45:54.551Z",
+      "updatedAt": "2026-10-27T08:45:55.440Z"
+    },
+    {
+      "id": "usr_mvqg2vs8g6vo",
+      "name": "Payment Tester",
+      "email": "pay_test_1793090983421@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T08:49:51.466Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T08:49:51.464Z",
+      "updatedAt": "2026-10-27T08:49:51.502Z"
+    },
+    {
+      "id": "usr_mvqg37pclcrw",
+      "name": "Reset Tester",
+      "email": "email_test_1793090998646@example.com",
+      "password": "$2b$10$J1m26bYtna13vnu4GJIh7.BGHA1FH.wLgS4YoTf/.73UmK7iXFmmG",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T08:50:06.912Z",
+      "updatedAt": "2026-10-27T08:50:07.449Z",
+      "resetPasswordToken": "dcbe9e23dfaaabd581785a3ac7fe00a5f650104ddfe5451cf0f4163fa1f46b45",
+      "resetPasswordExpires": "2026-10-27T08:49:07.448Z"
+    },
+    {
+      "id": "usr_mvqgnmlays0o",
+      "name": "Payment Tester",
+      "email": "pay_test_1793091951267@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T09:05:59.328Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T09:05:59.326Z",
+      "updatedAt": "2026-10-27T09:05:59.385Z"
+    },
+    {
+      "id": "usr_mvqgo4d6nc1a",
+      "name": "Reset Tester",
+      "email": "email_test_1793091973736@example.com",
+      "password": "$2b$10$kGLnHGv6eZokHunSwFKKsu/ML2Ie5A0rPVybsEegS7QvF/M/IPoP2",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T09:06:22.362Z",
+      "updatedAt": "2026-10-27T09:06:23.380Z",
+      "resetPasswordToken": "15be7e73c8d7bc5812c3ed14c8206ffdb9c51c482fdf649ca39ca6a82989eb58",
+      "resetPasswordExpires": "2026-10-27T09:05:23.379Z"
+    },
+    {
+      "id": "usr_mvqgq4a1j1rn",
+      "name": "Payment Tester",
+      "email": "pay_test_1793092067518@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T09:07:55.584Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T09:07:55.561Z",
+      "updatedAt": "2026-10-27T09:07:55.717Z"
+    },
+    {
+      "id": "usr_mvqgqgjdxui9",
+      "name": "Reset Tester",
+      "email": "email_test_1793092083192@example.com",
+      "password": "$2b$10$cekmUHRASGBR34twjO1Sf.ITU7aKBqGuaDtx5QROqQG4haRikfq6e",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T09:08:11.449Z",
+      "updatedAt": "2026-10-27T09:08:12.093Z",
+      "resetPasswordToken": "a9a6fc0daef0d680d0dde4412aeed9b1ea9bc1a3205b01766afc59a6f3efc31a",
+      "resetPasswordExpires": "2026-10-27T09:07:12.092Z"
+    },
+    {
+      "id": "usr_mvqgzouf5zmb",
+      "name": "Payment Tester",
+      "email": "pay_test_1793092514069@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T09:15:22.121Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T09:15:22.119Z",
+      "updatedAt": "2026-10-27T09:15:22.167Z"
+    },
+    {
+      "id": "usr_mvqh01w6usuw",
+      "name": "Reset Tester",
+      "email": "email_test_1793092530729@example.com",
+      "password": "$2b$10$dfg2rYbF00OsDGKIrVvaO.rErAn8UNDe6a8Iljj2XPpoqT./aqhAC",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T09:15:39.030Z",
+      "updatedAt": "2026-10-27T09:15:39.938Z",
+      "resetPasswordToken": "1351c7fcd71e82015c12c7e411419bd0945da4d2e14ba40eb3c3f2c754e4fdd0",
+      "resetPasswordExpires": "2026-10-27T09:14:39.937Z"
+    },
+    {
+      "id": "usr_mvqj3la5smh7",
+      "name": "Payment Tester",
+      "email": "pay_test_1793096060805@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T10:14:23.359Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T10:14:23.357Z",
+      "updatedAt": "2026-10-27T10:14:23.456Z"
+    },
+    {
+      "id": "usr_mvqj3y6z2uhq",
+      "name": "Reset Tester",
+      "email": "email_test_1793096077289@example.com",
+      "password": "$2b$10$C3OjWB5hcxsJ4sZw8Nt7VughHcKF.fi0r.TPrrBcnaP31ZnPMtJxq",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T10:14:40.091Z",
+      "updatedAt": "2026-10-27T10:14:40.725Z",
+      "resetPasswordToken": "ac55bd807a504d4d2823ed98bea41b5f6eabbcb4ecaa80a707fd05a8adec7cf0",
+      "resetPasswordExpires": "2026-10-27T10:13:40.724Z"
+    },
+    {
+      "id": "usr_mvqorkurf4h1",
+      "name": "Payment Tester",
+      "email": "pay_test_1793105578083@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T12:53:00.629Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T12:53:00.627Z",
+      "updatedAt": "2026-10-27T12:53:00.665Z"
+    },
+    {
+      "id": "usr_mvqorxoqmba5",
+      "name": "Reset Tester",
+      "email": "email_test_1793105594332@example.com",
+      "password": "$2b$10$Wi4v2HkD3NdokA/6q5L0ue08Y6X7l6ie22VAoHk73he1escWMuiia",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T12:53:17.258Z",
+      "updatedAt": "2026-10-27T12:53:17.930Z",
+      "resetPasswordToken": "87410f5399e92beed468ec21d177d215cf5be48f9f8a16548fc8a58661085fc7",
+      "resetPasswordExpires": "2026-10-27T12:52:17.928Z"
+    },
+    {
+      "id": "usr_mvqqc59jawbj",
+      "name": "Payment Tester",
+      "email": "pay_test_1793108217257@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T13:36:59.816Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T13:36:59.815Z",
+      "updatedAt": "2026-10-27T13:36:59.887Z"
+    },
+    {
+      "id": "usr_mvqqci2rel0h",
+      "name": "Reset Tester",
+      "email": "email_test_1793108233624@example.com",
+      "password": "$2b$10$Psn5AlN83bnlee6d/Pve7.hx3knEF4YXlipFh3pixqXngxjK0DRwm",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T13:37:16.419Z",
+      "updatedAt": "2026-10-27T13:37:17.203Z",
+      "resetPasswordToken": "b0f86c6df0872730517fa4768cb319e3eeec8ecd7b6894d6599e0c7dc9038d2e",
+      "resetPasswordExpires": "2026-10-27T13:36:17.202Z"
+    },
+    {
+      "id": "usr_mvr49r24b3ce",
+      "name": "Payment Tester",
+      "email": "pay_test_1793131620168@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T20:07:02.719Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T20:07:02.716Z",
+      "updatedAt": "2026-10-27T20:07:02.800Z"
+    },
+    {
+      "id": "usr_mvr4a4incojc",
+      "name": "Reset Tester",
+      "email": "email_test_1793131637320@example.com",
+      "password": "$2b$10$/PcXH6HgAt6CBHA/gsQ2debwK2G1DeNT9AhNr/AzugemXGZstrZ6y",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T20:07:20.159Z",
+      "updatedAt": "2026-10-27T20:07:21.016Z",
+      "resetPasswordToken": "3e5cdbe9b501ba8b4a37abfd335d9d166ca4dee9765234d7a13e96cc52c14e07",
+      "resetPasswordExpires": "2026-10-27T20:06:21.008Z"
+    },
+    {
+      "id": "usr_mvr5fide8m6i",
+      "name": "Alex Miller",
+      "email": "test_u8_1793133567778@jobmatch.ai",
+      "password": "$2b$10$qGagslLOPq1KISNkbqwHfe9Zit/4cDjjQz6iNusXiy0wJyzPCrPGO",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T20:39:31.010Z",
+      "updatedAt": "2026-10-27T20:39:31.010Z"
+    },
+    {
+      "id": "usr_mvr5vzmonlz6",
+      "name": "Alex Miller",
+      "email": "test_u8_1793134337098@jobmatch.ai",
+      "password": "$2b$10$moytEU4Kgq3XqIvjpMhgn.ybxhf0BIvrNpVaOb91yOOsQTkodPTz6",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T20:52:19.872Z",
+      "updatedAt": "2026-10-27T20:52:19.872Z"
+    },
+    {
+      "id": "usr_mvr86oszuui7",
+      "name": "Payment Tester",
+      "email": "pay_test_1793138195730@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T21:56:38.294Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T21:56:38.291Z",
+      "updatedAt": "2026-10-27T21:56:38.344Z"
+    },
+    {
+      "id": "usr_mvr870ubw5p9",
+      "name": "Reset Tester",
+      "email": "email_test_1793138210993@example.com",
+      "password": "$2b$10$vDam9F.3f02zDPNMDEqEaeDkSAVaZ4LKEopk5v6P8VYvB6Wx5gCr6",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T21:56:53.891Z",
+      "updatedAt": "2026-10-27T21:56:54.497Z",
+      "resetPasswordToken": "9f9d436e51ca9c97e575b235f25069970f0c33925d7e2474a96ae9bdd5791241",
+      "resetPasswordExpires": "2026-10-27T21:55:54.496Z"
+    },
+    {
+      "id": "usr_mvr8knkbam8s",
+      "name": "Payment Tester",
+      "email": "pay_test_1793138847320@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T22:07:29.873Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T22:07:29.868Z",
+      "updatedAt": "2026-10-27T22:07:29.924Z"
+    },
+    {
+      "id": "usr_mvr8l03has7s",
+      "name": "Reset Tester",
+      "email": "email_test_1793138863351@example.com",
+      "password": "$2b$10$d2EffQQ08Otozo9R11qM3e.Wkw7Arhsr57q.qqS9bA4n.DemU3mT6",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T22:07:46.109Z",
+      "updatedAt": "2026-10-27T22:07:46.693Z",
+      "resetPasswordToken": "b7fd3b78d933a668976ef83d8b6eaa5c9601ea49e1a0304e90ade368c270b3f8",
+      "resetPasswordExpires": "2026-10-27T22:06:46.691Z"
+    },
+    {
+      "id": "usr_mvr8yjl07o6p",
+      "name": "Payment Tester",
+      "email": "pay_test_1793139495343@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T22:18:17.894Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T22:18:17.892Z",
+      "updatedAt": "2026-10-27T22:18:17.956Z"
+    },
+    {
+      "id": "usr_mvr8yvmrja31",
+      "name": "Reset Tester",
+      "email": "email_test_1793139510752@example.com",
+      "password": "$2b$10$q55p6kKRX6QGzWEB/b5AweteY6A9eE31Qu7YH4SJUk75b/UhNdkxu",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T22:18:33.507Z",
+      "updatedAt": "2026-10-27T22:18:34.238Z",
+      "resetPasswordToken": "28c056caf671af35930a48be2e7365150d498d976aed2e694cace63df6feeec4",
+      "resetPasswordExpires": "2026-10-27T22:17:34.237Z"
+    },
+    {
+      "id": "usr_mvr9tz0tgjw9",
+      "name": "Payment Tester",
+      "email": "pay_test_1793140961698@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-26T22:42:44.239Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-27T22:42:44.237Z",
+      "updatedAt": "2026-10-27T22:42:44.279Z"
+    },
+    {
+      "id": "usr_mvr9ucjfqlny",
+      "name": "Reset Tester",
+      "email": "email_test_1793140978998@example.com",
+      "password": "$2b$10$bdsK5./9/Dwh5d9V2pzFWuPxhRy9EpeGDIRuRJOvBuMikrQXvLvHO",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-27T22:43:01.755Z",
+      "updatedAt": "2026-10-27T22:43:02.246Z",
+      "resetPasswordToken": "6c8c91d60ba492922db4a5cb03fe3c51a455293ce7af835a183d257e94ede72e",
+      "resetPasswordExpires": "2026-10-27T22:42:02.245Z"
+    },
+    {
+      "id": "usr_mvryp5tvzgof",
+      "name": "Payment Tester",
+      "email": "pay_test_1793182727611@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-27T10:18:50.181Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-28T10:18:50.179Z",
+      "updatedAt": "2026-10-28T10:18:50.243Z"
+    },
+    {
+      "id": "usr_mvrypivypqah",
+      "name": "Reset Tester",
+      "email": "email_test_1793182744336@example.com",
+      "password": "$2b$10$nbIJq1V5B787M6Jvk/BWYe6UgTwJtSIldgSrMaoY5G6lswgdMdNF6",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T10:19:07.102Z",
+      "updatedAt": "2026-10-28T10:19:07.667Z",
+      "resetPasswordToken": "e4345856f76b72f32ef7377db1a7504ea3cd25f127b649c326eca6fd8433914f",
+      "resetPasswordExpires": "2026-10-28T10:18:07.666Z"
+    },
+    {
+      "id": "usr_mvs8eab8jwzx",
+      "name": "Reset Tester",
+      "email": "email_test_1793199016109@example.com",
+      "password": "$2b$10$jAzifcojWTJf7EjPZT43a.TVUv.WoLhiL9DQWDnotvjjfFZ3/.VrO",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T14:50:18.932Z",
+      "updatedAt": "2026-10-28T14:50:19.583Z",
+      "resetPasswordToken": "187bbc5b7d804e9e803634e866d46a4d925b3cda79971ca459be0ec32a623dab",
+      "resetPasswordExpires": "2026-10-28T14:49:19.580Z"
+    },
+    {
+      "id": "usr_mvs9ibx938qq",
+      "name": "Free Test User",
+      "email": "free-user-1793200884712@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:21:27.261Z",
+      "updatedAt": "2026-10-28T15:21:27.314Z",
+      "aiResumeGenerationsCount": 1
+    },
+    {
+      "id": "usr_mvs9kvhwjn9h",
+      "name": "Free Test User",
+      "email": "free-user-1793201003389@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:23:25.940Z",
+      "updatedAt": "2026-10-28T15:23:25.968Z",
+      "aiResumeGenerationsCount": 1
+    },
+    {
+      "id": "usr_mvs9kvjozufi",
+      "name": "Pro Test User",
+      "email": "pro-user-1793201006002@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:23:26.004Z",
+      "updatedAt": "2026-10-28T15:23:26.004Z"
+    },
+    {
+      "id": "usr_mvs9kvkiesaj",
+      "name": "PAYG Test User",
+      "email": "payg-user-1793201006033@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 5,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:23:26.034Z",
+      "updatedAt": "2026-10-28T15:23:26.103Z",
+      "aiResumeGenerationsCount": 1
+    },
+    {
+      "id": "usr_mvs9lozzonaz",
+      "name": "Free Test User",
+      "email": "free-user-1793201041628@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:24:04.175Z",
+      "updatedAt": "2026-10-28T15:24:04.221Z",
+      "aiResumeGenerationsCount": 1
+    },
+    {
+      "id": "usr_mvs9lp2pmgjw",
+      "name": "Pro Test User",
+      "email": "pro-user-1793201044272@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:24:04.273Z",
+      "updatedAt": "2026-10-28T15:24:04.273Z"
+    },
+    {
+      "id": "usr_mvs9lp483c1a",
+      "name": "PAYG Test User",
+      "email": "payg-user-1793201044326@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 1,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:24:04.328Z",
+      "updatedAt": "2026-10-28T15:24:04.465Z",
+      "aiResumeGenerationsCount": 3
+    },
+    {
+      "id": "usr_mvs9lp94tvp3",
+      "name": "Demo Candidate",
+      "email": "demo-user-1793201044503@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": true,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:24:04.504Z",
+      "updatedAt": "2026-10-28T15:24:04.504Z"
+    },
+    {
+      "id": "usr_mvs9n3zjpjfj",
+      "name": "Free Test User",
+      "email": "free-user-1793201107713@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:25:10.255Z",
+      "updatedAt": "2026-10-28T15:25:10.294Z",
+      "aiResumeGenerationsCount": 1
+    },
+    {
+      "id": "usr_mvs9n41sgp7l",
+      "name": "Pro Test User",
+      "email": "pro-user-1793201110335@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:25:10.336Z",
+      "updatedAt": "2026-10-28T15:25:10.336Z"
+    },
+    {
+      "id": "usr_mvs9n42ykqac",
+      "name": "PAYG Test User",
+      "email": "payg-user-1793201110376@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 1,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:25:10.378Z",
+      "updatedAt": "2026-10-28T15:25:10.474Z",
+      "aiResumeGenerationsCount": 3
+    },
+    {
+      "id": "usr_mvs9n46meblk",
+      "name": "Demo Candidate",
+      "email": "demo-user-1793201110509@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": true,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:25:10.510Z",
+      "updatedAt": "2026-10-28T15:25:10.510Z"
+    },
+    {
+      "id": "usr_mvsavnnkddi6",
+      "name": "Free Quota Candidate",
+      "email": "usr_test_free_mvsavnni@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T15:59:48.608Z",
+      "updatedAt": "2026-10-28T15:59:48.608Z"
+    },
+    {
+      "id": "usr_mvsbtoihynyg",
+      "name": "Free Test User",
+      "email": "free-user-1793204773479@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T16:26:16.025Z",
+      "updatedAt": "2026-10-28T16:26:16.058Z",
+      "aiResumeGenerationsCount": 1
+    },
+    {
+      "id": "usr_mvsbtokcz3i9",
+      "name": "Pro Test User",
+      "email": "pro-user-1793204776090@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T16:26:16.092Z",
+      "updatedAt": "2026-10-28T16:26:16.092Z"
+    },
+    {
+      "id": "usr_mvsbtol9ivwq",
+      "name": "PAYG Test User",
+      "email": "payg-user-1793204776123@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 1,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T16:26:16.125Z",
+      "updatedAt": "2026-10-28T16:26:16.237Z",
+      "aiResumeGenerationsCount": 3
+    },
+    {
+      "id": "usr_mvsbtop3yvmw",
+      "name": "Demo Candidate",
+      "email": "demo-user-1793204776262@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": true,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T16:26:16.263Z",
+      "updatedAt": "2026-10-28T16:26:16.263Z"
+    },
+    {
+      "id": "usr_mvscfb4x3v04",
+      "name": "Crypto Tester",
+      "email": "paytest_1793205782575@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T16:43:05.121Z",
+      "updatedAt": "2026-10-28T16:43:05.121Z"
+    },
+    {
+      "id": "usr_mvscgzqzkw3q",
+      "name": "Crypto Tester",
+      "email": "paytest_1793205861117@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-12-27T16:44:23.835Z",
+      "paymentProvider": "binance",
+      "providerCustomerId": "paytest_1793205861117@example.com",
+      "providerSubscriptionId": "ORD-EXT-863890",
+      "createdAt": "2026-10-28T16:44:23.675Z",
+      "updatedAt": "2026-10-28T16:44:24.679Z"
+    },
+    {
+      "id": "usr_mvsdcw9e6kdj",
+      "name": "Reset Tester",
+      "email": "email_test_1793207349304@example.com",
+      "password": "$2b$10$RetQhrqWjuHuMqXx08mIpu0sqL2SxR9L7PkqSsymxaD2eSu47iDRu",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T17:09:12.146Z",
+      "updatedAt": "2026-10-28T17:09:12.959Z",
+      "resetPasswordToken": "4555cb392561373ef2b7510ae2de51400509da942e64bdc0e5caed3b82d1248f",
+      "resetPasswordExpires": "2026-10-28T17:08:12.954Z"
+    },
+    {
+      "id": "usr_mvsdst04b02z",
+      "name": "Reset Tester",
+      "email": "email_test_1793208091595@example.com",
+      "password": "$2b$10$cXuhvYxmrtxdwvEgVfvwGOUcpSi0zTW8GAndoDj.VEI91Xkp08.8O",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T17:21:34.421Z",
+      "updatedAt": "2026-10-28T17:21:35.951Z",
+      "resetPasswordToken": "87df2f7f525cc437b5a8188b91be65b43388c0c48963a1c1d952911ee12ee593",
+      "resetPasswordExpires": "2026-10-28T17:20:35.943Z"
+    },
+    {
+      "id": "usr_mvsdwy02yqjw",
+      "name": "Payment Tester",
+      "email": "pay_test_1793208284972@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-27T17:24:47.527Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-28T17:24:47.522Z",
+      "updatedAt": "2026-10-28T17:24:47.581Z"
+    },
+    {
+      "id": "usr_mvsdxfqm98hf",
+      "name": "Free Test User",
+      "email": "free-user-1793208307943@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T17:25:10.510Z",
+      "updatedAt": "2026-10-28T17:25:10.585Z",
+      "aiResumeGenerationsCount": 1
+    },
+    {
+      "id": "usr_mvsdxftlr173",
+      "name": "Pro Test User",
+      "email": "pro-user-1793208310615@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T17:25:10.617Z",
+      "updatedAt": "2026-10-28T17:25:10.617Z"
+    },
+    {
+      "id": "usr_mvsdxfub350j",
+      "name": "PAYG Test User",
+      "email": "payg-user-1793208310641@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 1,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T17:25:10.643Z",
+      "updatedAt": "2026-10-28T17:25:10.772Z",
+      "aiResumeGenerationsCount": 3
+    },
+    {
+      "id": "usr_mvsdxfymlsm1",
+      "name": "Demo Candidate",
+      "email": "demo-user-1793208310796@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": true,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T17:25:10.798Z",
+      "updatedAt": "2026-10-28T17:25:10.798Z"
+    },
+    {
+      "id": "usr_mvsdyk9pejai",
+      "name": "Crypto Tester",
+      "email": "paytest_1793208360491@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-12-27T17:26:03.131Z",
+      "paymentProvider": "binance",
+      "providerCustomerId": "paytest_1793208360491@example.com",
+      "providerSubscriptionId": "ORD-EXT-363179",
+      "createdAt": "2026-10-28T17:26:03.037Z",
+      "updatedAt": "2026-10-28T17:26:03.363Z"
+    },
+    {
+      "id": "usr_mvsehlk13gsq",
+      "name": "Payment Tester",
+      "email": "pay_test_1793209248612@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-27T17:40:51.172Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-28T17:40:51.169Z",
+      "updatedAt": "2026-10-28T17:40:51.230Z"
+    },
+    {
+      "id": "usr_mvsehytzx2cm",
+      "name": "Reset Tester",
+      "email": "email_test_1793209265561@example.com",
+      "password": "$2b$10$V/wQTxfD.5GeBEJf6tC/duCg3/RQkn.2SOywXDdyWzViHIc7IeOj2",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-28T17:41:08.375Z",
+      "updatedAt": "2026-10-28T17:41:08.982Z",
+      "resetPasswordToken": "49c3294bc15ee2ebd14f32caaf181d945daa64b215f6984188856408aa5db2a5",
+      "resetPasswordExpires": "2026-10-28T17:40:08.980Z"
+    },
+    {
+      "id": "usr_mvthbscmpss0",
+      "name": "Payment Tester",
+      "email": "pay_test_1793274482509@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-11-28T11:48:05.065Z",
+      "paymentProvider": "stripe",
+      "providerCustomerId": "cus_test_123",
+      "providerSubscriptionId": "sub_test_123",
+      "createdAt": "2026-10-29T11:48:05.062Z",
+      "updatedAt": "2026-10-29T11:48:05.106Z"
+    },
+    {
+      "id": "usr_mvthc7kple9o",
+      "name": "Reset Tester",
+      "email": "email_test_1793274502013@example.com",
+      "password": "$2b$10$FjWJmwfg8XbZm/WUEHOFDO.va5oMZgTgL.ucSuYoeCRuPFpqiz1n.",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-29T11:48:24.793Z",
+      "updatedAt": "2026-10-29T11:48:25.459Z",
+      "resetPasswordToken": "34edb24e96ffc735e5b1ad5bb037578077715760b299da54e5a91cf9c71732fc",
+      "resetPasswordExpires": "2026-10-29T11:47:25.457Z"
+    },
+    {
+      "id": "usr_mvthe409nj0d",
+      "name": "Free Test User",
+      "email": "free-user-1793274590927@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-29T11:49:53.481Z",
+      "updatedAt": "2026-10-29T11:49:53.512Z",
+      "aiResumeGenerationsCount": 1
+    },
+    {
+      "id": "usr_mvthe424fowg",
+      "name": "Pro Test User",
+      "email": "pro-user-1793274593546@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-29T11:49:53.548Z",
+      "updatedAt": "2026-10-29T11:49:53.548Z"
+    },
+    {
+      "id": "usr_mvthe436dzh8",
+      "name": "PAYG Test User",
+      "email": "payg-user-1793274593583@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 1,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-29T11:49:53.586Z",
+      "updatedAt": "2026-10-29T11:49:53.689Z",
+      "aiResumeGenerationsCount": 3
+    },
+    {
+      "id": "usr_mvthe46nsex0",
+      "name": "Demo Candidate",
+      "email": "demo-user-1793274593709@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": true,
+      "plan": "free",
+      "aiCredits": 0,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "createdAt": "2026-10-29T11:49:53.711Z",
+      "updatedAt": "2026-10-29T11:49:53.711Z"
+    },
+    {
+      "id": "usr_mvtheto5vx17",
+      "name": "Crypto Tester",
+      "email": "paytest_1793274624178@example.com",
+      "password": "password123",
+      "role": "user",
+      "isDemo": false,
+      "plan": "pro",
+      "aiCredits": 18,
+      "billingCycle": "monthly",
+      "planExpiresAt": "2026-12-28T11:50:26.906Z",
+      "paymentProvider": "binance",
+      "providerCustomerId": "paytest_1793274624178@example.com",
+      "providerSubscriptionId": "ORD-EXT-626951",
+      "createdAt": "2026-10-29T11:50:26.741Z",
+      "updatedAt": "2026-10-29T11:50:27.603Z"
     }
   ],
-  "resumes": [],
-  "analyses": [],
+  "resumes": [
+    {
+      "id": "res_mvthe489hkb0",
+      "userId": "usr_mvthe409nj0d",
+      "title": "Senior Full Stack Engineer - Resume (AI)",
+      "templateId": "compact",
+      "theme": {
+        "accentColor": "#0F5C4D",
+        "fontFamily": "var(--font-sans), sans-serif",
+        "fontSize": "base",
+        "documentLanguage": "en"
+      },
+      "data": {
+        "personalInfo": {
+          "fullName": "Alex Morgan",
+          "jobTitle": "Senior Full Stack Engineer",
+          "email": "alex.morgan@example.com",
+          "phone": "+1 (555) 019-2834",
+          "location": "[City, Country]",
+          "website": "",
+          "linkedin": "",
+          "github": "",
+          "summary": "Results-driven Senior Full Stack Engineer with 5-8+ years of experience building scalable solutions and delivering measurable business impact. Adept at cross-functional collaboration, technical problem-solving, and workflow optimization to accelerate product delivery.",
+          "photoUrl": "",
+          "showPhoto": false
+        },
+        "experience": [
+          {
+            "id": "exp-1",
+            "company": "[Recent Employer Name]",
+            "position": "Senior Full Stack Engineer",
+            "location": "[City, Country]",
+            "startDate": "2021-03",
+            "endDate": "Present",
+            "current": true,
+            "description": [
+              "Lead Developer at FinTech Startup (2021-Present)",
+              "Software Engineer at Digital Agency (2018-2021)"
+            ]
+          }
+        ],
+        "education": [
+          {
+            "id": "edu-1",
+            "institution": "B.S. in Computer Science",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science or Related Field",
+            "startDate": "2018",
+            "endDate": "2022"
+          }
+        ],
+        "projects": [
+          {
+            "id": "proj-1",
+            "title": "Senior Full Stack Engineer Core Automation Platform",
+            "techStack": "TypeScript, Next.js, Node.js, PostgreSQL, Docker",
+            "link": "https://github.com/example/platform",
+            "description": [
+              "Designed and deployed an end-to-end scalable architecture servicing heavy data traffic.",
+              "Enhanced reliability and query latency through optimized indexing and caching layers."
+            ]
+          }
+        ],
+        "skills": [
+          "React",
+          "Next.js",
+          "TypeScript",
+          "Node.js",
+          "PostgreSQL",
+          "Docker",
+          "AWS",
+          "Kubernetes",
+          "Ci/cd",
+          "Microservices"
+        ],
+        "certifications": [],
+        "languages": [
+          {
+            "id": "lang-1",
+            "name": "English",
+            "proficiency": "Native"
+          },
+          {
+            "id": "lang-2",
+            "name": "Professional Working",
+            "proficiency": "Fluent"
+          }
+        ]
+      },
+      "createdAt": "2026-10-29T11:49:53.769Z",
+      "updatedAt": "2026-10-29T11:49:53.769Z"
+    },
+    {
+      "id": "res_mvthdh43ag4h",
+      "userId": "usr_mvpabfxqsnc5",
+      "title": "Alex Rivera - Junior Full-Stack Developer CV",
+      "templateId": "modern",
+      "theme": {
+        "accentColor": "#0ea5e9",
+        "fontFamily": "var(--font-sans), sans-serif",
+        "fontSize": "base"
+      },
+      "data": {
+        "personalInfo": {
+          "fullName": "Alex Rivera",
+          "jobTitle": "Junior Full-Stack Developer",
+          "email": "alex.rivera.dev@gmail.com",
+          "phone": "+1 (555) 349-8201",
+          "location": "Austin, TX",
+          "linkedin": "linkedin.com/in/alexrivera-dev",
+          "website": "https://alexrivera.dev"
+        },
+        "summary": "Enthusiastic and detail-oriented Full-Stack Developer with 2+ years of hands-on experience building performant web applications using React, Next.js, Node.js, and TypeScript. Passionate about clean code, intuitive UI/UX, and scalable RESTful APIs.",
+        "experience": [
+          {
+            "id": "exp_demo_01",
+            "title": "Junior Software Engineer",
+            "company": "NexTech Solutions",
+            "location": "Austin, TX",
+            "startDate": "2023-03",
+            "endDate": "Present",
+            "current": true,
+            "bullets": [
+              "Developed and maintained interactive client-facing dashboards using Next.js 14, React, and Tailwind CSS, improving page load speeds by 28%.",
+              "Designed and optimized REST APIs using Node.js, Express, and MongoDB, handling 50k+ daily telemetry requests with 99.9% uptime.",
+              "Collaborated in an Agile Scrum squad with 6 engineers, participating in bi-weekly sprints, code reviews, and automated CI/CD workflows."
+            ]
+          },
+          {
+            "id": "exp_demo_02",
+            "title": "Frontend Developer Intern",
+            "company": "PixelCraft Media",
+            "location": "Remote",
+            "startDate": "2022-06",
+            "endDate": "2022-12",
+            "current": false,
+            "bullets": [
+              "Converted Figma wireframes into responsive, accessible HTML/CSS/JavaScript components tested across mobile and desktop devices.",
+              "Integrated third-party analytics and form validation pipelines, reducing form drop-off rates by 15%."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "id": "edu_demo_01",
+            "degree": "Bachelor of Science in Computer Science",
+            "school": "University of Texas at Austin",
+            "location": "Austin, TX",
+            "graduationDate": "2023",
+            "gpa": "3.8 / 4.0"
+          }
+        ],
+        "skills": [
+          "JavaScript",
+          "TypeScript",
+          "React",
+          "Next.js",
+          "Node.js",
+          "Express",
+          "Tailwind CSS",
+          "MongoDB",
+          "PostgreSQL",
+          "Git",
+          "Docker",
+          "REST APIs",
+          "Jest"
+        ],
+        "projects": [
+          {
+            "id": "proj_demo_01",
+            "name": "TaskPulse - Agile Collaboration App",
+            "description": "Real-time team project board built with Next.js App Router, WebSockets, and MongoDB.",
+            "technologies": [
+              "Next.js",
+              "TypeScript",
+              "Tailwind CSS",
+              "MongoDB"
+            ],
+            "link": "https://github.com/alexrivera/taskpulse"
+          },
+          {
+            "id": "proj_demo_02",
+            "name": "DevMetrics - API Latency Monitor",
+            "description": "Lightweight dashboard visualizing HTTP endpoints response times and server health.",
+            "technologies": [
+              "React",
+              "Node.js",
+              "Chart.js",
+              "Express"
+            ],
+            "link": "https://github.com/alexrivera/devmetrics"
+          }
+        ]
+      },
+      "createdAt": "2026-10-29T11:49:23.811Z",
+      "updatedAt": "2026-10-29T11:49:23.811Z"
+    },
+    {
+      "id": "res_mvsdxg1cyp7r",
+      "userId": "usr_mvsdxfqm98hf",
+      "title": "Senior Full Stack Engineer - Resume (AI)",
+      "templateId": "compact",
+      "theme": {
+        "accentColor": "#0F5C4D",
+        "fontFamily": "var(--font-sans), sans-serif",
+        "fontSize": "base",
+        "documentLanguage": "en"
+      },
+      "data": {
+        "personalInfo": {
+          "fullName": "Alex Morgan",
+          "jobTitle": "Senior Full Stack Engineer",
+          "email": "alex.morgan@example.com",
+          "phone": "+1 (555) 019-2834",
+          "location": "[City, Country]",
+          "website": "",
+          "linkedin": "",
+          "github": "",
+          "summary": "Results-driven Senior Full Stack Engineer with 5-8+ years of experience building scalable solutions and delivering measurable business impact. Adept at cross-functional collaboration, technical problem-solving, and workflow optimization to accelerate product delivery.",
+          "photoUrl": "",
+          "showPhoto": false
+        },
+        "experience": [
+          {
+            "id": "exp-1",
+            "company": "[Recent Employer Name]",
+            "position": "Senior Full Stack Engineer",
+            "location": "[City, Country]",
+            "startDate": "2021-03",
+            "endDate": "Present",
+            "current": true,
+            "description": [
+              "Lead Developer at FinTech Startup (2021-Present)",
+              "Software Engineer at Digital Agency (2018-2021)"
+            ]
+          }
+        ],
+        "education": [
+          {
+            "id": "edu-1",
+            "institution": "B.S. in Computer Science",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science or Related Field",
+            "startDate": "2018",
+            "endDate": "2022"
+          }
+        ],
+        "projects": [
+          {
+            "id": "proj-1",
+            "title": "Senior Full Stack Engineer Core Automation Platform",
+            "techStack": "TypeScript, Next.js, Node.js, PostgreSQL, Docker",
+            "link": "https://github.com/example/platform",
+            "description": [
+              "Designed and deployed an end-to-end scalable architecture servicing heavy data traffic.",
+              "Enhanced reliability and query latency through optimized indexing and caching layers."
+            ]
+          }
+        ],
+        "skills": [
+          "React",
+          "Next.js",
+          "TypeScript",
+          "Node.js",
+          "PostgreSQL",
+          "Docker",
+          "AWS",
+          "Kubernetes",
+          "Ci/cd",
+          "Microservices"
+        ],
+        "certifications": [],
+        "languages": [
+          {
+            "id": "lang-1",
+            "name": "English",
+            "proficiency": "Native"
+          },
+          {
+            "id": "lang-2",
+            "name": "Professional Working",
+            "proficiency": "Fluent"
+          }
+        ]
+      },
+      "createdAt": "2026-10-28T17:25:10.897Z",
+      "updatedAt": "2026-10-28T17:25:10.897Z"
+    },
+    {
+      "id": "res_mvsbtoqeacxb",
+      "userId": "usr_mvsbtoihynyg",
+      "title": "Senior Full Stack Engineer - Resume (AI)",
+      "templateId": "compact",
+      "theme": {
+        "accentColor": "#0F5C4D",
+        "fontFamily": "var(--font-sans), sans-serif",
+        "fontSize": "base",
+        "documentLanguage": "en"
+      },
+      "data": {
+        "personalInfo": {
+          "fullName": "Alex Morgan",
+          "jobTitle": "Senior Full Stack Engineer",
+          "email": "alex.morgan@example.com",
+          "phone": "+1 (555) 019-2834",
+          "location": "[City, Country]",
+          "website": "",
+          "linkedin": "",
+          "github": "",
+          "summary": "Results-driven Senior Full Stack Engineer with 5-8+ years of experience building scalable solutions and delivering measurable business impact. Adept at cross-functional collaboration, technical problem-solving, and workflow optimization to accelerate product delivery.",
+          "photoUrl": "",
+          "showPhoto": false
+        },
+        "experience": [
+          {
+            "id": "exp-1",
+            "company": "[Recent Employer Name]",
+            "position": "Senior Full Stack Engineer",
+            "location": "[City, Country]",
+            "startDate": "2021-03",
+            "endDate": "Present",
+            "current": true,
+            "description": [
+              "Lead Developer at FinTech Startup (2021-Present)",
+              "Software Engineer at Digital Agency (2018-2021)"
+            ]
+          }
+        ],
+        "education": [
+          {
+            "id": "edu-1",
+            "institution": "B.S. in Computer Science",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science or Related Field",
+            "startDate": "2018",
+            "endDate": "2022"
+          }
+        ],
+        "projects": [
+          {
+            "id": "proj-1",
+            "title": "Senior Full Stack Engineer Core Automation Platform",
+            "techStack": "TypeScript, Next.js, Node.js, PostgreSQL, Docker",
+            "link": "https://github.com/example/platform",
+            "description": [
+              "Designed and deployed an end-to-end scalable architecture servicing heavy data traffic.",
+              "Enhanced reliability and query latency through optimized indexing and caching layers."
+            ]
+          }
+        ],
+        "skills": [
+          "React",
+          "Next.js",
+          "TypeScript",
+          "Node.js",
+          "PostgreSQL",
+          "Docker",
+          "AWS",
+          "Kubernetes",
+          "Ci/cd",
+          "Microservices"
+        ],
+        "certifications": [],
+        "languages": [
+          {
+            "id": "lang-1",
+            "name": "English",
+            "proficiency": "Native"
+          },
+          {
+            "id": "lang-2",
+            "name": "Professional Working",
+            "proficiency": "Fluent"
+          }
+        ]
+      },
+      "createdAt": "2026-10-28T16:26:16.310Z",
+      "updatedAt": "2026-10-28T16:26:16.310Z"
+    },
+    {
+      "id": "res_mvs9n47yf76v",
+      "userId": "usr_mvs9n3zjpjfj",
+      "title": "Senior Full Stack Engineer - Resume (AI)",
+      "templateId": "compact",
+      "theme": {
+        "accentColor": "#0F5C4D",
+        "fontFamily": "var(--font-sans), sans-serif",
+        "fontSize": "base",
+        "documentLanguage": "en"
+      },
+      "data": {
+        "personalInfo": {
+          "fullName": "Alex Morgan",
+          "jobTitle": "Senior Full Stack Engineer",
+          "email": "alex.morgan@example.com",
+          "phone": "+1 (555) 019-2834",
+          "location": "[City, Country]",
+          "website": "",
+          "linkedin": "",
+          "github": "",
+          "summary": "Results-driven Senior Full Stack Engineer with 5-8+ years of experience building scalable solutions and delivering measurable business impact. Adept at cross-functional collaboration, technical problem-solving, and workflow optimization to accelerate product delivery.",
+          "photoUrl": "",
+          "showPhoto": false
+        },
+        "experience": [
+          {
+            "id": "exp-1",
+            "company": "[Recent Employer Name]",
+            "position": "Senior Full Stack Engineer",
+            "location": "[City, Country]",
+            "startDate": "2021-03",
+            "endDate": "Present",
+            "current": true,
+            "description": [
+              "Lead Developer at FinTech Startup (2021-Present)",
+              "Software Engineer at Digital Agency (2018-2021)"
+            ]
+          }
+        ],
+        "education": [
+          {
+            "id": "edu-1",
+            "institution": "B.S. in Computer Science",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science or Related Field",
+            "startDate": "2018",
+            "endDate": "2022"
+          }
+        ],
+        "projects": [
+          {
+            "id": "proj-1",
+            "title": "Senior Full Stack Engineer Core Automation Platform",
+            "techStack": "TypeScript, Next.js, Node.js, PostgreSQL, Docker",
+            "link": "https://github.com/example/platform",
+            "description": [
+              "Designed and deployed an end-to-end scalable architecture servicing heavy data traffic.",
+              "Enhanced reliability and query latency through optimized indexing and caching layers."
+            ]
+          }
+        ],
+        "skills": [
+          "React",
+          "Next.js",
+          "TypeScript",
+          "Node.js",
+          "PostgreSQL",
+          "Docker",
+          "AWS",
+          "Kubernetes",
+          "Ci/cd",
+          "Microservices"
+        ],
+        "certifications": [],
+        "languages": [
+          {
+            "id": "lang-1",
+            "name": "English",
+            "proficiency": "Native"
+          },
+          {
+            "id": "lang-2",
+            "name": "Professional Working",
+            "proficiency": "Fluent"
+          }
+        ]
+      },
+      "createdAt": "2026-10-28T15:25:10.558Z",
+      "updatedAt": "2026-10-28T15:25:10.558Z"
+    }
+  ],
+  "analyses": [
+    {
+      "id": "ana_mvthdh5c84xq",
+      "userId": "usr_mvpabfxqsnc5",
+      "resumeFileName": "Alex_Rivera_FullStack_CV.pdf",
+      "targetRole": "Full-Stack Software Engineer",
+      "overallScore": 88,
+      "grade": "A-",
+      "rankPercentile": "Top 15%",
+      "matchLabel": "Strong Match",
+      "subScores": {
+        "keywordsMatch": 90,
+        "formatting": 95,
+        "structure": 85,
+        "contentQuality": 82
+      },
+      "result": {
+        "score": 88,
+        "grade": "A-",
+        "rankPercentile": "Top 15%",
+        "matchLabel": "Strong Match",
+        "matchedKeywords": [
+          "React",
+          "TypeScript",
+          "Node.js",
+          "Next.js",
+          "MongoDB",
+          "REST APIs",
+          "Tailwind CSS",
+          "Git",
+          "Docker"
+        ],
+        "missingKeywords": [
+          "Kubernetes",
+          "GraphQL",
+          "AWS Lambda"
+        ],
+        "recommendations": [
+          "Quantify accomplishments with additional metrics and percentages where possible.",
+          "Add a short bullet about cloud deployment or serverless functions to boost cloud ATS scores.",
+          "Strong action verbs and formatting are already well optimized for ATS parsers."
+        ],
+        "subScores": {
+          "keywordsMatch": 90,
+          "formatting": 95,
+          "structure": 85,
+          "contentQuality": 82
+        }
+      },
+      "createdAt": "2026-10-29T11:49:23.856Z",
+      "updatedAt": "2026-10-29T11:49:23.856Z"
+    }
+  ],
   "coverLetters": [
+    {
+      "id": "cl_mvthdh6d6ogf",
+      "userId": "usr_mvpabfxqsnc5",
+      "title": "Cover Letter - Acme Cloud Technologies",
+      "companyName": "Acme Cloud Technologies",
+      "jobTitle": "Junior Full-Stack Developer",
+      "jobDescription": "Acme Cloud Technologies is hiring a Junior Full-Stack Developer to work on next-generation web dashboards and robust backend services.",
+      "extractedKeywords": [
+        "React",
+        "TypeScript",
+        "Node.js",
+        "Next.js",
+        "REST APIs",
+        "MongoDB"
+      ],
+      "tone": "technical",
+      "language": "en",
+      "status": "saved",
+      "isArchived": false,
+      "sender": {
+        "fullName": "Alex Rivera",
+        "email": "alex.rivera.dev@gmail.com",
+        "phone": "+1 (555) 349-8201",
+        "location": "Austin, TX",
+        "linkedin": "linkedin.com/in/alexrivera-dev",
+        "portfolio": "https://alexrivera.dev"
+      },
+      "recipient": {
+        "companyName": "Acme Cloud Technologies",
+        "jobTitle": "Junior Full-Stack Developer",
+        "hiringManager": "Engineering Hiring Team",
+        "department": "Cloud Platform Engineering",
+        "location": "Austin, TX"
+      },
+      "content": {
+        "subject": "Application for Junior Full-Stack Developer - Alex Rivera",
+        "salutation": "Dear Engineering Hiring Team,",
+        "introduction": "I am writing to express my enthusiastic interest in the Junior Full-Stack Developer position at Acme Cloud Technologies. With proven experience building scalable web applications in React, TypeScript, and Node.js, I am excited about the opportunity to contribute to your engineering team.",
+        "bodyParagraphs": [
+          "During my recent experience at NexTech Solutions, I contributed to key client-facing dashboards utilizing Next.js and Tailwind CSS, resulting in a 28% reduction in page latency. Additionally, I architected RESTful microservices with Node.js and MongoDB that successfully handle over 50,000 daily telemetry events with exceptional reliability.",
+          "Your focus on developer velocity and resilient cloud architecture aligns closely with my dedication to writing clean, tested, and maintainable code. I thrive in collaborative Agile teams and take pride in delivering intuitive user interfaces backed by scalable server logic."
+        ],
+        "conclusion": "Thank you for your time and consideration. I welcome the opportunity to discuss how my technical skill set and drive for engineering excellence can benefit Acme Cloud Technologies.",
+        "signOff": "Sincerely,",
+        "fullText": "Dear Engineering Hiring Team,\n\nI am writing to express my enthusiastic interest in the Junior Full-Stack Developer position at Acme Cloud Technologies. With proven experience building scalable web applications in React, TypeScript, and Node.js, I am excited about the opportunity to contribute to your engineering team.\n\nDuring my recent experience at NexTech Solutions, I contributed to key client-facing dashboards utilizing Next.js and Tailwind CSS, resulting in a 28% reduction in page latency. Additionally, I architected RESTful microservices with Node.js and MongoDB that successfully handle over 50,000 daily telemetry events with exceptional reliability.\n\nYour focus on developer velocity and resilient cloud architecture aligns closely with my dedication to writing clean, tested, and maintainable code. I thrive in collaborative Agile teams and take pride in delivering intuitive user interfaces backed by scalable server logic.\n\nThank you for your time and consideration. I welcome the opportunity to discuss how my technical skill set and drive for engineering excellence can benefit Acme Cloud Technologies.\n\nSincerely,\nAlex Rivera\nalex.rivera.dev@gmail.com | +1 (555) 349-8201"
+      },
+      "templateId": "modern",
+      "linkedResumeId": "res_mvthdh43ag4h",
+      "createdAt": "2026-10-29T11:49:23.893Z",
+      "updatedAt": "2026-10-29T11:49:23.893Z"
+    },
     {
       "id": "cl_mvmkzm7b6q9s",
       "userId": "user_security_a",
@@ -147,6 +2092,1921 @@
       "updatedAt": "2026-10-23T17:31:03.514Z",
       "status": "saved",
       "isArchived": false
+    }
+  ],
+  "paymentEvents": [
+    {
+      "eventId": "evt_idempotent_test_1793029314952",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793029314952"
+      },
+      "processedAt": "2026-10-26T15:41:54.954Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793090612650",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793090612650",
+        "userId": "usr_mvqfurchb4h8",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T08:43:32.798Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793090646500",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793090646500",
+        "userId": "usr_mvqfvhen2tsv",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T08:44:06.605Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793090754933",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793090754933",
+        "userId": "usr_mvqfxszby4wz",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T08:45:55.097Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793090806605",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793090806605",
+        "userId": "usr_mvqfyx1lp9s9",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T08:46:46.705Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793090991522",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793090991522"
+      },
+      "processedAt": "2026-10-27T08:49:51.525Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793091031097",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793091031097",
+        "userId": "usr_mvqg3q8w1qan",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T08:50:31.202Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793091959404",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793091959404"
+      },
+      "processedAt": "2026-10-27T09:05:59.407Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793092015854",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793092015854",
+        "userId": "usr_mvqgotwmmz0n",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T09:06:56.007Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793092076225",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793092076225"
+      },
+      "processedAt": "2026-10-27T09:07:56.239Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793092119607",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793092119607",
+        "userId": "usr_mvqgr1y8c3d0",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T09:08:39.805Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793092522239",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793092522239"
+      },
+      "processedAt": "2026-10-27T09:15:22.248Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793092566991",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793092566991",
+        "userId": "usr_mvqh0nad7s1c",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T09:16:07.130Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793093068662",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793093068662",
+        "userId": "usr_mvqhbeafo9kp",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T09:24:28.857Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793096063508",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793096063508"
+      },
+      "processedAt": "2026-10-27T10:14:23.511Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793096134873",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793096134873",
+        "userId": "usr_mvqj546ndvsw",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T10:15:35.155Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793105580697",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793105580697"
+      },
+      "processedAt": "2026-10-27T12:53:00.699Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793105620400",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793105620400",
+        "userId": "usr_mvqosff3er73",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T12:53:40.524Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793108219915",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793108219915"
+      },
+      "processedAt": "2026-10-27T13:36:59.917Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793108262461",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793108262461",
+        "userId": "usr_mvqqd1zjoycl",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T13:37:42.587Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793131622818",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793131622818"
+      },
+      "processedAt": "2026-10-27T20:07:02.823Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793138198362",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793138198362"
+      },
+      "processedAt": "2026-10-27T21:56:38.365Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793138257016",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793138257016",
+        "userId": "usr_mvr87xzcvv8u",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T21:57:37.110Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793138849973",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793138849973"
+      },
+      "processedAt": "2026-10-27T22:07:29.976Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793138891161",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793138891161",
+        "userId": "usr_mvr8lj7qs7ty",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T22:08:11.445Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793139497974",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793139497974"
+      },
+      "processedAt": "2026-10-27T22:18:17.977Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793139539110",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793139539110",
+        "userId": "usr_mvr8zf5k803u",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T22:18:59.262Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793140964301",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793140964301"
+      },
+      "processedAt": "2026-10-27T22:42:44.304Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793141004575",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793141004575",
+        "userId": "usr_mvr9uu0ujdr2",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-27T22:43:24.664Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793182730281",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793182730281"
+      },
+      "processedAt": "2026-10-28T10:18:50.284Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793182809232",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793182809232",
+        "userId": "usr_mvryqupgfbwt",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-28T10:20:09.398Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793199066749",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793199066749",
+        "userId": "usr_mvs8fb1mgdhd",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-28T14:51:06.925Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793207419888",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793207419888",
+        "userId": "usr_mvsdecdx57h7",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-28T17:10:20.027Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793208139903",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793208139903",
+        "userId": "usr_mvsdtrxatln3",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-28T17:22:20.137Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793208287635",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793208287635"
+      },
+      "processedAt": "2026-10-28T17:24:47.639Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793209251249",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793209251249"
+      },
+      "processedAt": "2026-10-28T17:40:51.254Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793209295696",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793209295696",
+        "userId": "usr_mvseijrcgbzl",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-28T17:41:35.805Z"
+    },
+    {
+      "eventId": "evt_idempotent_test_1793274485127",
+      "provider": "stripe",
+      "eventType": "checkout.session.completed",
+      "payload": {
+        "id": "evt_idempotent_test_1793274485127"
+      },
+      "processedAt": "2026-10-29T11:48:05.134Z"
+    },
+    {
+      "eventId": "e2e_beta_event_1793274561589",
+      "provider": "test",
+      "eventType": "test.payment.succeeded",
+      "payload": {
+        "provider": "test",
+        "eventId": "e2e_beta_event_1793274561589",
+        "userId": "usr_mvthdf7wrc90",
+        "planId": "pro",
+        "billingCycle": "monthly",
+        "amount": 9,
+        "currency": "USD"
+      },
+      "processedAt": "2026-10-29T11:49:21.803Z"
+    }
+  ],
+  "payments": [
+    {
+      "id": "pay_1793029314977_ke88i",
+      "userId": "usr_mvpfcxu38wps",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-26T15:41:54.977Z",
+      "updatedAt": "2026-10-26T15:41:54.977Z"
+    },
+    {
+      "id": "pay_1793090612678_37lta",
+      "userId": "usr_mvqfurchb4h8",
+      "userEmail": "beta_user_1793090604194@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793090612650",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T08:43:32.679Z",
+      "updatedAt": "2026-10-27T08:43:32.679Z"
+    },
+    {
+      "id": "pay_1793090646526_6db1c",
+      "userId": "usr_mvqfvhen2tsv",
+      "userEmail": "beta_user_1793090637878@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793090646500",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T08:44:06.526Z",
+      "updatedAt": "2026-10-27T08:44:06.526Z"
+    },
+    {
+      "id": "pay_1793090754989_adxif",
+      "userId": "usr_mvqfxszby4wz",
+      "userEmail": "beta_user_1793090746262@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793090754933",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T08:45:54.989Z",
+      "updatedAt": "2026-10-27T08:45:54.989Z"
+    },
+    {
+      "id": "pay_1793090806642_i1rhx",
+      "userId": "usr_mvqfyx1lp9s9",
+      "userEmail": "beta_user_1793090798187@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793090806605",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T08:46:46.642Z",
+      "updatedAt": "2026-10-27T08:46:46.642Z"
+    },
+    {
+      "id": "pay_1793090991546_63h0c",
+      "userId": "usr_mvqg2vs8g6vo",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T08:49:51.546Z",
+      "updatedAt": "2026-10-27T08:49:51.546Z"
+    },
+    {
+      "id": "pay_1793091031144_bh3gc",
+      "userId": "usr_mvqg3q8w1qan",
+      "userEmail": "beta_user_1793091022646@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793091031097",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T08:50:31.144Z",
+      "updatedAt": "2026-10-27T08:50:31.144Z"
+    },
+    {
+      "id": "pay_1793091959426_2joby",
+      "userId": "usr_mvqgnmlays0o",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T09:05:59.426Z",
+      "updatedAt": "2026-10-27T09:05:59.426Z"
+    },
+    {
+      "id": "pay_1793092015916_l138n",
+      "userId": "usr_mvqgotwmmz0n",
+      "userEmail": "beta_user_1793092006953@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793092015854",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T09:06:55.917Z",
+      "updatedAt": "2026-10-27T09:06:55.917Z"
+    },
+    {
+      "id": "pay_1793092076489_eb1ad",
+      "userId": "usr_mvqgq4a1j1rn",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T09:07:56.489Z",
+      "updatedAt": "2026-10-27T09:07:56.489Z"
+    },
+    {
+      "id": "pay_1793092119648_qgnx9",
+      "userId": "usr_mvqgr1y8c3d0",
+      "userEmail": "beta_user_1793092110261@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793092119607",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T09:08:39.648Z",
+      "updatedAt": "2026-10-27T09:08:39.648Z"
+    },
+    {
+      "id": "pay_1793092522270_2wo9a",
+      "userId": "usr_mvqgzouf5zmb",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T09:15:22.270Z",
+      "updatedAt": "2026-10-27T09:15:22.270Z"
+    },
+    {
+      "id": "pay_1793092567040_zo709",
+      "userId": "usr_mvqh0nad7s1c",
+      "userEmail": "beta_user_1793092558421@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793092566991",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T09:16:07.040Z",
+      "updatedAt": "2026-10-27T09:16:07.040Z"
+    },
+    {
+      "id": "pay_1793093068737_mvvd4",
+      "userId": "usr_mvqhbeafo9kp",
+      "userEmail": "beta_user_1793093059631@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793093068662",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T09:24:28.737Z",
+      "updatedAt": "2026-10-27T09:24:28.737Z"
+    },
+    {
+      "id": "pay_1793096063562_ezluz",
+      "userId": "usr_mvqj3la5smh7",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T10:14:23.562Z",
+      "updatedAt": "2026-10-27T10:14:23.562Z"
+    },
+    {
+      "id": "pay_1793096134937_d509x",
+      "userId": "usr_mvqj546ndvsw",
+      "userEmail": "beta_user_1793096131323@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793096134873",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T10:15:34.937Z",
+      "updatedAt": "2026-10-27T10:15:34.937Z"
+    },
+    {
+      "id": "pay_1793105580735_r1lpq",
+      "userId": "usr_mvqorkurf4h1",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T12:53:00.736Z",
+      "updatedAt": "2026-10-27T12:53:00.736Z"
+    },
+    {
+      "id": "pay_1793105620450_rmqxh",
+      "userId": "usr_mvqosff3er73",
+      "userEmail": "beta_user_1793105617467@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793105620400",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T12:53:40.450Z",
+      "updatedAt": "2026-10-27T12:53:40.450Z"
+    },
+    {
+      "id": "pay_1793108219934_dl89d",
+      "userId": "usr_mvqqc59jawbj",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T13:36:59.935Z",
+      "updatedAt": "2026-10-27T13:36:59.935Z"
+    },
+    {
+      "id": "pay_1793108262503_abi6j",
+      "userId": "usr_mvqqd1zjoycl",
+      "userEmail": "beta_user_1793108259422@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793108262461",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T13:37:42.503Z",
+      "updatedAt": "2026-10-27T13:37:42.503Z"
+    },
+    {
+      "id": "pay_1793131622846_s9n0t",
+      "userId": "usr_mvr49r24b3ce",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T20:07:02.846Z",
+      "updatedAt": "2026-10-27T20:07:02.846Z"
+    },
+    {
+      "id": "pay_1793138198390_fu1sc",
+      "userId": "usr_mvr86oszuui7",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T21:56:38.390Z",
+      "updatedAt": "2026-10-27T21:56:38.390Z"
+    },
+    {
+      "id": "pay_1793138257041_c7j1e",
+      "userId": "usr_mvr87xzcvv8u",
+      "userEmail": "beta_user_1793138254062@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793138257016",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T21:57:37.041Z",
+      "updatedAt": "2026-10-27T21:57:37.041Z"
+    },
+    {
+      "id": "pay_1793138850000_xn0qz",
+      "userId": "usr_mvr8knkbam8s",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T22:07:30.000Z",
+      "updatedAt": "2026-10-27T22:07:30.000Z"
+    },
+    {
+      "id": "pay_1793138891231_mibc3",
+      "userId": "usr_mvr8lj7qs7ty",
+      "userEmail": "beta_user_1793138888122@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793138891161",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T22:08:11.231Z",
+      "updatedAt": "2026-10-27T22:08:11.231Z"
+    },
+    {
+      "id": "pay_1793139497995_r2bie",
+      "userId": "usr_mvr8yjl07o6p",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T22:18:17.995Z",
+      "updatedAt": "2026-10-27T22:18:17.995Z"
+    },
+    {
+      "id": "pay_1793139539163_xnqz6",
+      "userId": "usr_mvr8zf5k803u",
+      "userEmail": "beta_user_1793139535729@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793139539110",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T22:18:59.163Z",
+      "updatedAt": "2026-10-27T22:18:59.163Z"
+    },
+    {
+      "id": "pay_1793140964325_sja5e",
+      "userId": "usr_mvr9tz0tgjw9",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T22:42:44.325Z",
+      "updatedAt": "2026-10-27T22:42:44.325Z"
+    },
+    {
+      "id": "pay_1793141004603_dc5s8",
+      "userId": "usr_mvr9uu0ujdr2",
+      "userEmail": "beta_user_1793141001631@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793141004575",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-27T22:43:24.603Z",
+      "updatedAt": "2026-10-27T22:43:24.603Z"
+    },
+    {
+      "id": "pay_1793182730358_j5p8j",
+      "userId": "usr_mvryp5tvzgof",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-28T10:18:50.358Z",
+      "updatedAt": "2026-10-28T10:18:50.358Z"
+    },
+    {
+      "id": "pay_1793182809272_0ag58",
+      "userId": "usr_mvryqupgfbwt",
+      "userEmail": "beta_user_1793182806242@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793182809232",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-28T10:20:09.272Z",
+      "updatedAt": "2026-10-28T10:20:09.272Z"
+    },
+    {
+      "id": "pay_1793199066794_6ax0j",
+      "userId": "usr_mvs8fb1mgdhd",
+      "userEmail": "beta_user_1793199063719@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793199066749",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-28T14:51:06.794Z",
+      "updatedAt": "2026-10-28T14:51:06.794Z"
+    },
+    {
+      "id": "pay_1793205785229_oqca4",
+      "userId": "usr_test_pay_1793205782575",
+      "userEmail": "paytest_1793205782575@example.com",
+      "amount": 9.14,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793205785124_qbzt8",
+        "reference": "ORD-TEST-785123",
+        "network": "BEP20",
+        "method": "manual_crypto",
+        "txid": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+      },
+      "createdAt": "2026-10-28T16:43:05.229Z",
+      "updatedAt": "2026-10-28T16:43:05.229Z"
+    },
+    {
+      "id": "pay_1793205863861_2czhz",
+      "userId": "usr_mvscgzqzkw3q",
+      "userEmail": "paytest_1793205861117@example.com",
+      "amount": 9.14,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793205863678_7ctbh",
+        "reference": "ORD-TEST-863677",
+        "network": "BEP20",
+        "method": "manual_crypto",
+        "txid": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+      },
+      "createdAt": "2026-10-28T16:44:23.861Z",
+      "updatedAt": "2026-10-28T16:44:23.861Z"
+    },
+    {
+      "id": "pay_1793205864313_s3gij",
+      "userId": "usr_mvscgzqzkw3q",
+      "userEmail": "paytest_1793205861117@example.com",
+      "amount": 9.33,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "0x9999999999999999999999999999999999999999999999999999999999999999",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793205863891_m25mb",
+        "reference": "ORD-EXT-863890",
+        "network": "BEP20",
+        "method": "manual_crypto",
+        "txid": "0x9999999999999999999999999999999999999999999999999999999999999999"
+      },
+      "createdAt": "2026-10-28T16:44:24.313Z",
+      "updatedAt": "2026-10-28T16:44:24.313Z"
+    },
+    {
+      "id": "pay_1793205864724_onygu",
+      "userId": "usr_mvscgzqzkw3q",
+      "userEmail": "paytest_1793205861117@example.com",
+      "amount": 5.77,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "ORD-ADMIN-864521",
+      "planId": "payg",
+      "billingCycle": "none",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793205864521_buhas",
+        "reference": "ORD-ADMIN-864521",
+        "network": "BEP20",
+        "method": "manual_crypto"
+      },
+      "createdAt": "2026-10-28T16:44:24.724Z",
+      "updatedAt": "2026-10-28T16:44:24.724Z"
+    },
+    {
+      "id": "pay_1793207419928_zpu43",
+      "userId": "usr_mvsdecdx57h7",
+      "userEmail": "beta_user_1793207416774@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793207419888",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-28T17:10:19.928Z",
+      "updatedAt": "2026-10-28T17:10:19.928Z"
+    },
+    {
+      "id": "pay_1793208139968_q0o1i",
+      "userId": "usr_mvsdtrxatln3",
+      "userEmail": "beta_user_1793208136792@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793208139903",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-28T17:22:19.968Z",
+      "updatedAt": "2026-10-28T17:22:19.968Z"
+    },
+    {
+      "id": "pay_1793208287729_c1yom",
+      "userId": "usr_mvsdwy02yqjw",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-28T17:24:47.729Z",
+      "updatedAt": "2026-10-28T17:24:47.729Z"
+    },
+    {
+      "id": "pay_1793208363157_lx06s",
+      "userId": "usr_mvsdyk9pejai",
+      "userEmail": "paytest_1793208360491@example.com",
+      "amount": 9.14,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793208363041_dvm3u",
+        "reference": "ORD-TEST-363040",
+        "network": "BEP20",
+        "method": "manual_crypto",
+        "txid": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+      },
+      "createdAt": "2026-10-28T17:26:03.157Z",
+      "updatedAt": "2026-10-28T17:26:03.157Z"
+    },
+    {
+      "id": "pay_1793208363272_b3dlf",
+      "userId": "usr_mvsdyk9pejai",
+      "userEmail": "paytest_1793208360491@example.com",
+      "amount": 9.33,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "0x9999999999999999999999999999999999999999999999999999999999999999",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793208363180_xbk27",
+        "reference": "ORD-EXT-363179",
+        "network": "BEP20",
+        "method": "manual_crypto",
+        "txid": "0x9999999999999999999999999999999999999999999999999999999999999999"
+      },
+      "createdAt": "2026-10-28T17:26:03.272Z",
+      "updatedAt": "2026-10-28T17:26:03.272Z"
+    },
+    {
+      "id": "pay_1793208363390_j7c35",
+      "userId": "usr_mvsdyk9pejai",
+      "userEmail": "paytest_1793208360491@example.com",
+      "amount": 5.77,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "ORD-ADMIN-363319",
+      "planId": "payg",
+      "billingCycle": "none",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793208363319_713iq",
+        "reference": "ORD-ADMIN-363319",
+        "network": "BEP20",
+        "method": "manual_crypto"
+      },
+      "createdAt": "2026-10-28T17:26:03.390Z",
+      "updatedAt": "2026-10-28T17:26:03.390Z"
+    },
+    {
+      "id": "pay_1793209251297_tbcil",
+      "userId": "usr_mvsehlk13gsq",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-28T17:40:51.297Z",
+      "updatedAt": "2026-10-28T17:40:51.297Z"
+    },
+    {
+      "id": "pay_1793209295730_pz069",
+      "userId": "usr_mvseijrcgbzl",
+      "userEmail": "beta_user_1793209292631@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793209295696",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-28T17:41:35.730Z",
+      "updatedAt": "2026-10-28T17:41:35.730Z"
+    },
+    {
+      "id": "pay_1793274485156_m0809",
+      "userId": "usr_mvthbscmpss0",
+      "userEmail": "test@example.com",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "stripe",
+      "providerPaymentId": "ch_test_123",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-29T11:48:05.156Z",
+      "updatedAt": "2026-10-29T11:48:05.156Z"
+    },
+    {
+      "id": "pay_1793274561626_ws9so",
+      "userId": "usr_mvthdf7wrc90",
+      "userEmail": "beta_user_1793274558540@jobmatch.ai",
+      "amount": 9,
+      "currency": "USD",
+      "provider": "test",
+      "providerPaymentId": "e2e_beta_event_1793274561589",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "createdAt": "2026-10-29T11:49:21.626Z",
+      "updatedAt": "2026-10-29T11:49:21.626Z"
+    },
+    {
+      "id": "pay_1793274626929_w9l51",
+      "userId": "usr_mvtheto5vx17",
+      "userEmail": "paytest_1793274624178@example.com",
+      "amount": 9.14,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793274626744_ycn96",
+        "reference": "ORD-TEST-626744",
+        "network": "BEP20",
+        "method": "manual_crypto",
+        "txid": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+      },
+      "createdAt": "2026-10-29T11:50:26.929Z",
+      "updatedAt": "2026-10-29T11:50:26.929Z"
+    },
+    {
+      "id": "pay_1793274627110_okxgn",
+      "userId": "usr_mvtheto5vx17",
+      "userEmail": "paytest_1793274624178@example.com",
+      "amount": 9.33,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "0x9999999999999999999999999999999999999999999999999999999999999999",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793274626951_v8ksd",
+        "reference": "ORD-EXT-626951",
+        "network": "BEP20",
+        "method": "manual_crypto",
+        "txid": "0x9999999999999999999999999999999999999999999999999999999999999999"
+      },
+      "createdAt": "2026-10-29T11:50:27.110Z",
+      "updatedAt": "2026-10-29T11:50:27.110Z"
+    },
+    {
+      "id": "pay_1793274627709_hx934",
+      "userId": "usr_mvtheto5vx17",
+      "userEmail": "paytest_1793274624178@example.com",
+      "amount": 5.77,
+      "currency": "USDT",
+      "provider": "test",
+      "providerPaymentId": "ORD-ADMIN-627408",
+      "planId": "payg",
+      "billingCycle": "none",
+      "status": "succeeded",
+      "metadata": {
+        "orderId": "ord_1793274627408_h9ner",
+        "reference": "ORD-ADMIN-627408",
+        "network": "BEP20",
+        "method": "manual_crypto"
+      },
+      "createdAt": "2026-10-29T11:50:27.709Z",
+      "updatedAt": "2026-10-29T11:50:27.709Z"
+    }
+  ],
+  "jobCache": [
+    {
+      "cacheKey": "job_search:backend engineer test cache:riyadh:all:sa",
+      "data": {
+        "jobs": [
+          {
+            "id": "test_job_1",
+            "title": "Senior Frontend Developer",
+            "company": "FinTech Hub",
+            "location": "Cairo, Egypt",
+            "remote": true,
+            "description": "Looking for a Senior Frontend Developer skilled in React, TypeScript, Tailwind, and AWS.",
+            "url": "https://example.com/job/1",
+            "source": "Remotive",
+            "tags": [
+              "React",
+              "TypeScript",
+              "AWS"
+            ]
+          }
+        ],
+        "totalFound": 1,
+        "attributions": []
+      },
+      "expiresAt": "2026-10-29T17:50:10.265Z",
+      "createdAt": "2026-10-29T11:50:10.265Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ord_1793205785124_qbzt8",
+      "userId": "usr_test_pay_1793205782575",
+      "userEmail": "paytest_1793205782575@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.14,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-TEST-785123",
+      "recipientAddress": "0x1111111111111111111111111111111111111111",
+      "expiresAt": "2026-10-28T17:13:05.123Z",
+      "paidAt": "2026-10-28T16:43:05.202Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T16:43:05.124Z",
+          "note": "Order initialized for plan pro (9.14 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-28T16:43:05.202Z",
+          "note": "Completed via automated verification test",
+          "actor": "test_suite"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T16:43:05.124Z",
+      "updatedAt": "2026-10-28T16:43:05.202Z",
+      "txid": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    },
+    {
+      "id": "ord_1793205785154_h04db",
+      "userId": "usr_test_pay_1793205782575",
+      "userEmail": "paytest_1793205782575@example.com",
+      "planId": "payg",
+      "billingCycle": "once",
+      "baseAmount": 5,
+      "amount": 5.25,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "TRC20",
+      "status": "awaiting_payment",
+      "reference": "ORD-TRC-785154",
+      "recipientAddress": "TRecipientWalletOnTron1234567890",
+      "expiresAt": "2026-10-28T17:13:05.154Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T16:43:05.154Z",
+          "note": "Order initialized for plan payg (5.25 USDT on TRC20)",
+          "actor": "system"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T16:43:05.154Z",
+      "updatedAt": "2026-10-28T16:43:05.154Z"
+    },
+    {
+      "id": "ord_1793205863678_7ctbh",
+      "userId": "usr_mvscgzqzkw3q",
+      "userEmail": "paytest_1793205861117@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.14,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-TEST-863677",
+      "recipientAddress": "0x1111111111111111111111111111111111111111",
+      "expiresAt": "2026-10-28T17:14:23.677Z",
+      "paidAt": "2026-10-28T16:44:23.795Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T16:44:23.678Z",
+          "note": "Order initialized for plan pro (9.14 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-28T16:44:23.795Z",
+          "note": "Completed via automated verification test",
+          "actor": "test_suite"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T16:44:23.678Z",
+      "updatedAt": "2026-10-28T16:44:23.795Z",
+      "txid": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    },
+    {
+      "id": "ord_1793205863710_x0c9a",
+      "userId": "usr_mvscgzqzkw3q",
+      "userEmail": "paytest_1793205861117@example.com",
+      "planId": "payg",
+      "billingCycle": "once",
+      "baseAmount": 5,
+      "amount": 5.25,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "TRC20",
+      "status": "awaiting_payment",
+      "reference": "ORD-TRC-863710",
+      "recipientAddress": "TRecipientWalletOnTron1234567890",
+      "expiresAt": "2026-10-28T17:14:23.710Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T16:44:23.710Z",
+          "note": "Order initialized for plan payg (5.25 USDT on TRC20)",
+          "actor": "system"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T16:44:23.710Z",
+      "updatedAt": "2026-10-28T16:44:23.710Z"
+    },
+    {
+      "id": "ord_1793205863891_m25mb",
+      "userId": "usr_mvscgzqzkw3q",
+      "userEmail": "paytest_1793205861117@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.33,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-EXT-863890",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-28T17:14:23.890Z",
+      "paidAt": "2026-10-28T16:44:23.933Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T16:44:23.891Z",
+          "note": "Order initialized for plan pro (9.33 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-28T16:44:23.933Z",
+          "note": "Extension payment",
+          "actor": "test_suite"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T16:44:23.891Z",
+      "updatedAt": "2026-10-28T16:44:23.933Z",
+      "txid": "0x9999999999999999999999999999999999999999999999999999999999999999"
+    },
+    {
+      "id": "ord_1793205864404_kk47l",
+      "userId": "usr_other_1793205864403",
+      "userEmail": "other@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.14,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "awaiting_payment",
+      "reference": "ORD-DUP-864403",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-28T17:14:24.404Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T16:44:24.404Z",
+          "note": "Order initialized for plan pro (9.14 USDT on BEP20)",
+          "actor": "system"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T16:44:24.404Z",
+      "updatedAt": "2026-10-28T16:44:24.404Z"
+    },
+    {
+      "id": "ord_1793205864521_buhas",
+      "userId": "usr_mvscgzqzkw3q",
+      "userEmail": "paytest_1793205861117@example.com",
+      "planId": "payg",
+      "billingCycle": "once",
+      "baseAmount": 5,
+      "amount": 5.77,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-ADMIN-864521",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-28T17:14:24.521Z",
+      "paidAt": "2026-10-28T16:44:24.616Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T16:44:24.521Z",
+          "note": "Order initialized for plan payg (5.77 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-28T16:44:24.616Z",
+          "note": "Manually verified via BscScan explorer",
+          "actor": "admin (admin@jobmatch.ai)"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T16:44:24.521Z",
+      "updatedAt": "2026-10-28T16:44:24.616Z"
+    },
+    {
+      "id": "ord_1793205864762_1qhuj",
+      "userId": "usr_mvscgzqzkw3q",
+      "userEmail": "paytest_1793205861117@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.88,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "rejected",
+      "reference": "ORD-REJ-864762",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-28T17:14:24.762Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T16:44:24.762Z",
+          "note": "Order initialized for plan pro (9.88 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "rejected",
+          "timestamp": "2026-10-28T16:44:24.773Z",
+          "note": "Invalid transfer details",
+          "actor": "admin (admin@jobmatch.ai)"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T16:44:24.762Z",
+      "updatedAt": "2026-10-28T16:44:24.773Z"
+    },
+    {
+      "id": "ord_1793208363041_dvm3u",
+      "userId": "usr_mvsdyk9pejai",
+      "userEmail": "paytest_1793208360491@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.14,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-TEST-363040",
+      "recipientAddress": "0x1111111111111111111111111111111111111111",
+      "expiresAt": "2026-10-28T17:56:03.040Z",
+      "paidAt": "2026-10-28T17:26:03.113Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T17:26:03.041Z",
+          "note": "Order initialized for plan pro (9.14 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-28T17:26:03.113Z",
+          "note": "Completed via automated verification test",
+          "actor": "test_suite"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T17:26:03.041Z",
+      "updatedAt": "2026-10-28T17:26:03.113Z",
+      "txid": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    },
+    {
+      "id": "ord_1793208363075_kjqit",
+      "userId": "usr_mvsdyk9pejai",
+      "userEmail": "paytest_1793208360491@example.com",
+      "planId": "payg",
+      "billingCycle": "once",
+      "baseAmount": 5,
+      "amount": 5.25,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "TRC20",
+      "status": "awaiting_payment",
+      "reference": "ORD-TRC-363075",
+      "recipientAddress": "TRecipientWalletOnTron1234567890",
+      "expiresAt": "2026-10-28T17:56:03.075Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T17:26:03.075Z",
+          "note": "Order initialized for plan payg (5.25 USDT on TRC20)",
+          "actor": "system"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T17:26:03.075Z",
+      "updatedAt": "2026-10-28T17:26:03.075Z"
+    },
+    {
+      "id": "ord_1793208363180_xbk27",
+      "userId": "usr_mvsdyk9pejai",
+      "userEmail": "paytest_1793208360491@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.33,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-EXT-363179",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-28T17:56:03.180Z",
+      "paidAt": "2026-10-28T17:26:03.211Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T17:26:03.180Z",
+          "note": "Order initialized for plan pro (9.33 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-28T17:26:03.211Z",
+          "note": "Extension payment",
+          "actor": "test_suite"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T17:26:03.180Z",
+      "updatedAt": "2026-10-28T17:26:03.211Z",
+      "txid": "0x9999999999999999999999999999999999999999999999999999999999999999"
+    },
+    {
+      "id": "ord_1793208363295_nq4u4",
+      "userId": "usr_other_1793208363295",
+      "userEmail": "other@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.14,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "awaiting_payment",
+      "reference": "ORD-DUP-363295",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-28T17:56:03.295Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T17:26:03.295Z",
+          "note": "Order initialized for plan pro (9.14 USDT on BEP20)",
+          "actor": "system"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T17:26:03.295Z",
+      "updatedAt": "2026-10-28T17:26:03.295Z"
+    },
+    {
+      "id": "ord_1793208363319_713iq",
+      "userId": "usr_mvsdyk9pejai",
+      "userEmail": "paytest_1793208360491@example.com",
+      "planId": "payg",
+      "billingCycle": "once",
+      "baseAmount": 5,
+      "amount": 5.77,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-ADMIN-363319",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-28T17:56:03.319Z",
+      "paidAt": "2026-10-28T17:26:03.339Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T17:26:03.319Z",
+          "note": "Order initialized for plan payg (5.77 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-28T17:26:03.339Z",
+          "note": "Manually verified via BscScan explorer",
+          "actor": "admin (admin@jobmatch.ai)"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T17:26:03.319Z",
+      "updatedAt": "2026-10-28T17:26:03.339Z"
+    },
+    {
+      "id": "ord_1793208363410_esg19",
+      "userId": "usr_mvsdyk9pejai",
+      "userEmail": "paytest_1793208360491@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.88,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "rejected",
+      "reference": "ORD-REJ-363410",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-28T17:56:03.410Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-28T17:26:03.410Z",
+          "note": "Order initialized for plan pro (9.88 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "rejected",
+          "timestamp": "2026-10-28T17:26:03.414Z",
+          "note": "Invalid transfer details",
+          "actor": "admin (admin@jobmatch.ai)"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-28T17:26:03.410Z",
+      "updatedAt": "2026-10-28T17:26:03.414Z"
+    },
+    {
+      "id": "ord_1793274626744_ycn96",
+      "userId": "usr_mvtheto5vx17",
+      "userEmail": "paytest_1793274624178@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.14,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-TEST-626744",
+      "recipientAddress": "0x1111111111111111111111111111111111111111",
+      "expiresAt": "2026-10-29T12:20:26.744Z",
+      "paidAt": "2026-10-29T11:50:26.885Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-29T11:50:26.744Z",
+          "note": "Order initialized for plan pro (9.14 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-29T11:50:26.885Z",
+          "note": "Completed via automated verification test",
+          "actor": "test_suite"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-29T11:50:26.744Z",
+      "updatedAt": "2026-10-29T11:50:26.885Z",
+      "txid": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+    },
+    {
+      "id": "ord_1793274626774_irwdh",
+      "userId": "usr_mvtheto5vx17",
+      "userEmail": "paytest_1793274624178@example.com",
+      "planId": "payg",
+      "billingCycle": "once",
+      "baseAmount": 5,
+      "amount": 5.25,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "TRC20",
+      "status": "awaiting_payment",
+      "reference": "ORD-TRC-626774",
+      "recipientAddress": "TRecipientWalletOnTron1234567890",
+      "expiresAt": "2026-10-29T12:20:26.774Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-29T11:50:26.774Z",
+          "note": "Order initialized for plan payg (5.25 USDT on TRC20)",
+          "actor": "system"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-29T11:50:26.774Z",
+      "updatedAt": "2026-10-29T11:50:26.774Z"
+    },
+    {
+      "id": "ord_1793274626951_v8ksd",
+      "userId": "usr_mvtheto5vx17",
+      "userEmail": "paytest_1793274624178@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.33,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-EXT-626951",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-29T12:20:26.951Z",
+      "paidAt": "2026-10-29T11:50:26.974Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-29T11:50:26.951Z",
+          "note": "Order initialized for plan pro (9.33 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-29T11:50:26.974Z",
+          "note": "Extension payment",
+          "actor": "test_suite"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-29T11:50:26.951Z",
+      "updatedAt": "2026-10-29T11:50:26.974Z",
+      "txid": "0x9999999999999999999999999999999999999999999999999999999999999999"
+    },
+    {
+      "id": "ord_1793274627284_mlx4o",
+      "userId": "usr_other_1793274627284",
+      "userEmail": "other@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.14,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "awaiting_payment",
+      "reference": "ORD-DUP-627284",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-29T12:20:27.284Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-29T11:50:27.284Z",
+          "note": "Order initialized for plan pro (9.14 USDT on BEP20)",
+          "actor": "system"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-29T11:50:27.284Z",
+      "updatedAt": "2026-10-29T11:50:27.284Z"
+    },
+    {
+      "id": "ord_1793274627408_h9ner",
+      "userId": "usr_mvtheto5vx17",
+      "userEmail": "paytest_1793274624178@example.com",
+      "planId": "payg",
+      "billingCycle": "once",
+      "baseAmount": 5,
+      "amount": 5.77,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "paid",
+      "reference": "ORD-ADMIN-627408",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-29T12:20:27.408Z",
+      "paidAt": "2026-10-29T11:50:27.427Z",
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-29T11:50:27.408Z",
+          "note": "Order initialized for plan payg (5.77 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "paid",
+          "timestamp": "2026-10-29T11:50:27.427Z",
+          "note": "Manually verified via BscScan explorer",
+          "actor": "admin (admin@jobmatch.ai)"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-29T11:50:27.408Z",
+      "updatedAt": "2026-10-29T11:50:27.427Z"
+    },
+    {
+      "id": "ord_1793274627768_3aa7i",
+      "userId": "usr_mvtheto5vx17",
+      "userEmail": "paytest_1793274624178@example.com",
+      "planId": "pro",
+      "billingCycle": "monthly",
+      "baseAmount": 9,
+      "amount": 9.88,
+      "currency": "USDT",
+      "method": "manual_crypto",
+      "network": "BEP20",
+      "status": "rejected",
+      "reference": "ORD-REJ-627768",
+      "recipientAddress": "",
+      "expiresAt": "2026-10-29T12:20:27.768Z",
+      "paidAt": null,
+      "auditLog": [
+        {
+          "status": "awaiting_payment",
+          "timestamp": "2026-10-29T11:50:27.768Z",
+          "note": "Order initialized for plan pro (9.88 USDT on BEP20)",
+          "actor": "system"
+        },
+        {
+          "status": "rejected",
+          "timestamp": "2026-10-29T11:50:27.772Z",
+          "note": "Invalid transfer details",
+          "actor": "admin (admin@jobmatch.ai)"
+        }
+      ],
+      "metadata": {},
+      "createdAt": "2026-10-29T11:50:27.768Z",
+      "updatedAt": "2026-10-29T11:50:27.772Z"
     }
   ]
 }

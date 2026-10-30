@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -13,7 +13,7 @@ interface TemplateProps {
  * Clean typography, 1cm margin, inline dates, single-column high-density layout.
  */
 export default function CompactTemplate({ data, theme }: TemplateProps) {
-  const { personalInfo, experience, education, projects, skills, certifications } = data;
+  const { personalInfo, experience, education, projects, skills, certifications, languages } = data;
   const accent = theme.accentColor || '#1d4ed8';
   const h = getDocumentHeadings(theme.documentLanguage);
 
@@ -130,7 +130,7 @@ export default function CompactTemplate({ data, theme }: TemplateProps) {
                     </span>
                     {(exp.startDate || exp.endDate) && (
                       <span className={`text-gray-600 font-medium text-[11px] shrink-0 ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                        {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                        {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                       </span>
                     )}
                   </div>
@@ -170,7 +170,7 @@ export default function CompactTemplate({ data, theme }: TemplateProps) {
                     </span>
                     {(edu.startDate || edu.endDate) && (
                       <span className={`text-gray-600 font-medium text-[11px] shrink-0 ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                        {edu.startDate} – {edu.endDate}
+                        {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                       </span>
                     )}
                   </div>
@@ -257,6 +257,18 @@ export default function CompactTemplate({ data, theme }: TemplateProps) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* 8. Languages */}
+      {languages && languages.length > 0 && (
+        <section className="mb-3">
+          <h2 className="text-xs font-bold tracking-wider text-gray-900 uppercase mb-1.5">
+            {h.languages}
+          </h2>
+          <p className="text-[11.5px] text-gray-700 leading-relaxed">
+            {languages.map((l) => `${l.name} (${l.proficiency})`).join(' • ')}
+          </p>
         </section>
       )}
     </div>

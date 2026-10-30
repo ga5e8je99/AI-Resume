@@ -1,52 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
-  <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#020617"/>
-      <stop offset="100%" stop-color="#0f172a"/>
-    </linearGradient>
-    <linearGradient id="neonGradient" x1="10%" y1="10%" x2="90%" y2="90%">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="35%" stop-color="#38bdf8"/>
-      <stop offset="65%" stop-color="#818cf8"/>
-      <stop offset="100%" stop-color="#e879f9"/>
-    </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-
-  <!-- Background container -->
-  <rect width="100" height="100" rx="24" fill="url(#bgGrad)" stroke="#1e293b" stroke-width="2"/>
-  <circle cx="50" cy="50" r="40" stroke="#06b6d4" stroke-width="1" stroke-dasharray="3 4" opacity="0.3"/>
-
-  <!-- Letter J -->
-  <path d="M32 24 H48 V56 C48 64 42 70 32 70 C24 70 18 64 18 56" 
-        fill="none" 
-        stroke="url(#neonGradient)" 
-        stroke-width="7" 
-        stroke-linecap="round" 
-        stroke-linejoin="round" 
-        filter="url(#glow)"/>
-  <path d="M32 24 V32" 
-        fill="none" 
-        stroke="url(#neonGradient)" 
-        stroke-width="5" 
-        stroke-linecap="round"/>
-
-  <!-- Letter M -->
-  <path d="M48 50 L60 30 L72 50 L84 24 V70" 
-        fill="none" 
-        stroke="url(#neonGradient)" 
-        stroke-width="7" 
-        stroke-linecap="round" 
-        stroke-linejoin="round" 
-        filter="url(#glow)"/>
-
-  <!-- Glowing AI Sparkle -->
-  <circle cx="60" cy="30" r="3" fill="#ffffff"/>
-  <circle cx="60" cy="30" r="5" fill="#22d3ee" opacity="0.4"/>
+<svg viewBox="0 0 32 32" width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Document Sheet -->
+  <path d="M 5,6.5 C 5,5.12 6.12,4 7.5,4 L 17,4 L 23,10 L 23,25.5 C 23,26.88 21.88,28 20.5,28 L 7.5,28 C 6.12,28 5,26.88 5,25.5 Z" fill="#E3EFEA" stroke="#0F5C4D" stroke-width="1.75" stroke-linejoin="round"/>
+  <!-- Folded Corner Flap -->
+  <path d="M 17,4 L 17,8.5 C 17,9.33 17.67,10 18.5,10 L 23,10 Z" fill="#D1E7DF" stroke="#0F5C4D" stroke-width="1.75" stroke-linejoin="round"/>
+  <!-- Resume text lines -->
+  <line x1="9" y1="14" x2="17" y2="14" stroke="#0F5C4D" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+  <line x1="9" y1="18" x2="14.5" y2="18" stroke="#0F5C4D" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+  <line x1="9" y1="22" x2="12" y2="22" stroke="#0F5C4D" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+  <!-- Amber AI Spark Accent -->
+  <path d="M 24.5,1.5 C 24.5,2.6 25.4,3.5 26.5,3.5 C 25.4,3.5 24.5,4.4 24.5,5.5 C 24.5,4.4 23.6,3.5 22.5,3.5 C 23.6,3.5 24.5,2.6 24.5,1.5 Z" fill="#C8892B"/>
+  <!-- ATS Pass Badge (Knockout Ring + Fill) -->
+  <circle cx="22" cy="22" r="5.5" fill="#0F5C4D" stroke="#FAF8F4" stroke-width="2"/>
+  <!-- Checkmark -->
+  <path d="M 19.3,22.2 L 21.1,24 L 24.8,20.2" stroke="#FFFFFF" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

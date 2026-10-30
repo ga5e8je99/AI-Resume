@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { CoverLetterTone, CoverLetterLanguage } from '../types';
-import { TONE_PRESETS } from '../constants';
-import { Briefcase, Code, Award, Sparkles } from 'lucide-react';
+import { TONE_PRESETS, TonePreset } from '../constants';
+import { Briefcase, Sparkles, Award, Code, Check } from 'lucide-react';
 
 interface ToneCardSelectorProps {
   selectedTone: CoverLetterTone;
@@ -12,27 +12,41 @@ interface ToneCardSelectorProps {
 }
 
 export function ToneCardSelector({ selectedTone, onChange, language }: ToneCardSelectorProps) {
-  const getIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Briefcase':
-        return <Briefcase className="w-4 h-4" />;
-      case 'Code':
-        return <Code className="w-4 h-4" />;
-      case 'Award':
-        return <Award className="w-4 h-4" />;
-      case 'Sparkles':
+  const isAr = language === 'ar';
+
+  const getIcon = (id: string) => {
+    switch (id) {
+      case 'formal':
+        return <Briefcase className="w-4 h-4" strokeWidth={1.75} />;
+      case 'enthusiastic':
+        return <Sparkles className="w-4 h-4" strokeWidth={1.75} />;
+      case 'leadership':
+        return <Award className="w-4 h-4" strokeWidth={1.75} />;
+      case 'technical':
       default:
-        return <Sparkles className="w-4 h-4" />;
+        return <Code className="w-4 h-4" strokeWidth={1.75} />;
     }
   };
 
+  // Primary 3 Tones requested in Task U7: Professional, Friendly, Confident
+  const primaryToneIds: CoverLetterTone[] = ['formal', 'enthusiastic', 'leadership'];
+  const primaryTones = TONE_PRESETS.filter((t) => primaryToneIds.includes(t.id));
+  const technicalPreset = TONE_PRESETS.find((t) => t.id === 'technical');
+
   return (
-    <div className="space-y-1.5" role="radiogroup" aria-label={language === 'ar' ? 'اختيار نبرة الخطاب' : 'Select cover letter tone'}>
-      <label className="block text-xs font-semibold text-slate-300">
-        {language === 'ar' ? 'نبرة الخطاب (Tone)' : 'Letter Tone'}
-      </label>
-      <div className="grid grid-cols-2 gap-2">
-        {TONE_PRESETS.map((t) => {
+    <div className="space-y-2.5" role="radiogroup" aria-label={isAr ? 'اختيار نبرة الخطاب' : 'Select cover letter tone'}>
+      <div className="flex items-baseline justify-between">
+        <label className="block text-xs font-semibold text-ink">
+          {isAr ? 'نبرة الخطاب (Tone)' : 'Letter Tone'}
+        </label>
+        <span className="text-[11px] text-ink-3">
+          {isAr ? 'تحدد أسلوب الصياغة والمقدمة' : 'Shapes tone, phrasing & intro'}
+        </span>
+      </div>
+
+      {/* 3 Prominent Primary Cards: Professional, Friendly, Confident */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {primaryTones.map((t) => {
           const isSelected = selectedTone === t.id;
           return (
             <button
@@ -41,29 +55,71 @@ export function ToneCardSelector({ selectedTone, onChange, language }: ToneCardS
               role="radio"
               aria-checked={isSelected}
               onClick={() => onChange(t.id)}
-              className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none ${
-                language === 'ar' ? 'text-right' : 'text-left'
-              } ${
+              className={`p-3 rounded-[10px] border text-start transition-all cursor-pointer flex flex-col justify-between gap-1.5 focus-visible:outline-2 focus-visible:outline-accent relative ${
                 isSelected
-                  ? 'bg-amber-500/15 border-amber-500/60 shadow-md shadow-amber-500/10'
-                  : 'bg-slate-800/60 border-slate-700/70 hover:border-slate-600 hover:bg-slate-800'
+                  ? 'bg-surface border-accent shadow-xs text-ink ring-2 ring-accent/20'
+                  : 'bg-surface-2/40 border-line hover:border-line-strong hover:bg-surface text-ink-2'
               }`}
             >
-              <div className="flex items-center justify-between w-full mb-1">
-                <span className={`text-xs font-bold ${isSelected ? 'text-amber-300' : 'text-slate-200'}`}>
-                  {language === 'ar' ? t.labelAr : t.labelEn}
+              <div className="flex items-center justify-between w-full">
+                <span className={`p-1.5 rounded-[6px] transition-colors ${
+                  isSelected ? 'text-accent bg-accent-soft' : 'text-ink-3 bg-surface-2'
+                }`}>
+                  {getIcon(t.id)}
                 </span>
-                <span className={`p-1 rounded-md ${isSelected ? 'text-amber-400 bg-amber-500/20' : 'text-slate-400 bg-slate-700/50'}`}>
-                  {getIcon(t.icon)}
-                </span>
+                {isSelected && (
+                  <span className="w-4 h-4 rounded-full bg-accent text-white flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                  </span>
+                )}
               </div>
-              <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">
-                {language === 'ar' ? t.descriptionAr : t.descriptionEn}
-              </p>
+
+              <div>
+                <h4 className={`text-xs font-semibold ${isSelected ? 'text-accent' : 'text-ink'}`}>
+                  {isAr ? t.labelAr : t.labelEn}
+                </h4>
+                <p className="text-[10px] text-ink-3 leading-relaxed mt-0.5 line-clamp-2">
+                  {isAr ? t.descriptionAr : t.descriptionEn}
+                </p>
+              </div>
             </button>
           );
         })}
       </div>
+
+      {/* 4th Tone: Technical (Available for engineering & dev roles) */}
+      {technicalPreset && (
+        <div className="pt-0.5">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={selectedTone === 'technical'}
+            onClick={() => onChange('technical')}
+            className={`w-full py-1.5 px-3 rounded-[8px] border text-start transition-all cursor-pointer flex items-center justify-between text-xs focus-visible:outline-2 focus-visible:outline-accent ${
+              selectedTone === 'technical'
+                ? 'bg-surface border-cyan-500/50 shadow-xs text-ink ring-1 ring-cyan-500/30'
+                : 'bg-surface-2/30 border-line hover:border-line-strong hover:bg-surface text-ink-3 hover:text-ink'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`p-1 rounded-[4px] ${selectedTone === 'technical' ? 'text-cyan-600 bg-cyan-500/10' : 'text-ink-3'}`}>
+                <Code className="w-3.5 h-3.5" strokeWidth={1.75} />
+              </span>
+              <span className={`font-medium ${selectedTone === 'technical' ? 'text-cyan-600 font-semibold' : 'text-ink-2'}`}>
+                {isAr ? technicalPreset.labelAr : technicalPreset.labelEn}
+              </span>
+              <span className="text-[10px] text-ink-3 hidden sm:inline">
+                {isAr ? '— تركيز على المهارات البرمجية والأرقام' : '— Focused on code, metrics & tech stack'}
+              </span>
+            </div>
+            {selectedTone === 'technical' && (
+              <span className="w-3.5 h-3.5 rounded-full bg-cyan-600 text-white flex items-center justify-center">
+                <Check className="w-2 h-2" strokeWidth={3} />
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

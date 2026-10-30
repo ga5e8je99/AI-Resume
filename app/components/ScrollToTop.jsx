@@ -1,65 +1,76 @@
-import { useState, useEffect } from "react";
-import { ArrowUp } from "lucide-react";
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { ArrowUp } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+
 export default function ScrollToTop() {
+  const { isRtl, language } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const isAr = language === 'ar';
 
   useEffect(() => {
     const toggleVisibility = () => {
-      setIsVisible(window.pageYOffset > 300);
+      if (window.scrollY > 300) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
     };
 
-    window.addEventListener("scroll", toggleVisibility);
-    return () => window.removeEventListener("scroll", toggleVisibility);
+    window.addEventListener('scroll', toggleVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', toggleVisibility);
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const label = isAr ? 'انتقل إلى أعلى الصفحة' : 'Scroll to top';
+  const tooltipText = isAr ? 'العودة للأعلى' : 'Back to top';
 
   return (
     <>
       <button
+        type="button"
         onClick={scrollToTop}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        suppressHydrationWarning
+        aria-label={label}
         className={`
-          fixed bottom-6 right-6
-          w-12 h-12
+          fixed bottom-6 end-6
+          w-11 h-11
           rounded-full
-          bg-white/10
-          backdrop-blur-md
-          text-white
-          border-2 border-white/20
+          bg-surface
+          text-ink
+          border border-line-strong
           cursor-pointer
-          shadow-lg shadow-blue-500/30
+          shadow-subtle
           flex items-center justify-center
-          text-xl font-bold
-          transition-all duration-300 ease-out
-          z-50
+          transition-all duration-200 ease-out
+          z-40
           ${
             isVisible
-              ? "opacity-100 translate-y-0 visible"
-              : "opacity-0 translate-y-24 invisible"
+              ? 'opacity-100 translate-y-0 visible pointer-events-auto'
+              : 'opacity-0 translate-y-6 invisible pointer-events-none'
           }
-          hover:scale-110 hover:shadow-xl hover:shadow-blue-500/40
-          hover:border-white/30
+          hover:bg-surface-2
           active:scale-95
-          focus:outline-none focus:ring-3 focus:ring-blue-400 focus:ring-offset-2
-          backdrop-blur-sm
+          focus-visible:outline-2 outline-offset-2 outline-[var(--focus)]
         `}
-        aria-label="Scroll to top"
       >
-        <span className="transform transition-transform duration-200 hover:-translate-y-0.5">
-          < ArrowUp size={24} />
-        </span>
+        <ArrowUp className="w-5 h-5 text-accent" />
       </button>
 
       {/* Tooltip */}
       {isHovered && isVisible && (
-        <div className="fixed bottom-20 right-6 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-50 animate-in fade-in slide-in-from-bottom-2">
-          Back to top
-          <div className="absolute -bottom-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+        <div
+          dir={isRtl ? 'rtl' : 'ltr'}
+          className="fixed bottom-20 end-6 bg-surface border border-line-strong text-ink text-xs px-3 py-1.5 rounded-[6px] shadow-subtle z-40 animate-in fade-in"
+        >
+          {tooltipText}
         </div>
       )}
     </>

@@ -27,7 +27,7 @@ export default function ResumeCard({ resume }: { resume: Resume }) {
     title = t('template_2_title', resume.companyName);
     jobTitle = t('template_2_job', resume.jobTitle);
     summary = t('template_2_summary', resume.summary);
-  } else if (resume.templateId === 'ats-friendly') {
+  } else if (resume.templateId === 'executive-blue' || resume.templateId === 'ats-friendly') {
     badge = t('template_3_badge', resume.badge);
     title = t('template_3_title', resume.companyName);
     jobTitle = t('template_3_job', resume.jobTitle);
@@ -35,77 +35,77 @@ export default function ResumeCard({ resume }: { resume: Resume }) {
   }
 
   return (
-    <div className="group border border-slate-800 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden bg-slate-900/80 backdrop-blur-md hover:border-slate-700 flex flex-col justify-between">
+    <div className="group border border-line rounded-[10px] shadow-subtle hover:border-line-strong card-hover overflow-hidden bg-surface flex flex-col justify-between text-start">
       {/* Header Info */}
       <div className="p-5 pb-3">
         <div className="flex justify-between items-start gap-3">
           <div className="flex-1 min-w-0">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 mb-2">
-              <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider bg-accent-soft text-accent border border-accent/20 mb-2">
+              <CheckCircle2 className="w-3 h-3 text-accent" />
               <span>{badge}</span>
             </span>
 
-            <h3 className="text-lg font-bold text-white truncate">
+            <h3 className="text-base sm:text-lg font-serif font-semibold text-ink truncate">
               {title}
             </h3>
 
-            <p className="text-xs text-slate-300 font-medium truncate mt-0.5">
+            <p className="text-xs text-ink-2 truncate mt-0.5">
               {jobTitle}
             </p>
           </div>
 
           <div className="shrink-0 flex flex-col items-center">
             <ScoreCircle score={resume.feedback.overallScore} />
-            <span className="text-[10px] font-semibold text-slate-400 mt-1 uppercase tracking-wider">
+            <span className="text-[10px] font-mono font-semibold text-ink-3 mt-1 uppercase tracking-wider">
               {t('template_card_score')}
             </span>
           </div>
         </div>
 
-        <p className="text-xs text-slate-400 line-clamp-2 mt-3 leading-relaxed">
+        <p className="text-xs text-ink-3 line-clamp-2 mt-3 leading-relaxed">
           {summary}
         </p>
       </div>
 
       {/* Divider */}
       <div className="px-5">
-        <div className="border-t border-slate-800/80" />
+        <div className="border-t border-line" />
       </div>
 
       {/* Image Preview & Interactive CTA */}
-      <div className="p-4 bg-slate-950/40">
+      <div className="p-4 bg-surface-2">
         <Link
           href={`/builder?template=${resume.templateId}`}
-          className="block relative rounded-xl overflow-hidden border border-slate-800 group-hover:border-cyan-500/50 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
+          className="block relative rounded-[6px] overflow-hidden border border-line group-hover:border-line-strong transition-all focus-visible:outline-2 outline-offset-2 outline-[var(--focus)]"
           aria-label={`${t('template_card_use')} ${title}`}
         >
-          <div className="relative w-full h-[220px] bg-slate-900">
+          <div className="relative w-full h-[220px] bg-paper">
             <Image
               src={resume.imagePath}
               alt={`${title} Preview`}
               fill
               sizes="(max-width: 768px) 100vw, 33vw"
-              className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+              className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
           </div>
         </Link>
 
         {/* Action Button Row */}
         <div className="mt-3 flex items-center justify-between gap-2">
           <Link
-            href={`/review`}
-            className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-800/60 font-medium"
+            href={`/review?sample=${resume.templateId}`}
+            aria-label={`${t('template_card_inspect')}: ${title}`}
+            className="text-xs text-ink-2 hover:text-ink hover:underline transition-colors py-1.5 px-2 rounded-[4px] font-medium focus-visible:outline-2 outline-offset-2 outline-[var(--focus)]"
           >
             {t('template_card_inspect')}
           </Link>
 
           <Link
             href={`/builder?template=${resume.templateId}`}
-            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold py-1.5 px-3.5 rounded-xl shadow-md shadow-cyan-500/20 transition-all group-hover:shadow-cyan-500/40 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
+            className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-on-accent text-xs font-medium py-1.5 px-3.5 rounded-[6px] transition-colors focus-visible:outline-2 outline-offset-2 outline-[var(--focus)]"
           >
             <span>{t('template_card_use')}</span>
-            <ArrowRight className={`w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform ${isRtl ? 'rotate-180 group-hover:-translate-x-0.5' : ''}`} />
+            <ArrowRight className="w-3.5 h-3.5 rtl:-scale-x-100" />
           </Link>
         </div>
       </div>

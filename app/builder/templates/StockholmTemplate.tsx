@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -45,7 +45,7 @@ export default function StockholmTemplate({ data, theme }: TemplateProps) {
         </div>
 
         {personalInfo.showPhoto && personalInfo.photoUrl && (
-          <div className="shrink-0 ml-4">
+          <div className="shrink-0 ms-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={personalInfo.photoUrl}
@@ -86,7 +86,7 @@ export default function StockholmTemplate({ data, theme }: TemplateProps) {
                     {exp.position} at {exp.company}{exp.location ? `, ${exp.location}` : ''}
                   </span>
                   <span className={`text-gray-500 font-medium text-[11px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                    {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                    {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                   </span>
                 </div>
                 <ul className={`list-disc list-outside ${h.isRtl ? 'mr-4 pr-1' : 'ml-4'} mt-1 space-y-0.5 text-xs text-gray-700`}>
@@ -161,7 +161,7 @@ export default function StockholmTemplate({ data, theme }: TemplateProps) {
                   <div className="text-gray-600">{edu.institution} {edu.gpa && `• ${h.gpa}: ${edu.gpa}`}</div>
                 </div>
                 <span className={`text-gray-500 text-[11px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                  {edu.startDate} – {edu.endDate}
+                  {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                 </span>
               </div>
             ))}

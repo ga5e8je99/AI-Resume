@@ -1,3 +1,5 @@
+import { DocumentLanguage, getDocumentHeadings } from './documentI18n';
+
 export interface KeywordMatch {
   keyword: string;
   count: number;
@@ -25,6 +27,11 @@ export interface AnalysisSuggestion {
 }
 
 export interface ATSAnalysisResult {
+  detectedLanguage: DocumentLanguage;
+  languageNotice?: {
+    en: string;
+    ar: string;
+  };
   overallScore: number;
   subScores: {
     keywordsMatch: number;
@@ -106,27 +113,110 @@ const SKILL_CATALOG: { [category: string]: string[] } = {
   ],
 };
 
-// Power action verbs for ATS
-const POWER_VERBS = [
-  'accelerated', 'achieved', 'architected', 'automated', 'built', 'championed',
-  'collaborated', 'configured', 'created', 'decreased', 'delivered', 'deployed',
-  'designed', 'developed', 'devised', 'directed', 'engineered', 'established',
-  'executed', 'expanded', 'formulated', 'generated', 'implemented', 'improved',
-  'increased', 'initiated', 'integrated', 'launched', 'lead', 'led', 'managed',
-  'maximized', 'mentored', 'minimized', 'modernized', 'negotiated', 'optimized',
-  'orchestrated', 'overhauled', 'partnered', 'pioneered', 'produced', 'reduced',
-  'refactored', 'resolved', 'restructured', 'revamped', 'scaled', 'spearheaded',
-  'standardized', 'streamlined', 'strengthened', 'supervised', 'transformed', 'upgraded'
-];
+// Power action verbs for ATS across all 6 supported languages
+export const MULTILINGUAL_POWER_VERBS: Record<DocumentLanguage, string[]> = {
+  en: [
+    'accelerated', 'achieved', 'architected', 'automated', 'built', 'championed',
+    'collaborated', 'configured', 'created', 'decreased', 'delivered', 'deployed',
+    'designed', 'developed', 'devised', 'directed', 'engineered', 'established',
+    'executed', 'expanded', 'formulated', 'generated', 'implemented', 'improved',
+    'increased', 'initiated', 'integrated', 'launched', 'lead', 'led', 'managed',
+    'maximized', 'mentored', 'minimized', 'modernized', 'negotiated', 'optimized',
+    'orchestrated', 'overhauled', 'partnered', 'pioneered', 'produced', 'reduced',
+    'refactored', 'resolved', 'restructured', 'revamped', 'scaled', 'spearheaded',
+    'standardized', 'streamlined', 'strengthened', 'supervised', 'transformed', 'upgraded'
+  ],
+  ar: [
+    'طوّر', 'طور', 'صمّم', 'صمم', 'أدار', 'ادار', 'قاد', 'أسس', 'بنى', 'نفّذ', 'نفذ',
+    'أطلق', 'اطلق', 'حسّن', 'حسن', 'زاد', 'أنشأ', 'انشأ', 'ابتكر', 'نسّق', 'نسق',
+    'أشرف', 'اشرف', 'نظّم', 'نظم', 'حقّق', 'حقق', 'سرّع', 'وسع', 'وسّع', 'أعدّ', 'اعد'
+  ],
+  fr: [
+    'développé', 'conçu', 'géré', 'dirigé', 'créé', 'implémenté', 'optimisé',
+    'augmenté', 'réduit', 'coordonné', 'lancé', 'amélioré', 'restructuré',
+    'piloté', 'supervisé', 'initié', 'déployé', 'accéléré', 'délivré'
+  ],
+  de: [
+    'entwickelt', 'entworfen', 'geleitet', 'aufgebaut', 'optimiert', 'implementiert',
+    'gesteigert', 'reduziert', 'koordiniert', 'eingeführt', 'verbessert', 'gesteuert',
+    'betreut', 'erstellt', 'skaliert', 'konzipiert', 'umgesetzt'
+  ],
+  es: [
+    'desarrollado', 'diseñado', 'liderado', 'gestionado', 'creado', 'implementado',
+    'optimizado', 'aumentado', 'reducido', 'coordinado', 'lanzado', 'mejorado',
+    'dirigido', 'supervisado', 'establecido', 'generado', 'ejecutado'
+  ],
+  tr: [
+    'geliştirdi', 'tasarladı', 'yönetti', 'kurdu', 'optimize etti', 'uyguladı',
+    'artırdı', 'koordine etti', 'iyileştirdi', 'başlattı', 'denetledi', 'üretti',
+    'entegre etti', 'ölçeklendirdi'
+  ]
+};
 
-// Passive or weak phrases to avoid
+const POWER_VERBS = MULTILINGUAL_POWER_VERBS.en;
+
+// Passive or weak phrases to avoid (multilingual)
 const WEAK_PHRASES = [
   'responsible for', 'duties included', 'worked on', 'assisted in', 'helped with',
-  'tasked with', 'participated in', 'involved in', 'handled', 'did', 'tried to'
+  'tasked with', 'participated in', 'involved in', 'handled', 'did', 'tried to',
+  'مسؤول عن', 'المسؤوليات تضمنت', 'ساعد في', 'شارك في',
+  'responsable de', 'tâches comprenaient', 'a participé à',
+  'verantwortlich für', 'zuständig für', 'mitgewirkt bei',
+  'tareas incluían', 'ayudó en',
+  'sorumlu', 'görevleri arasındaydı', 'yardım etti'
 ];
 
 /**
- * Real ATS Resume Analyzer Engine
+ * Detect language of resume text among the 6 supported languages
+ */
+export function detectResumeLanguage(cleanText: string): DocumentLanguage {
+  if (!cleanText || cleanText.trim().length === 0) return 'en';
+
+  // 1. Arabic: check Arabic Unicode characters
+  const arabicMatches = cleanText.match(/[\u0600-\u06FF]/g) || [];
+  if (arabicMatches.length >= 8 || arabicMatches.length / Math.max(1, cleanText.length) > 0.04) {
+    return 'ar';
+  }
+
+  const lower = cleanText.toLowerCase();
+
+  // 2. Turkish: check specific characters (ğ, ş, ı, İ) and common resume keywords
+  const turkishChars = cleanText.match(/[ğĞıİşŞ]/g) || [];
+  const turkishKeywords = ['özet', 'deneyim', 'iş deneyimi', 'eğitim', 'yetenekler', 'beceriler', 'projeler', 'sertifikalar', 'diller', 'hakkımda', 'üniversite'];
+  const turkishScore = turkishChars.length * 2 + turkishKeywords.filter((kw) => lower.includes(kw)).length * 3;
+
+  // 3. German: check specific characters (ä, ö, ü, ß) and common resume keywords
+  const germanChars = cleanText.match(/[äöüßÄÖÜ]/g) || [];
+  const germanKeywords = ['berufserfahrung', 'ausbildung', 'kenntnisse', 'fähigkeiten', 'lebenslauf', 'kurzprofil', 'über mich', 'hochschule', 'sprachen', 'projekte', 'zertifikate'];
+  const germanScore = germanChars.length * 2 + germanKeywords.filter((kw) => lower.includes(kw)).length * 3;
+
+  // 4. French: check accented characters and common resume keywords
+  const frenchChars = cleanText.match(/[éèêëàâùûîïôçœÉÈÊËÀÂÙÛÎÏÔÇ]/g) || [];
+  const frenchKeywords = ['expérience', 'expériences', 'formation', 'compétences', 'langues', 'projets', 'centres d’intérêt', 'profil', 'diplôme', 'coordonnées'];
+  const frenchScore = frenchChars.length * 1.5 + frenchKeywords.filter((kw) => lower.includes(kw)).length * 3;
+
+  // 5. Spanish: check accented characters and common resume keywords
+  const spanishChars = cleanText.match(/[áéíóúüñ¿¡ÁÉÍÓÚÜÑ]/g) || [];
+  const spanishKeywords = ['experiencia laboral', 'experiencia', 'educación', 'formación', 'habilidades', 'idiomas', 'proyectos', 'sobre mí', 'perfil profesional', 'certificaciones'];
+  const spanishScore = spanishChars.length * 1.5 + spanishKeywords.filter((kw) => lower.includes(kw)).length * 3;
+
+  // Rank scores
+  const candidates: { lang: DocumentLanguage; score: number }[] = [
+    { lang: 'tr' as const, score: turkishScore },
+    { lang: 'de' as const, score: germanScore },
+    { lang: 'fr' as const, score: frenchScore },
+    { lang: 'es' as const, score: spanishScore },
+  ].sort((a, b) => b.score - a.score);
+
+  if (candidates[0].score >= 4) {
+    return candidates[0].lang;
+  }
+
+  return 'en';
+}
+
+/**
+ * Real ATS Resume Analyzer Engine with Full Multilingual Support
  */
 export function analyzeResumeText(
   resumeText: string,
@@ -135,6 +225,7 @@ export function analyzeResumeText(
 ): ATSAnalysisResult {
   const cleanText = resumeText || '';
   const lowerText = cleanText.toLowerCase();
+  const detectedLanguage = detectResumeLanguage(cleanText);
 
   // 1. Basic Metrics
   const words = cleanText.trim().split(/\s+/).filter(Boolean);
@@ -142,7 +233,7 @@ export function analyzeResumeText(
   const readingTimeSeconds = Math.max(5, Math.round((wordCount / 180) * 60));
   const readingTimeString = `${(readingTimeSeconds / 60).toFixed(1)}m`;
 
-  // 2. Contact Information Audit
+  // 2. Contact Information Audit (Multilingual locations & headers)
   const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i;
   const emailMatch = cleanText.match(emailRegex);
   const hasEmail = !!emailMatch;
@@ -159,8 +250,12 @@ export function analyzeResumeText(
   const gitHubRegex = /(github\.com\/[a-zA-Z0-9_-]+|github)/i;
   const hasGitHub = gitHubRegex.test(cleanText);
 
-  const locationRegex = /\b(remote|cairo|dubai|london|new york|san francisco|california|egypt|uae|usa|uk|germany|riyadh|paris|toronto|berlin)\b/i;
-  const hasLocation = locationRegex.test(cleanText) || /address|location|city|country/i.test(cleanText);
+  const locationRegex = /\b(remote|cairo|القاهرة|dubai|دبي|riyadh|الرياض|london|new york|san francisco|california|egypt|مصر|uae|الإمارات|usa|uk|germany|deutschland|ألمانيا|berlin|munich|münchen|frankfurt|paris|france|madrid|barcelona|spain|españa|istanbul|ankara|turkey|türkiye|toronto|canada)\b/i;
+  const hasLocation =
+    locationRegex.test(cleanText) ||
+    /(address|location|city|country|adresse|ville|pays|stadt|ort|land|dirección|ciudad|país|adres|şehir|ülke|العنوان|المدينة|الدولة|الموقع)/i.test(
+      cleanText
+    );
 
   let contactCount = 0;
   if (hasEmail) contactCount += 25;
@@ -169,14 +264,38 @@ export function analyzeResumeText(
   if (hasLocation || hasGitHub) contactCount += 25;
   const contactScore = contactCount;
 
-  // 3. Section Audit
+  // 3. Multilingual Section Audit across all 6 supported languages
   const sectionsToCheck = [
-    { name: 'Summary / Objective', regex: /\b(summary|professional summary|profile|about me|objective)\b/i },
-    { name: 'Experience / Work History', regex: /\b(experience|work experience|employment|history|work history)\b/i },
-    { name: 'Education', regex: /\b(education|academic|university|degree|bachelor|master|phd|diploma)\b/i },
-    { name: 'Skills / Technical Stack', regex: /\b(skills|technical skills|technologies|tools|stack|competencies)\b/i },
-    { name: 'Projects / Portfolio', regex: /\b(projects|personal projects|portfolio|key projects)\b/i },
-    { name: 'Certifications / Awards', regex: /\b(certifications|certificates|licenses|awards|honors|credentials)\b/i },
+    {
+      name: 'Summary / Objective',
+      regex:
+        /\b(summary|professional summary|profile|about me|objective|résumé|profil|profil professionnel|à propos|objectif|zusammenfassung|kurzprofil|über mich|ziel|resumen|perfil|perfil profesional|sobre mí|özet|hakkımda|kariyer hedefi|ملخص|الملخص المهني|نبذة|نبذة شخصية|الهدف المهني|الملف الشخصي)\b/i,
+    },
+    {
+      name: 'Experience / Work History',
+      regex:
+        /\b(experience|work experience|employment|history|work history|expérience|expériences|expérience professionnelle|parcours professionnel|berufserfahrung|erfahrung|beruflicher werdegang|arbeitserfahrung|experiencia|experiencia laboral|experiencia profesional|historial laboral|deneyim|iş deneyimi|tecrübe|çalışma geçmişi|الخبرة|الخبرات|الخبرة المهنية|خبرات العمل|تاريخ العمل)\b/i,
+    },
+    {
+      name: 'Education',
+      regex:
+        /\b(education|academic|university|degree|bachelor|master|phd|diploma|formation|éducation|diplômes|université|baccalauréat|licence|doctorat|ausbildung|studium|abschluss|universität|doktor|educación|formación|estudios|universidad|título|licenciatura|grado|máster|eğitim|akademik|üniversite|lisans|yüksek lisans|doktora|التعليم|المؤهلات|المؤهل الدراسي|الجامعة|درجة|بكالوريوس|ماجستير|دكتوراه|دبلوم)\b/i,
+    },
+    {
+      name: 'Skills / Technical Stack',
+      regex:
+        /\b(skills|technical skills|technologies|tools|stack|competencies|compétences|compétences techniques|aptitudes|kenntnisse|fähigkeiten|it-kenntnisse|kompetenzen|habilidades|habilidades técnicas|competencias|herramientas|beceriler|yetenekler|teknik beceriler|yetkinlikler|المهارات|المهارات التقنية|المهارات الفنية|التقنيات|الأدوات|الكفاءات)\b/i,
+    },
+    {
+      name: 'Projects / Portfolio',
+      regex:
+        /\b(projects|personal projects|portfolio|key projects|projets|réalisations|projets clés|projekte|ausgewählte projekte|proyectos|proyectos destacados|portafolio|projeler|önemli projeler|portföy|المشاريع|مشاريع سابقة|أبرز المشاريع|معرض الأعمال)\b/i,
+    },
+    {
+      name: 'Certifications / Awards',
+      regex:
+        /\b(certifications|certificates|licenses|awards|honors|credentials|certificats|licences|prix|distinctions|zertifikate|zertifizierungen|weiterbildung|auszeichnungen|certificados|premios|reconocimientos|sertifikalar|belgeler|lisanslar|ödüller|الشهادات|الدورات التدريبية|الرخص|الجوائز|شهادات التقدير|الاعتمادات)\b/i,
+    },
   ];
 
   const sectionsDetected = sectionsToCheck.map((s) => ({
@@ -187,16 +306,23 @@ export function analyzeResumeText(
   const foundSectionsCount = sectionsDetected.filter((s) => s.found).length;
   const structureScore = Math.min(100, Math.round((foundSectionsCount / 5) * 100));
 
-  // 4. Quantifiable Metrics Detection
-  // Matches %, numbers with scale (100k, 2M, $500), 'reduced by 30%', etc.
-  const metricRegex = /(\b\d+(\.\d+)?%|\$\s?\d+[\d,]*(\.\d+)?([kKmMbB])?|\b\d+([kKmM])\+?\b|\b\d{2,}\+?\s+(users|clients|customers|requests|transactions|projects|engineers|members|downloads)\b|improved by \d+|reduced by \d+|increased by \d+)/gi;
+  // 4. Quantifiable Metrics Detection (Supports %, $, €, £, multilingual scale words)
+  const metricRegex =
+    /(\b\d+(\.\d+)?%|[\$€£]\s?\d+[\d,]*(\.\d+)?([kKmMbB])?|\b\d+([kKmM])\+?\b|\b\d{2,}\+?\s+(users|clients|customers|requests|transactions|projects|engineers|members|downloads|utilisateurs|projets|kunden|projekte|usuarios|proyectos|kullanıcı|proje|عملاء|مستخدمين|مشاريع|مهندسين)\b|improved by \d+|reduced by \d+|increased by \d+|augmenté de \d+|réduit de \d+|gesteigert um \d+|reduziert um \d+|aumentado en \d+|reducido en \d+|oranında artırıldı|بنسبة \d+)/gi;
   const matchedMetrics = cleanText.match(metricRegex) || [];
   const quantifiedMetricsCount = matchedMetrics.length;
 
-  // 5. Action Verbs vs Weak Verbs
+  // 5. Action Verbs vs Weak Verbs (Evaluated against English + detected language verbs)
   const actionVerbsFound: string[] = [];
-  POWER_VERBS.forEach((verb) => {
-    const regex = new RegExp(`\\b${verb}\\b`, 'i');
+  const verbsToCheck = Array.from(
+    new Set([...POWER_VERBS, ...(MULTILINGUAL_POWER_VERBS[detectedLanguage] || [])])
+  );
+
+  verbsToCheck.forEach((verb) => {
+    const isArabic = /[\u0600-\u06FF]/.test(verb);
+    const regex = isArabic
+      ? new RegExp(`(^|\\s|[.,;])${verb}(\\s|[.,;]|$)`, 'i')
+      : new RegExp(`\\b${verb}\\b`, 'i');
     if (regex.test(cleanText)) {
       actionVerbsFound.push(verb.charAt(0).toUpperCase() + verb.slice(1));
     }
@@ -481,7 +607,32 @@ export function analyzeResumeText(
     },
   ];
 
+  // 12. Multilingual Analysis Notice
+  let languageNotice: { en: string; ar: string } | undefined;
+  if (detectedLanguage === 'ar') {
+    languageNotice = {
+      en: 'Arabic resume detected. Comprehensive RTL structure, localized section mapping, and technical keywords were analyzed.',
+      ar: 'تم فحص السيرة الذاتية باللغة العربية مع دعم كامل للاتجاه وتصنيف الأقسام والمهارات التقنية.',
+    };
+  } else if (detectedLanguage !== 'en') {
+    const langNames: Record<DocumentLanguage, { en: string; ar: string }> = {
+      fr: { en: 'French', ar: 'الفرنسية' },
+      de: { en: 'German', ar: 'الألمانية' },
+      es: { en: 'Spanish', ar: 'الإسبانية' },
+      tr: { en: 'Turkish', ar: 'التركية' },
+      ar: { en: 'Arabic', ar: 'العربية' },
+      en: { en: 'English', ar: 'الإنجليزية' },
+    };
+    const name = langNames[detectedLanguage];
+    languageNotice = {
+      en: `${name.en} resume detected. Core sections, formatting, and international technical keywords were successfully analyzed without penalty.`,
+      ar: `تم فحص السيرة الذاتية باللغة ${name.ar}. تم تحليل الأقسام الأساسية والتنسيق والكلمات التقنية بنجاح دون التأثير على التقييم.`,
+    };
+  }
+
   return {
+    detectedLanguage,
+    languageNotice,
     overallScore,
     subScores: {
       keywordsMatch: keywordsScore,
@@ -521,10 +672,13 @@ export function analyzeResumeText(
 }
 
 /**
- * Converts structured ResumeData to text representation for ATS analysis
+ * Converts structured ResumeData to text representation for ATS analysis,
+ * using localized section headings matching the document output language.
  */
 export function resumeDataToText(data: any): string {
   if (!data) return '';
+  const lang: DocumentLanguage = data.theme?.documentLanguage || 'en';
+  const headings = getDocumentHeadings(lang);
   const lines: string[] = [];
 
   // Header / Contact
@@ -535,16 +689,20 @@ export function resumeDataToText(data: any): string {
     const contacts = [p.email, p.phone, p.location, p.linkedin, p.github, p.website].filter(Boolean);
     if (contacts.length) lines.push(contacts.join(' | '));
     if (p.summary) {
-      lines.push('\nProfessional Summary');
+      lines.push(`\n${headings.summary}`);
       lines.push(p.summary);
     }
   }
 
   // Experience
   if (data.experience && data.experience.length > 0) {
-    lines.push('\nWork Experience');
+    lines.push(`\n${headings.experience}`);
     data.experience.forEach((exp: any) => {
-      lines.push(`${exp.position || ''} at ${exp.company || ''} (${exp.startDate || ''} - ${exp.current ? 'Present' : exp.endDate || ''})`);
+      lines.push(
+        `${exp.position || ''} at ${exp.company || ''} (${exp.startDate || ''} - ${
+          exp.current ? headings.present : exp.endDate || ''
+        })`
+      );
       if (exp.location) lines.push(exp.location);
       if (exp.description && Array.isArray(exp.description)) {
         exp.description.forEach((d: string) => {
@@ -556,28 +714,40 @@ export function resumeDataToText(data: any): string {
 
   // Skills
   if (data.skills && data.skills.length > 0) {
-    lines.push('\nTechnical Skills');
+    lines.push(`\n${headings.skills}`);
     data.skills.forEach((cat: any) => {
       const items = Array.isArray(cat.items) ? cat.items.join(', ') : cat.items;
-      lines.push(`${cat.category || 'Skills'}: ${items}`);
+      lines.push(`${cat.category || headings.skills}: ${items}`);
     });
   }
 
   // Projects
   if (data.projects && data.projects.length > 0) {
-    lines.push('\nKey Projects');
+    lines.push(`\n${headings.projects}`);
     data.projects.forEach((proj: any) => {
-      lines.push(`${proj.title || ''} (${proj.technologies ? (Array.isArray(proj.technologies) ? proj.technologies.join(', ') : proj.technologies) : ''})`);
+      lines.push(
+        `${proj.title || ''} (${
+          proj.technologies
+            ? Array.isArray(proj.technologies)
+              ? proj.technologies.join(', ')
+              : proj.technologies
+            : ''
+        })`
+      );
       if (proj.description) lines.push(`• ${proj.description}`);
     });
   }
 
   // Education
   if (data.education && data.education.length > 0) {
-    lines.push('\nEducation');
+    lines.push(`\n${headings.education}`);
     data.education.forEach((edu: any) => {
-      lines.push(`${edu.degree || ''} in ${edu.fieldOfStudy || ''} - ${edu.institution || ''} (${edu.startDate || ''} - ${edu.endDate || ''})`);
-      if (edu.gpa) lines.push(`GPA: ${edu.gpa}`);
+      lines.push(
+        `${edu.degree || ''} in ${edu.fieldOfStudy || ''} - ${edu.institution || ''} (${edu.startDate || ''} - ${
+          edu.endDate || ''
+        })`
+      );
+      if (edu.gpa) lines.push(`${headings.gpa}: ${edu.gpa}`);
     });
   }
 

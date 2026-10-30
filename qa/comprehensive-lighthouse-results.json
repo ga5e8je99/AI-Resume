@@ -1,0 +1,98 @@
+[
+  {
+    "page": "Landing",
+    "path": "/",
+    "desktop": {
+      "perf": 57,
+      "a11y": 100,
+      "bp": 96,
+      "seo": 100
+    },
+    "mobile": {
+      "perf": 55,
+      "a11y": 100,
+      "bp": 96,
+      "seo": 100
+    }
+  },
+  {
+    "page": "Dashboard",
+    "path": "/dashboard",
+    "desktop": {
+      "perf": 97,
+      "a11y": 96,
+      "bp": 96,
+      "seo": 92
+    },
+    "mobile": {
+      "perf": 50,
+      "a11y": 98,
+      "bp": 96,
+      "seo": 100
+    }
+  },
+  {
+    "page": "Builder",
+    "path": "/builder",
+    "desktop": {
+      "perf": 91,
+      "a11y": 93,
+      "bp": 96,
+      "seo": 100
+    },
+    "mobile": {
+      "perf": 45,
+      "a11y": 96,
+      "bp": 96,
+      "seo": 100
+    }
+  },
+  {
+    "page": "Scanner",
+    "path": "/review",
+    "desktop": {
+      "perf": 81,
+      "a11y": 96,
+      "bp": 96,
+      "seo": 100
+    },
+    "mobile": {
+      "perf": 57,
+      "a11y": 96,
+      "bp": 96,
+      "seo": 100
+    }
+  },
+  {
+    "page": "Job Match",
+    "path": "/jobs",
+    "desktop": {
+      "perf": 99,
+      "a11y": 88,
+      "bp": 96,
+      "seo": 100
+    },
+    "mobile": {
+      "perf": 58,
+      "a11y": 88,
+      "bp": 96,
+      "seo": 100
+    }
+  },
+  {
+    "page": "Pricing",
+    "path": "/pricing",
+    "desktop": {
+      "perf": 98,
+      "a11y": 94,
+      "bp": 96,
+      "seo": 100
+    },
+    "mobile": {
+      "perf": 54,
+      "a11y": 94,
+      "bp": 96,
+      "seo": 100
+    }
+  }
+]

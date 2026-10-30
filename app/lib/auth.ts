@@ -11,6 +11,14 @@ export interface AuthTokenPayload {
   email: string;
   name: string;
   role?: 'user' | 'admin';
+  isDemo?: boolean;
+}
+
+export function isDemoUser(user: AuthTokenPayload | { email?: string; isDemo?: boolean } | null | undefined): boolean {
+  if (!user) return false;
+  if ('isDemo' in user && user.isDemo === true) return true;
+  if ('email' in user && user.email?.toLowerCase().trim() === 'demo@jobmatch.ai') return true;
+  return false;
 }
 
 // Hash password securely with bcrypt

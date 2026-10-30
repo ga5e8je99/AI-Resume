@@ -2,41 +2,51 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Sparkles, FileText, ArrowRight, FolderArchive } from 'lucide-react';
+import { ArrowLeft, FolderArchive } from 'lucide-react';
 
 interface CoverLetterHeroProps {
   onOpenDrafts?: () => void;
   draftsCount?: number;
+  language?: string;
 }
 
-export function CoverLetterHero({ onOpenDrafts, draftsCount = 0 }: CoverLetterHeroProps) {
+export function CoverLetterHero({
+  onOpenDrafts,
+  draftsCount = 0,
+  language = 'ar',
+}: CoverLetterHeroProps) {
+  const isAr = language === 'ar';
+
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
-      <div className="space-y-1.5 max-w-2xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>مولد خطابات التقديم بالذكاء الاصطناعي (AI Cover Letter)</span>
+    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-line pb-8">
+      <div className="space-y-3 max-w-2xl">
+        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-[6px] bg-accent-soft text-accent text-xs font-medium">
+          <span>{isAr ? 'خطاب تقديم مدعوم بالذكاء الاصطناعي' : 'Tailored Cover Letter'}</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-          أنشئ خطاب تقديم مخصص يبهر مسؤولي التوظيف
+        <h1 className="text-3xl sm:text-4xl font-serif font-semibold text-ink tracking-tight">
+          {isAr
+            ? 'خطاب تقديم مخصص يبرز قيمتك المهنية.'
+            : 'A cover letter that speaks directly to the role.'}
         </h1>
-        <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-          صياغة فورية بنسبة 100% متطابقة مع متطلبات الوظيفة وسيرتك الذاتية، مع استخراج الكلمات المفتاحية واختيار النبرة المناسبة وتصدير PDF بنقرة زر.
+        <p className="text-sm sm:text-base text-ink-2 leading-relaxed">
+          {isAr
+            ? 'صياغة مباشرة ومتطابقة مع اشتراطات الوظيفة وسيرتك الذاتية، مع استخراج الكلمات المفتاحية وضبط النبرة وتصدير PDF دقيق.'
+            : 'Aligned to the job requirements and your resume. Keyword matched, tone adjusted, and export-ready.'}
         </p>
       </div>
 
-      {/* Quick Action Badges */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Quick Action Buttons */}
+      <div className="flex flex-wrap items-center gap-2.5 shrink-0">
         {onOpenDrafts && (
           <button
             type="button"
             onClick={onOpenDrafts}
-            className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700/80 hover:border-amber-500/40 text-xs text-slate-200 hover:text-white transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+            className="px-3.5 py-2 rounded-[6px] bg-surface border border-line hover:border-line-strong text-xs font-medium text-ink hover:text-ink transition-colors flex items-center gap-2 cursor-pointer shadow-xs focus-visible:outline-2 focus-visible:outline-accent"
           >
-            <FolderArchive className="w-3.5 h-3.5 text-amber-400" />
-            <span>المسودات المحفوظة</span>
+            <FolderArchive className="w-4 h-4 text-ink-2" />
+            <span>{isAr ? 'المسودات المحفوظة' : 'Saved drafts'}</span>
             {draftsCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+              <span className="px-1.5 py-0.2 rounded-[4px] bg-surface-2 text-ink-2 text-[11px] font-mono border border-line">
                 {draftsCount}
               </span>
             )}
@@ -44,19 +54,11 @@ export function CoverLetterHero({ onOpenDrafts, draftsCount = 0 }: CoverLetterHe
         )}
 
         <Link
-          href="/dashboard"
-          className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1.5"
-        >
-          <FileText className="w-3.5 h-3.5 text-cyan-400" />
-          <span>لوحة التحكم</span>
-        </Link>
-
-        <Link
           href="/builder"
-          className="px-3.5 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-xs text-cyan-300 font-semibold hover:bg-cyan-500/25 transition-all flex items-center gap-1.5"
+          className="px-3.5 py-2 rounded-[6px] bg-accent hover:bg-accent-hover text-xs font-medium text-white transition-colors flex items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
-          <span>منشئ السير الذاتية</span>
-          <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+          <span>{isAr ? 'منشئ السيرة الذاتية' : 'Resume builder'}</span>
+          <ArrowLeft className={`w-3.5 h-3.5 ${isAr ? '' : 'rotate-180'}`} />
         </Link>
       </div>
     </div>

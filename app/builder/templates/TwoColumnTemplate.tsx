@@ -1,7 +1,7 @@
 import React from 'react';
 import { ResumeData, ThemeConfig } from '../types';
 import { Mail, Phone, MapPin, Globe, Linkedin, Github, ExternalLink } from 'lucide-react';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import { getDocumentHeadings, formatDocumentDateRange } from '@/app/lib/documentI18n';
 
 interface TemplateProps {
   data: ResumeData;
@@ -86,7 +86,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
                         </span>
                         {(exp.startDate || exp.endDate) && (
                           <span className={`text-gray-500 font-medium text-[10.5px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                            {exp.startDate} – {exp.current ? h.present : exp.endDate}
+                            {formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, theme.documentLanguage)}
                           </span>
                         )}
                       </div>
@@ -128,7 +128,7 @@ export default function TwoColumnTemplate({ data, theme }: TemplateProps) {
                         </span>
                         {(edu.startDate || edu.endDate) && (
                           <span className={`text-gray-500 font-medium text-[10.5px] ${h.isRtl ? 'mr-2' : 'ml-2'}`}>
-                            {edu.startDate} – {edu.endDate}
+                            {formatDocumentDateRange(edu.startDate, edu.endDate, false, theme.documentLanguage)}
                           </span>
                         )}
                       </div>

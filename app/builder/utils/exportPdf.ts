@@ -1,41 +1,79 @@
-import * as htmlToImage from 'html-to-image';
+export type PaperSize = 'a4' | 'letter';
+
+/**
+ * Returns the default paper size based on user locale.
+ * US and Canada use US Letter; the rest of the world uses ISO A4.
+ */
+export function getDefaultPaperSize(locale?: string): PaperSize {
+  if (typeof navigator !== 'undefined') {
+    const loc = (locale || navigator.language || '').toLowerCase();
+    if (loc === 'en-us' || loc === 'en-ca' || loc === 'es-mx') {
+      return 'letter';
+    }
+  }
+  return 'a4';
+}
 
 /**
  * Downloads the resume directly as a real .pdf file into the user's Downloads folder
  * WITHOUT opening any printer dialog or browser print window.
  *
- * Uses native browser SVG foreignObject rendering via html-to-image (never crashes on
- * Tailwind v4 oklab/oklch colors) and builds a clean standard ISO A4 PDF 1.4 document.
+ * Supports both ISO A4 (210x297mm) and US Letter (8.5x11in) formats.
  */
 export async function exportResumeToPdf(
   elementId: string = 'resume-preview',
-  fileName: string = 'Resume.pdf'
+  fileName: string = 'Resume.pdf',
+  paperSize: PaperSize = 'a4'
 ): Promise<void> {
   const previewEl = document.getElementById(elementId);
   if (!previewEl) {
     throw new Error('Resume preview element not found. Please ensure the preview is active.');
   }
 
+  const isLetter = paperSize === 'letter';
+  // Pixel dimensions at 96 DPI:
+  // A4: 794 x 1123 px
+  // Letter: 816 x 1056 px
+  const baseWidthPx = isLetter ? 816 : 794;
+  const baseHeightPx = isLetter ? 1056 : 1123;
+  const pageRatio = isLetter ? 792 / 612 : 1.4142;
+
+  // PDF dimensions in points (72 pt per inch):
+  // A4: 595.28 x 841.89 pt
+  // Letter: 612 x 792 pt
+  const pdfWidth = isLetter ? 612 : 595.28;
+  const pdfHeight = isLetter ? 792 : 841.89;
+
   // 1. Create an offscreen wrapper to isolate from CSS zoom scales or mobile hidden tabs
   const offscreen = document.createElement('div');
   offscreen.style.position = 'fixed';
   offscreen.style.left = '-10000px';
   offscreen.style.top = '0';
-  offscreen.style.width = '794px';
+  offscreen.style.width = `${baseWidthPx}px`;
   offscreen.style.zIndex = '-99999';
   offscreen.style.backgroundColor = '#ffffff';
   offscreen.style.overflow = 'visible';
+
+  const previewDir = previewEl.getAttribute('dir') || 'ltr';
+  offscreen.setAttribute('dir', previewDir);
+  offscreen.dir = previewDir;
 
   // 2. Clone preview element with full contents and styles
   const clone = previewEl.cloneNode(true) as HTMLElement;
   clone.id = 'resume-preview-export-clone';
   clone.style.display = 'block';
   clone.style.transform = 'none';
-  clone.style.width = '794px';
-  clone.style.minHeight = '1123px';
+  clone.style.width = `${baseWidthPx}px`;
+  clone.style.minHeight = `${baseHeightPx}px`;
   clone.style.margin = '0';
   clone.style.boxShadow = 'none';
   clone.style.borderRadius = '0';
+  clone.setAttribute('dir', previewDir);
+  clone.dir = previewDir;
+
+  if (previewDir === 'rtl') {
+    clone.classList.add('font-arabic');
+  }
 
   offscreen.appendChild(clone);
   document.body.appendChild(offscreen);
@@ -44,21 +82,20 @@ export async function exportResumeToPdf(
     // 3. Small pause to ensure layout and any images/fonts are settled in DOM
     await new Promise((resolve) => setTimeout(resolve, 80));
 
-    const totalHeight = Math.max(1123, clone.scrollHeight);
+    const totalHeight = Math.max(baseHeightPx, clone.scrollHeight);
 
-    // 4. Render to canvas at 2x resolution (~300 DPI print quality)
+    // 4. Dynamically import html-to-image and render to canvas at 2x resolution (~300 DPI print quality)
+    const htmlToImage = await import('html-to-image');
     const fullCanvas = await htmlToImage.toCanvas(clone, {
       pixelRatio: 2,
       backgroundColor: '#ffffff',
-      width: 794,
+      width: baseWidthPx,
       height: totalHeight,
       cacheBust: true,
     });
 
-    // 5. Partition canvas into standard A4 pages (ratio 1:1.4142)
-    const a4Ratio = 1.4142;
-    const pageHeightPx = Math.round(fullCanvas.width * a4Ratio);
-    // Allow slight 3% overflow buffer before creating a second page
+    // 5. Partition canvas into pages according to paper aspect ratio
+    const pageHeightPx = Math.round(fullCanvas.width * pageRatio);
     const numPages =
       fullCanvas.height <= pageHeightPx * 1.05
         ? 1
@@ -104,8 +141,8 @@ export async function exportResumeToPdf(
       });
     }
 
-    // 6. Build genuine, 100% compliant ISO A4 PDF document
-    const pdfBytes = buildA4Pdf(pagesData);
+    // 6. Build genuine, standard-compliant PDF document
+    const pdfBytes = buildPdf(pagesData, pdfWidth, pdfHeight);
 
     // 7. Direct file download into user's Downloads folder
     const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
@@ -130,13 +167,13 @@ export async function exportResumeToPdf(
 }
 
 /**
- * Builds a standard ISO A4 PDF 1.4 binary document from one or more page JPEGs.
- * Dimensions: 595.28 x 841.89 points (210mm x 297mm).
- * Zero external PDF library dependencies, zero SSR issues, 100% reliable.
+ * Builds a standard ISO PDF 1.4 binary document from page JPEGs with customizable width & height.
  */
-function buildA4Pdf(pages: { jpegBytes: Uint8Array; width: number; height: number }[]): Uint8Array {
-  const pdfWidth = 595.28;
-  const pdfHeight = 841.89;
+function buildPdf(
+  pages: { jpegBytes: Uint8Array; width: number; height: number }[],
+  pdfWidth: number,
+  pdfHeight: number
+): Uint8Array {
   const numPages = pages.length;
 
   const encoder = new TextEncoder();

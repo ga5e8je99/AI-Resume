@@ -1,14 +1,9 @@
-import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  HeadingLevel,
-  AlignmentType,
-  BorderStyle,
-} from 'docx';
 import { ResumeData, ThemeConfig } from '../types';
-import { getDocumentHeadings } from '@/app/lib/documentI18n';
+import {
+  getDocumentHeadings,
+  formatDocumentDate,
+  formatDocumentDateRange,
+} from '@/app/lib/documentI18n';
 
 /**
  * Generates an ATS-compliant Word (.docx) document directly in the browser
@@ -18,9 +13,48 @@ export async function exportResumeToDocx(
   data: ResumeData,
   theme?: ThemeConfig
 ): Promise<void> {
-  const { personalInfo, experience, education, projects, skills, certifications } = data;
+  const {
+    Document,
+    Packer,
+    Paragraph,
+    TextRun,
+    HeadingLevel,
+    AlignmentType,
+    BorderStyle,
+  } = await import('docx');
+
+  const { personalInfo, experience, education, projects, skills, certifications, languages } = data;
   const accentHex = theme?.accentColor?.replace('#', '') || '1E3A8A';
-  const h = getDocumentHeadings(theme?.documentLanguage);
+  const docLang = theme?.documentLanguage || 'en';
+  const h = getDocumentHeadings(docLang);
+  const isRtl = h.isRtl;
+  const fontName = isRtl ? 'IBM Plex Sans Arabic' : 'Calibri';
+  const defaultAlign = isRtl ? AlignmentType.RIGHT : AlignmentType.LEFT;
+
+  function createSectionHeading(title: string, colorHex: string): any {
+    return new Paragraph({
+      bidirectional: isRtl,
+      alignment: defaultAlign,
+      spacing: { before: 180, after: 80 },
+      border: {
+        bottom: {
+          color: colorHex,
+          space: 2,
+          style: BorderStyle.SINGLE,
+          size: 10,
+        },
+      },
+      children: [
+        new TextRun({
+          text: title,
+          bold: true,
+          size: 22, // 11pt
+          color: colorHex,
+          font: fontName,
+        }),
+      ],
+    });
+  }
 
   const doc = new Document({
     sections: [
@@ -38,6 +72,7 @@ export async function exportResumeToDocx(
         children: [
           // 1. Candidate Full Name (Centered Heading)
           new Paragraph({
+            bidirectional: isRtl,
             alignment: AlignmentType.CENTER,
             spacing: { after: 80 },
             children: [
@@ -46,12 +81,14 @@ export async function exportResumeToDocx(
                 bold: true,
                 size: 32, // 16pt
                 color: accentHex,
+                font: fontName,
               }),
             ],
           }),
 
           // 2. Job Title
           new Paragraph({
+            bidirectional: isRtl,
             alignment: AlignmentType.CENTER,
             spacing: { after: 120 },
             children: [
@@ -60,12 +97,14 @@ export async function exportResumeToDocx(
                 bold: true,
                 size: 24, // 12pt
                 color: '374151',
+                font: fontName,
               }),
             ],
           }),
 
           // 3. Contact Line (Zero icons, pure ATS text with dot separators)
           new Paragraph({
+            bidirectional: isRtl,
             alignment: AlignmentType.CENTER,
             spacing: { after: 200 },
             children: [
@@ -82,6 +121,7 @@ export async function exportResumeToDocx(
                   .join('   •   '),
                 size: 19, // 9.5pt
                 color: '4B5563',
+                font: fontName,
               }),
             ],
           }),
@@ -91,11 +131,14 @@ export async function exportResumeToDocx(
             ? [
                 createSectionHeading(h.summary.toUpperCase(), accentHex),
                 new Paragraph({
+                  bidirectional: isRtl,
+                  alignment: defaultAlign,
                   spacing: { after: 180 },
                   children: [
                     new TextRun({
                       text: personalInfo.summary,
                       size: 21, // 10.5pt
+                      font: fontName,
                     }),
                   ],
                 }),
@@ -108,30 +151,37 @@ export async function exportResumeToDocx(
                 createSectionHeading(h.experience.toUpperCase(), accentHex),
                 ...experience.flatMap((exp) => [
                   new Paragraph({
+                    bidirectional: isRtl,
+                    alignment: defaultAlign,
                     spacing: { before: 100, after: 30 },
                     children: [
                       new TextRun({
                         text: exp.position,
                         bold: true,
                         size: 22, // 11pt
+                        font: fontName,
                       }),
                       new TextRun({
                         text: `  |  ${exp.company}`,
                         bold: false,
                         size: 22,
                         color: '1F2937',
+                        font: fontName,
                       }),
                       new TextRun({
-                        text: `   (${exp.startDate} – ${exp.current ? h.present : exp.endDate})`,
+                        text: `   (${formatDocumentDateRange(exp.startDate, exp.endDate, exp.current, docLang)})`,
                         bold: true,
                         size: 20,
                         color: '6B7280',
+                        font: fontName,
                       }),
                     ],
                   }),
                   ...(exp.location
                     ? [
                         new Paragraph({
+                          bidirectional: isRtl,
+                          alignment: defaultAlign,
                           spacing: { after: 40 },
                           children: [
                             new TextRun({
@@ -139,6 +189,7 @@ export async function exportResumeToDocx(
                               italics: true,
                               size: 19,
                               color: '6B7280',
+                              font: fontName,
                             }),
                           ],
                         }),
@@ -149,12 +200,15 @@ export async function exportResumeToDocx(
                     .map(
                       (bullet) =>
                         new Paragraph({
+                          bidirectional: isRtl,
+                          alignment: defaultAlign,
                           bullet: { level: 0 },
                           spacing: { after: 35 },
                           children: [
                             new TextRun({
                               text: bullet,
                               size: 21,
+                              font: fontName,
                             }),
                           ],
                         })
@@ -168,12 +222,15 @@ export async function exportResumeToDocx(
             ? [
                 createSectionHeading(h.skills.toUpperCase(), accentHex),
                 new Paragraph({
+                  bidirectional: isRtl,
+                  alignment: defaultAlign,
                   spacing: { after: 180 },
                   children: [
                     new TextRun({
                       text: skills.join('   •   '),
                       size: 21,
                       color: '1F2937',
+                      font: fontName,
                     }),
                   ],
                 }),
@@ -186,22 +243,28 @@ export async function exportResumeToDocx(
                 createSectionHeading(h.education.toUpperCase(), accentHex),
                 ...education.flatMap((edu) => [
                   new Paragraph({
+                    bidirectional: isRtl,
+                    alignment: defaultAlign,
                     spacing: { before: 90, after: 30 },
                     children: [
                       new TextRun({
                         text: `${edu.degree} in ${edu.fieldOfStudy}`,
                         bold: true,
                         size: 22,
+                        font: fontName,
                       }),
                       new TextRun({
-                        text: `   (${edu.startDate} – ${edu.endDate})`,
+                        text: `   (${formatDocumentDateRange(edu.startDate, edu.endDate, false, docLang)})`,
                         bold: true,
                         size: 20,
                         color: '6B7280',
+                        font: fontName,
                       }),
                     ],
                   }),
                   new Paragraph({
+                    bidirectional: isRtl,
+                    alignment: defaultAlign,
                     spacing: { after: 80 },
                     children: [
                       new TextRun({
@@ -209,6 +272,7 @@ export async function exportResumeToDocx(
                         italics: true,
                         size: 20,
                         color: '4B5563',
+                        font: fontName,
                       }),
                     ],
                   }),
@@ -222,12 +286,15 @@ export async function exportResumeToDocx(
                 createSectionHeading(h.projects.toUpperCase(), accentHex),
                 ...projects.flatMap((proj) => [
                   new Paragraph({
+                    bidirectional: isRtl,
+                    alignment: defaultAlign,
                     spacing: { before: 90, after: 30 },
                     children: [
                       new TextRun({
                         text: proj.title,
                         bold: true,
                         size: 22,
+                        font: fontName,
                       }),
                       ...(proj.techStack
                         ? [
@@ -236,6 +303,7 @@ export async function exportResumeToDocx(
                               italics: true,
                               size: 19,
                               color: '6B7280',
+                              font: fontName,
                             }),
                           ]
                         : []),
@@ -245,6 +313,7 @@ export async function exportResumeToDocx(
                               text: `  - ${proj.link.replace(/^https?:\/\//, '')}`,
                               size: 19,
                               color: '2563EB',
+                              font: fontName,
                             }),
                           ]
                         : []),
@@ -255,12 +324,15 @@ export async function exportResumeToDocx(
                     .map(
                       (b) =>
                         new Paragraph({
+                          bidirectional: isRtl,
+                          alignment: defaultAlign,
                           bullet: { level: 0 },
                           spacing: { after: 35 },
                           children: [
                             new TextRun({
                               text: b,
                               size: 21,
+                              font: fontName,
                             }),
                           ],
                         })
@@ -276,16 +348,38 @@ export async function exportResumeToDocx(
                 ...certifications.map(
                   (cert) =>
                     new Paragraph({
+                      bidirectional: isRtl,
+                      alignment: defaultAlign,
                       bullet: { level: 0 },
                       spacing: { after: 35 },
                       children: [
                         new TextRun({
                           text: cert,
                           size: 21,
+                          font: fontName,
                         }),
                       ],
                     })
                 ),
+              ]
+            : []),
+
+          // 10. Languages
+          ...(languages && languages.length > 0
+            ? [
+                createSectionHeading(h.languages.toUpperCase(), accentHex),
+                new Paragraph({
+                  bidirectional: isRtl,
+                  alignment: defaultAlign,
+                  spacing: { after: 120 },
+                  children: [
+                    new TextRun({
+                      text: languages.map((l) => `${l.name} (${l.proficiency})`).join('   •   '),
+                      size: 21,
+                      font: fontName,
+                    }),
+                  ],
+                }),
               ]
             : []),
         ],
@@ -306,26 +400,4 @@ export async function exportResumeToDocx(
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-function createSectionHeading(title: string, colorHex: string): Paragraph {
-  return new Paragraph({
-    spacing: { before: 180, after: 80 },
-    border: {
-      bottom: {
-        color: colorHex,
-        space: 2,
-        style: BorderStyle.SINGLE,
-        size: 10,
-      },
-    },
-    children: [
-      new TextRun({
-        text: title,
-        bold: true,
-        size: 22, // 11pt
-        color: colorHex,
-      }),
-    ],
-  });
 }

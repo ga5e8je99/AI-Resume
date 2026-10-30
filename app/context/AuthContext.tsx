@@ -7,6 +7,13 @@ export interface UserProfile {
   name: string;
   email: string;
   role?: 'user' | 'admin';
+  isDemo?: boolean;
+  plan?: 'free' | 'pro' | 'enterprise';
+  aiCredits?: number;
+  aiResumeGenerationsCount?: number;
+  jobMatchFreeUsed?: number;
+  billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
+  planExpiresAt?: string | null;
   createdAt?: string;
 }
 
@@ -14,6 +21,7 @@ interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginDemo: () => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -23,6 +31,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   login: async () => ({ success: false }),
+  loginDemo: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
@@ -71,6 +80,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginDemo = async () => {
+    try {
+      const res = await fetch('/api/auth/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to start demo session' };
+      }
+      setUser(data.user);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Network error' };
+    }
+  };
+
   const register = async (name: string, email: string, password: string) => {
     try {
       const res = await fetch('/api/auth/register', {
@@ -104,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         login,
+        loginDemo,
         register,
         logout,
         refreshUser: fetchCurrentUser,

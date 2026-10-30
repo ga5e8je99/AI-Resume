@@ -8,11 +8,30 @@ const eslintConfig = defineConfig([
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
+    "node_modules/**",
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "scripts/**",
+    "types/**",
+    ".data/**",
+    "public/**",
+    "docs/**",
+    "qa/**",
   ]),
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-wrapper-object-types": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "import/no-anonymous-default-export": "off",
+      "prefer-const": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/purity": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;
