@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
+  deploymentId: process.env.NODE_ENV !== 'production' ? 'dev-v3' : undefined,
 
   // Drastically reduce client JS bundle size by treeshaking icon and utility barrel files
   experimental: {
@@ -25,13 +26,14 @@ const nextConfig: NextConfig = {
 
   // HTTP Performance, Caching, and Security Headers
   async headers() {
+    const isDev = process.env.NODE_ENV !== 'production';
     return [
       {
         source: '/:all*(svg|jpg|png|webp|avif|ico|woff|woff2|ttf)',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: isDev ? 'no-cache' : 'public, max-age=31536000, immutable',
           },
         ],
       },
@@ -40,13 +42,21 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: isDev ? 'no-store, must-revalidate' : 'public, max-age=31536000, immutable',
           },
         ],
       },
       {
         source: '/:path*',
         headers: [
+          ...(isDev
+            ? [
+                {
+                  key: 'Clear-Site-Data',
+                  value: '"cache"',
+                },
+              ]
+            : []),
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',

@@ -28,13 +28,16 @@ export function AppShell({
   className = '',
 }: AppShellProps) {
   const { isRtl } = useLanguage();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(variant === 'canvas');
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('jobmatch_sidebar_collapsed');
-      if (stored !== null) return stored === 'true';
+      if (stored !== null) {
+        setSidebarCollapsed(stored === 'true');
+      }
     }
-    return variant === 'canvas';
-  });
+  }, []);
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 

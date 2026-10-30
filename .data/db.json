@@ -3336,30 +3336,1295 @@
   ],
   "jobCache": [
     {
-      "cacheKey": "job_search:backend engineer test cache:riyadh:all:sa",
+      "cacheKey": "job_search:software engineer:cairo, egypt:all:eg",
       "data": {
         "jobs": [
           {
-            "id": "test_job_1",
-            "title": "Senior Frontend Developer",
-            "company": "FinTech Hub",
-            "location": "Cairo, Egypt",
+            "id": "remotive_2091158",
+            "title": "Software Engineer, AI Coding Tasks",
+            "company": "Askable",
+            "location": "Worldwide",
             "remote": true,
-            "description": "Looking for a Senior Frontend Developer skilled in React, TypeScript, Tailwind, and AWS.",
-            "url": "https://example.com/job/1",
+            "description": "We're looking for experienced software engineers to build AI coding tasks from a codebase they know well. US$1,000 per task, and you can do as many tasks as you want. You turn a real change from a repository you know into a task that today's best AI coding models struggle with: hard for the models, but fair for a skilled engineer. Your tasks are used to measure and train AI coding models. Remote, ",
+            "url": "https://remotive.com/remote-jobs/software-development/software-engineer-ai-coding-tasks-2091158",
             "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-17",
+            "salary": "$1000 per task",
             "tags": [
+              "C++",
+              "docker",
+              "git",
+              "go",
+              "java",
+              "python",
+              "security",
+              "AI/ML",
+              "rust",
+              "Typescript ",
+              "distributed systems",
+              "SOLID",
+              "Linux/Unix",
+              "testing",
+              "infrastructure"
+            ],
+            "jobType": "contract",
+            "matchScore": 68,
+            "matchReasons": [
+              "Direct title match for \"Software Engineer, AI Coding Tasks\"",
+              "Matches 2 of your key skills: TypeScript, Git",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Python",
+              "Java",
+              "Go",
+              "Rust",
+              "C++"
+            ],
+            "matchedSkills": [
+              "TypeScript",
+              "Git"
+            ]
+          },
+          {
+            "id": "remoteok_1131457",
+            "title": "Software Engineer Showroom",
+            "company": "Higharc",
+            "location": "Remote",
+            "remote": true,
+            "description": "About Us Higharc is a VC-backed startup that is changing how new homes are designed and built. Join a founding team whoâve shipped products for Autodesk, Electronic Arts, Nike, and Apple. We have raised a total of $83M with support from top-notch venture capital firms and more than 18 strategic investorsâindustry leaders in construction, building products manufacturing, and distribution. Higha",
+            "url": "https://remoteOK.com/remote-jobs/remote-software-engineer-showroom-higharc-1131457",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-05",
+            "tags": [
+              "software",
+              "engineer",
+              "full stack",
+              "react",
+              "sql",
+              "backend",
+              "senior",
+              "api"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 68,
+            "matchReasons": [
+              "Direct title match for \"Software Engineer Showroom\"",
+              "Matches 2 of your key skills: React, SQL",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Api"
+            ],
+            "matchedSkills": [
+              "React",
+              "SQL"
+            ]
+          },
+          {
+            "id": "remotive_2091132",
+            "title": "Senior back-end Engineer",
+            "company": "Lemon.io",
+            "location": "Europe, USA, UK, Canada, Australia, Ireland, Switzerland, Singapore, Mexico, Iceland, Norway",
+            "remote": true,
+            "description": "Senior Developer? Work Remote. Get Paid Well. Build What Matters. Lemon.io connects hand-picked senior developers with vetted startups across the US and Europe — no bidding wars, no ghosting, just serious opportunities. We're currently hiring for a research-driven AI company on a mission to slash the cost of modern AI — co-designing hardware, software, algorithms, and models to make AI's benefits ",
+            "url": "https://remotive.com/remote-jobs/software-development/senior-back-end-engineer-2091132",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-09-30",
+            "tags": [
+              ".Net",
+              "android",
+              "C",
+              "C#",
+              "C++",
+              "data science",
+              "golang",
+              "ios",
+              "java",
+              "javascript",
+              "kubernetes",
+              "node.js",
+              "php",
+              "python",
+              "react",
+              "ruby/rails",
+              "scala",
+              "shopify",
+              "swift",
+              "UI/UX",
+              "wordpress",
+              "blockchain",
+              "AI/ML",
+              "automation",
+              "project management",
+              "react native",
+              "research",
+              "rust",
+              "unity",
+              "electron",
+              "spring",
+              "laravel",
+              "Ethereum",
+              "graphic design",
+              "Typescript ",
+              "hardware",
+              "angular ",
+              "firebase",
+              "data engineering",
+              "Site Reliability",
+              "Symfony",
+              "next.js",
+              "infrastructure",
+              "flutter"
+            ],
+            "jobType": "full_time",
+            "matchScore": 60,
+            "matchReasons": [
+              "Title matches key roles: engineer",
+              "Matches 4 of your key skills: React, TypeScript, Node.js, Next.js",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Angular",
+              "Javascript",
+              "Python",
+              "Java",
+              "Spring"
+            ],
+            "matchedSkills": [
               "React",
               "TypeScript",
-              "AWS"
+              "Node.js",
+              "Next.js"
             ]
+          },
+          {
+            "id": "remoteok_1131578",
+            "title": "Senior Software Engineer",
+            "company": "CentralReach",
+            "location": "Remote - US",
+            "remote": true,
+            "description": "CentralReach is a leading provider of autism and IDD care software for Applied Behavior Analysis (ABA), multidisciplinary therapy, and special education. Trusted by more than 200,000 users, we enable therapy providers, educators, and employers to scale the way they deliver ABA and related therapies with innovative technology, market-leading industry expertise, and world-class customer satisfaction",
+            "url": "https://remoteOK.com/remote-jobs/remote-senior-software-engineer-centralreach-1131578",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-13",
+            "tags": [
+              "senior",
+              "software",
+              "engineer",
+              "saas",
+              "healthcare",
+              "medical"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 55,
+            "matchReasons": [
+              "Direct title match for \"Senior Software Engineer\"",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "remoteok_1131575",
+            "title": "Engenharia Software Engineer III Golang",
+            "company": "Stone",
+            "location": "Remoto",
+            "remote": true,
+            "description": "Quem Ã© Stone Tech? A Stone nasceu com o propÃ³sito de ser protagonista na transformaÃ§Ã£o da indÃºstria de pagamentos, lutando para oferecer as melhores soluÃ§Ãµes para quem empreende no Brasil. Pensando nisso, construÃ­mos a Stone Tech! A junÃ§Ã£o dos times de tecnologia Stone Co. e as empresas financeiras do grupo que reconhecem o potencial empreendedor de cada brasileiro. Por aqui, temos todas",
+            "url": "https://remoteOK.com/remote-jobs/remote-engenharia-software-engineer-iii-golang-stone-1131575",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-13",
+            "tags": [
+              "golang",
+              "engineer",
+              "software",
+              "senior",
+              "backend"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 55,
+            "matchReasons": [
+              "Direct title match for \"Engenharia Software Engineer III Golang\"",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Golang"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "remoteok_1131567",
+            "title": "Senior Software Engineer",
+            "company": "Phaidra",
+            "location": "Remote - United States",
+            "remote": true,
+            "description": "About Phaidra Phaidra is building the future of industrial automation. The world today is filled with static, monolithic infrastructure. Factories, power plants, buildings, etc. operate the same they've operated for decades â because the controls programming is hard-coded. Thousands of lines of rules and heuristics that define how the machines interact with each other. The result of all this har",
+            "url": "https://remoteOK.com/remote-jobs/remote-senior-software-engineer-phaidra-1131567",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-13",
+            "tags": [
+              "senior",
+              "engineer",
+              "software",
+              "ai",
+              "machine learning",
+              "artificial intelligence"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 55,
+            "matchReasons": [
+              "Direct title match for \"Senior Software Engineer\"",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Machine learning",
+              "Ai"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "remoteok_1131527",
+            "title": "Senior Software Engineer I",
+            "company": "Clariti Cloud, Inc.",
+            "location": "Canada",
+            "remote": true,
+            "description": "Join our mission to provide governments with exceptional experiences so they can do the same for their communities! What do we do?ð¥ We empower governments to deliver exceptional citizen experiences. Check out our âAbout Usâ page for a deep dive into our product and what makes us exceptional. As a Senior Software Engineer at Clariti, youâll work at the intersection of Salesforce, distribut",
+            "url": "https://remoteOK.com/remote-jobs/remote-senior-software-engineer-i-clariti-cloud-inc-1131527",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-09",
+            "tags": [
+              "senior",
+              "engineer",
+              "software",
+              "java",
+              "nodejs",
+              "saas",
+              "architecture",
+              "api",
+              "backend"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 55,
+            "matchReasons": [
+              "Direct title match for \"Senior Software Engineer I\"",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Nodejs",
+              "Java",
+              "Api"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "remoteok_1131507",
+            "title": "Senior Software Engineer",
+            "company": "Cast AI",
+            "location": "Remote (Worldwide)",
+            "remote": true,
+            "description": "Remote - We are hiring across multiple teams!As a Senior Software Engineer, you will have the opportunity to work on different key features of our product. We are currently hiring Senior Software Engineers for the following teams:â Workload Optimization â Automates work... Please mention the word **STURDY** and tag RMTU2LjIwNi4yMDguMjI3 when applying to show you read the job post completely (#",
+            "url": "https://remoteOK.com/remote-jobs/remote-senior-software-engineer-cast-ai-1131507",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-07",
+            "tags": [
+              "senior",
+              "software",
+              "engineer"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 55,
+            "matchReasons": [
+              "Direct title match for \"Senior Software Engineer\"",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "remoteok_1131470",
+            "title": "Software Engineer II",
+            "company": "Precision AQ",
+            "location": "India",
+            "remote": true,
+            "description": "Position Summary: The candidate will be responsible for the configuration and delivery of client-facing applications.Â The candidate may assist with support for the development of process enhancements under the guidance of the Sr. Software Engineer and the Manager, Technical Operations. Responsibilities will also include day-to-day maintenance of the health care application systems in operation, i",
+            "url": "https://remoteOK.com/remote-jobs/remote-software-engineer-ii-precision-aq-1131470",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-05",
+            "tags": [
+              "engineer",
+              "software",
+              "healthcare",
+              "medical",
+              "support",
+              "testing",
+              "ops",
+              "operational"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 55,
+            "matchReasons": [
+              "Direct title match for \"Software Engineer II\"",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "remotive_2091135",
+            "title": "Senior Back-end Developer",
+            "company": "Lemon.io",
+            "location": "Europe, USA, Canada, Australia, Singapore, Mexico, Saudi Arabia",
+            "remote": true,
+            "description": "Lemon.io helps companies in the US and Europe hire experienced engineers, from funded startups to teams like Klarna, Retool, and Pinterest. We’ve been doing this since 2015, and more than 1,500 companies have hired engineers through us. Currently, we have a few open positions from our client, an AI-native cloud company. AI teams use its platform to run inference on open-source models, fine-tune th",
+            "url": "https://remotive.com/remote-jobs/software-development/senior-back-end-developer-2091135",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-27",
+            "tags": [
+              ".Net",
+              "android",
+              "C",
+              "C#",
+              "C++",
+              "cloud",
+              "data science",
+              "golang",
+              "ios",
+              "java",
+              "javascript",
+              "kubernetes",
+              "node.js",
+              "php",
+              "python",
+              "react",
+              "ruby/rails",
+              "scala",
+              "shopify",
+              "swift",
+              "UI/UX",
+              "wordpress",
+              "blockchain",
+              "AI/ML",
+              "automation",
+              "project management",
+              "react native",
+              "rust",
+              "unity",
+              "electron",
+              "spring",
+              "laravel",
+              "Ethereum",
+              "graphic design",
+              "Typescript ",
+              "distributed systems",
+              "angular ",
+              "firebase",
+              "data engineering",
+              "Site Reliability",
+              "Symfony",
+              "Linux/Unix",
+              "next.js",
+              "infrastructure",
+              "flutter",
+              "GPU"
+            ],
+            "jobType": "full_time",
+            "matchScore": 42,
+            "matchReasons": [
+              "Matches 4 of your key skills: React, TypeScript, Node.js, Next.js",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Angular",
+              "Javascript",
+              "Python",
+              "Java",
+              "Spring"
+            ],
+            "matchedSkills": [
+              "React",
+              "TypeScript",
+              "Node.js",
+              "Next.js"
+            ]
+          },
+          {
+            "id": "remotive_2091133",
+            "title": "Senior React Full-stack Developer",
+            "company": "Lemon.io",
+            "location": "Europe, USA, Canada, APAC",
+            "remote": true,
+            "description": "Are you a talented Senior Developer looking for a remote job that lets you show your skills and get decent compensation? Look no further than Lemon.io — the marketplace that connects you with hand-picked startups in the US and Europe. What we offer: The rate depends on your seniority level, skills and experience. We've already paid out over $11M to our engineers. No more hunting for clients or neg",
+            "url": "https://remotive.com/remote-jobs/software-development/senior-react-full-stack-developer-2091133",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-02",
+            "tags": [
+              ".Net",
+              "android",
+              "AWS",
+              "azure",
+              "C",
+              "C#",
+              "C++",
+              "data science",
+              "fullstack",
+              "golang",
+              "ios",
+              "java",
+              "javascript",
+              "node.js",
+              "php",
+              "python",
+              "react",
+              "react js",
+              "ruby/rails",
+              "scala",
+              "shopify",
+              "swift",
+              "UI/UX",
+              "wordpress",
+              "blockchain",
+              "AI/ML",
+              "automation",
+              "react native",
+              "rust",
+              "product management",
+              "unity",
+              "electron",
+              "spring",
+              "data analysis",
+              "laravel",
+              "Ethereum",
+              "graphic design",
+              "Typescript ",
+              "angular ",
+              "GCP",
+              "firebase",
+              "data engineering",
+              "Site Reliability",
+              "Symfony",
+              "startup",
+              "marketplace",
+              "next.js",
+              "flutter"
+            ],
+            "jobType": "full_time",
+            "matchScore": 42,
+            "matchReasons": [
+              "Matches 4 of your key skills: React, TypeScript, Node.js, Next.js",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Angular",
+              "Javascript",
+              "Python",
+              "Java",
+              "Spring"
+            ],
+            "matchedSkills": [
+              "React",
+              "TypeScript",
+              "Node.js",
+              "Next.js"
+            ]
+          },
+          {
+            "id": "remotive_2069746",
+            "title": "Tech Lead Full-Stack Rails Engineer",
+            "company": "Mitre Media",
+            "location": "USA, Canada, USA timezones",
+            "remote": true,
+            "description": "About Mitre Media Mitre Media is redefining FinTech with AI-driven tools that empower millions of investors. Our portfolio, including Dividend.com and MutualFunds.com, leverages LLMs to deliver novel data insights and visually rich user experiences. For over a decade, we’ve served individual investors, financial advisors, and top asset managers like BlackRock and Vanguard through our premium data,",
+            "url": "https://remotive.com/remote-jobs/software-development/tech-lead-full-stack-rails-engineer-2069746",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-14",
+            "salary": "$170k - $200k",
+            "tags": [
+              "api",
+              "CSS",
+              "docker",
+              "elasticsearch",
+              "fullstack",
+              "html",
+              "javascript",
+              "kubernetes",
+              "postgresql",
+              "react",
+              "ror",
+              "ruby/rails",
+              "AI/ML",
+              "CAD",
+              "advertising",
+              "Redis",
+              "ES6",
+              "web applications",
+              "MySQL",
+              "NLP",
+              "fintech",
+              "Micro services",
+              "github",
+              "system architecture"
+            ],
+            "jobType": "full_time",
+            "matchScore": 40,
+            "matchReasons": [
+              "Title matches key roles: engineer",
+              "Matches 1 of your key skills: React",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Javascript",
+              "Ruby",
+              "Rails",
+              "Mysql",
+              "Postgresql"
+            ],
+            "matchedSkills": [
+              "React"
+            ]
+          },
+          {
+            "id": "remotive_2091045",
+            "title": "Tier III Service Desk Engineer",
+            "company": "Unio Digital",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "Unió Digital is an Arizona-based managed service provider (MSP) delivering Managed IT Services, Low Voltage Cabling, Access Control, Video Surveillance, and Intrusion Services. We believe technology should be intuitive, not intimidating. We are looking for an experienced Tier 3 Service Desk Technician with exceptional problem-solving skills. You will serve as the escalation point within the team, ",
+            "url": "https://remotive.com/remote-jobs/information-technology/tier-iii-service-desk-engineer-2091045",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-06",
+            "tags": [
+              "azure",
+              "cisco",
+              "security",
+              "video",
+              "documentation",
+              "hardware",
+              "helpdesk",
+              "onboarding",
+              "MSP",
+              "ticketing",
+              "Microsoft 365",
+              "IT systems"
+            ],
+            "jobType": "full_time",
+            "matchScore": 33,
+            "matchReasons": [
+              "Title matches key roles: engineer",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Azure"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_ai-software-builder-sinsheim-247132",
+            "title": "AI Software Builder (m/w/d)",
+            "company": "Immosandbox GmbH",
+            "location": "Sinsheim",
+            "remote": false,
+            "description": "AI Software Builder (m/w/d) Code schreiben. KI zähmen. Eine Branche aufs nächste Level bringen. 📍 Remote First – deutschlandweit | 2–3 Tage im Monat in Sinsheim 💰 36.000–42.000 € brutto/Jahr 💻 Vollzeit | Unbefristet Die Immobilienbranche ist digital noch nicht da, wo sie sein könnte. Das ändern wir gerade mit unserem eigenen ERP, gebaut mit KI. In unserer Party ist nur noch der Slot „Entwickler",
+            "url": "https://www.arbeitnow.com/jobs/companies/immosandbox-gmbh/ai-software-builder-sinsheim-247132",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Software Development"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 33,
+            "matchReasons": [
+              "Title matches key roles: software",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Ai"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "remoteok_1131629",
+            "title": "Intern SD Engineer",
+            "company": "Copious",
+            "location": "Maharashtra",
+            "remote": true,
+            "description": "&lt;p dir=&quot;ltr&quot; style=&quot;line-height:1.38;text-align: justify;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;&quot;&gt;&lt;span style=&quot;font-size:10pt;font-family:&#39;DM Sans&#39;,sans-serif;color:#434343;background-color:transparent;font-weight:600;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;&",
+            "url": "https://remoteOK.com/remote-jobs/remote-intern-sd-engineer-copious-1131629",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-19",
+            "tags": [
+              "internship",
+              "engineer",
+              "software",
+              "dev"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 33,
+            "matchReasons": [
+              "Title matches key roles: engineer",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "remotive_2091134",
+            "title": "Head of Engineering",
+            "company": "Lemon.io",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "About Lemon.io Lemon.io is a profitable, growing talent marketplace that connects vetted senior engineers with companies that need them. We’ve been in business for 10 years, have 60 people across Ukraine, Europe, Canada, and the US, and process over $16M in annual GMV. We compress the traditional 2–5 week hiring timeline down to 24–48 hours through a curated, pre-vetted supply of developers. Hirin",
+            "url": "https://remotive.com/remote-jobs/software-development/head-of-engineering-2091134",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-26",
+            "tags": [
+              "AI/ML",
+              "startup",
+              "marketplace",
+              "fundraising"
+            ],
+            "jobType": "full_time",
+            "matchScore": 25,
+            "matchReasons": [
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Ai"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "remotive_2091161",
+            "title": "AI Trainer - Video Annotation",
+            "company": "iMerit Technology",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "AI Trainer - Video Annotation Remote | Independent Contractor Prove your skills. Get certified. Robotics AI is advancing rapidly, and high-quality video data helps intelligent systems better understand the world around them. We are inviting detail-oriented professionals to complete our certification process for potential robotics AI projects. ▌ What you will do As part of the certification process",
+            "url": "https://remotive.com/remote-jobs/artificial-intelligence/ai-trainer-video-annotation-2091161",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-22",
+            "salary": "70K-80K",
+            "tags": [
+              "video",
+              "AI/ML",
+              "robotics"
+            ],
+            "jobType": "freelance",
+            "matchScore": 25,
+            "matchReasons": [
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Ai"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "remotive_1680495",
+            "title": "Remote Office Assistant",
+            "company": "Coalition Technologies ",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "Coalition Technologies is seeking a reliable, detail-oriented, and highly organized Remote Office Assistant to support administrative, bookkeeping, billing, reporting, data entry, and internal operations tasks. This role is ideal for someone with strong communication skills, discretion, attention to detail, and a willingness to learn and grow within a fast-paced remote work environment. As an Offi",
+            "url": "https://remotive.com/remote-jobs/marketing/remote-office-assistant-1680495",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-11",
+            "salary": "$35,3k- $52k",
+            "tags": [
+              "CSS",
+              "excel",
+              "frontend",
+              "git",
+              "html",
+              "illustrator",
+              "magento",
+              "photoshop",
+              "php",
+              "shopify",
+              "wordpress",
+              "MySQL",
+              "startup",
+              "responsive",
+              "themes",
+              "bootstrap",
+              "insurance",
+              "jQuery",
+              "Ajax"
+            ],
+            "jobType": "full_time",
+            "matchScore": 25,
+            "matchReasons": [
+              "Matches 1 of your key skills: Git",
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Php",
+              "Mysql",
+              "Css",
+              "Html"
+            ],
+            "matchedSkills": [
+              "Git"
+            ]
+          },
+          {
+            "id": "remotive_2086540",
+            "title": "Inside Sales Contractor",
+            "company": "Credit Wellness, LLC",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "About Us We are a financial services start up focusing on helping to improve consumer credit profiles. We are currently seeking KPI driven sales representatives looking to earn up to 45K in their first year while working remotely. We offer comprehensive training and continuous sales coaching to help you meet your financial goals. During our training period we offer a guaranteed training stipend wh",
+            "url": "https://remotive.com/remote-jobs/sales/inside-sales-contractor-2086540",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-08",
+            "salary": "OTE $25k - $35k",
+            "tags": [
+              "CRM",
+              "google sheets",
+              "financial services",
+              "Inside Sales"
+            ],
+            "jobType": "full_time",
+            "matchScore": 25,
+            "matchReasons": [
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "remotive_1185979",
+            "title": "Freelance Writer",
+            "company": "IAPWE",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "Our organization is seeking content writers to create articles and blog posts on a variety of topics. The rate of pay is $20 per 100 words (this comes out to approximately $100 per article or $50 per hour). Some topics you may be asked to write about include the following (you can always turn down a topic if you do not feel comfortable writing about it, however if you have experience or expertise ",
+            "url": "https://remotive.com/remote-jobs/writing/freelance-writer-1185979",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-04",
+            "salary": "$50-$75 /hour",
+            "tags": [
+              "REST"
+            ],
+            "jobType": "freelance",
+            "matchScore": 25,
+            "matchReasons": [
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Rest"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "remotive_1749306",
+            "title": "Freelance Copywriter",
+            "company": "Coalition Technologies ",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "CT Marketing Agency is seeking skilled Freelance Copywriters to write high-quality, SEO-driven content for eCommerce and lead generation websites. This is a freelance, project-based writing role. The ideal candidate has excellent English writing skills, strong research ability, and experience writing content that follows detailed, client-specific guidelines. Projects commonly include category page",
+            "url": "https://remotive.com/remote-jobs/writing/freelance-copywriter-1749306",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-02",
+            "salary": "$20k -$35k",
+            "tags": [
+              "accounting",
+              "excel",
+              "research",
+              "data analysis",
+              "bookkeeping",
+              "google sheets",
+              "quickbooks",
+              "data entry",
+              "insurance",
+              "G Suite"
+            ],
+            "jobType": "freelance",
+            "matchScore": 25,
+            "matchReasons": [
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Seo"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_schiffsmechaniker-deck-fur-den-forschungseisbrecher-polarstern-bremerhaven-93030",
+            "title": "Schiffsmechaniker Deck (M/W/D) Für Den Forschungseisbrecher Polarstern",
+            "company": "F. Laeisz Group",
+            "location": "Bremerhaven",
+            "remote": false,
+            "description": "Die Reederei F. Laeisz ist eines der führenden deutschen Unternehmen im Schifffahrtsbereich. Seit mehr als 25 Jahren ist die Reederei mit ihrer Zweigniederlassung in Bremerhaven eng mit der Polar- und Meeresforschung verbunden. Von hier aus erfolgt das Management der größeren Forschungsschiffe und -plattformen „Polarstern“ und „Neumayer-Station III“, aber auch der kleineren Forschungsschiffe „Uthö",
+            "url": "https://www.arbeitnow.com/jobs/companies/f-laeisz-group/schiffsmechaniker-deck-fur-den-forschungseisbrecher-polarstern-bremerhaven-93030",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Engineering"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_projektassistentin-dresden-365256",
+            "title": "Projektassistent:in",
+            "company": "agentur sieg & soehne GmbH",
+            "location": "Dresden",
+            "remote": false,
+            "description": "Was uns so spannend macht: Wir digitalisieren die Eventbranche und stellen diese mit neuen Tools und Ideen auf den Kopf – zu unseren Kunden zählen daher bereits namhafte Unternehmen Bei uns kannst Du Teil eines wachsenden, innovativen Teams werden und Dank flacher Hierarchien eigenständig neue Prozesse, Lösungen und Strukturen mitgestalten Wir suchen daher kreative Köpfe die gerne Verantwortung üb",
+            "url": "https://www.arbeitnow.com/jobs/companies/agentur-sieg-soehne-gmbh/projektassistentin-dresden-365256",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Marketing and Communication"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_leitung-kommunikation-offentlichkeitsarbeit-regensburg-192686",
+            "title": "Leitung Kommunikation / Öffentlichkeitsarbeit (m/w/d)",
+            "company": "Designerdock München GmbH",
+            "location": "Regensburg",
+            "remote": false,
+            "description": "Das Unternehmen: Strategie gestalten. Menschen erreichen. Kommunikation weiterentwickeln. Unser Auftraggeber ist ein etabliertes, regional stark verwurzeltes mittelständisches Finanzinstitut mit hoher gesellschaftlicher Verantwortung und einer engen Verbindung zu den Menschen und Unternehmen in der Oberpfalz. Als bedeutender Finanzdienstleister engagiert sich das Unternehmen nicht nur für seine Ku",
+            "url": "https://www.arbeitnow.com/jobs/companies/designerdock-munchen-gmbh/leitung-kommunikation-offentlichkeitsarbeit-regensburg-192686",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Public Relations",
+              "Corporate Communication"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_sachbearbeiter-forderungsmanagement-munich-313486",
+            "title": "Sachbearbeiter Forderungsmanagement (m/w/d)",
+            "company": "MY Humancapital GmbH",
+            "location": "Munich",
+            "remote": false,
+            "description": "Sachbearbeiter Forderungsmanagement (m/w/d) – München | Vollzeit | Homeoffice-Möglichkeit Im Auftrag unseres Partnerunternehmens in München suchen wir Sie zum nächstmöglichen Zeitpunkt als „Sachbearbeiter Forderungsmanagement (m/w/d)“. Aufgaben Als Sachbearbeiter Forderungsmanagement (m/w/d) betreuen Sie eigenständig ein Immobilienportfolio und übernehmen das zugehörige Forderungsmanagement Zudem ",
+            "url": "https://www.arbeitnow.com/jobs/companies/my-humancapital-gmbh/sachbearbeiter-forderungsmanagement-munich-313486",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Accounts Receivable"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_business-analyst-munich-17017",
+            "title": "Business Analyst (m/w/d)",
+            "company": "Odoo DE GmbH",
+            "location": "Munich",
+            "remote": false,
+            "description": "Du begeisterst dich für Technologie und suchst einen Job, der unfassbar abwechslungsreich ist und dir tiefe Einblicke in zahlreiche Unternehmen und Branchen bietet? Deine Mission? Du holst das volle Potenzial aus unseren Business Apps heraus, indem du Geschäftsprozesse analysierst, deine Kund:innen hinsichtlich ihrer Anforderungen berätst und letztlich das Projekt von A bis Z gemeinsam mit deinen ",
+            "url": "https://www.arbeitnow.com/jobs/companies/odoo-de-gmbh/business-analyst-munich-17017",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Business Analyst"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_senior-media-planner-munich-81740",
+            "title": "(Senior) Media Planner (m/w/d)",
+            "company": "Designerdock München GmbH",
+            "location": "Munich",
+            "remote": false,
+            "description": "Die Agentur: Unser Kunde ist eine etablierte, auf den Gesundheitsmarkt spezialisierte inhabergeführte Mediaagentur. Am Standort München verbindet das Unternehmen fundiertes Branchenwissen mit strategischer Beratung, datenbasierter Mediaplanung und digitalen Kommunikationslösungen. Für Kunden aus dem Pharma- und Healthcare-Umfeld entstehen kanalübergreifende Kampagnen, die relevante Zielgruppen gez",
+            "url": "https://www.arbeitnow.com/jobs/companies/designerdock-munchen-gmbh/senior-media-planner-munich-81740",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Media Planning",
+              "Purchasing"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_product-manager-energy-markets-flexibility-berlin-71090",
+            "title": "Product Manager Energy Markets & Flexibility (m/f/d)",
+            "company": "1KOMMA5˚",
+            "location": "Berlin",
+            "remote": true,
+            "description": "1KOMMA5° At 1KOMMA5° , we pursue a clear vision: Living on wind and sunlight forever for free . To make this a reality, we are building the energy system of the future with Heartbeat AI. Want to be part of it? We bring together regional craftsmanship and scalable software: We don't think of solar, batteries, heat pumps, and e-mobility as isolated components, but control them as an intelligent, int",
+            "url": "https://www.arbeitnow.com/jobs/companies/1komma50/product-manager-energy-markets-flexibility-berlin-71090",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Remote",
+              "Marketing and Communication"
+            ],
+            "jobType": "Permanent employment",
+            "matchScore": 25,
+            "matchReasons": [
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Ai"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_werkstudent-vertrieb-kundenberatung-warenautomaten-bensheim-214064",
+            "title": "Werkstudent (m/w/d) Vertrieb & Kundenberatung Warenautomaten",
+            "company": "Pulse Vending - UPdrinks GmbH",
+            "location": "Bensheim",
+            "remote": false,
+            "description": "Du willst im Studium nicht nur zuarbeiten, sondern echte Kundengespräche führen und ein Unternehmen mit aufbauen? Pulse Vending ist ein junges, stark wachsendes Unternehmen aus Bensheim. Wir verkaufen Warenautomaten, Komponenten und Ersatzteile an Betreiber in ganz Deutschland. Dabei bleiben wir nicht beim Verkauf stehen: Wir entwickeln eigene Produkte und eigene Systeme und probieren Neues schnel",
+            "url": "https://www.arbeitnow.com/jobs/companies/pulse-vending-updrinks-gmbh/werkstudent-vertrieb-kundenberatung-warenautomaten-bensheim-214064",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Customer Service"
+            ],
+            "jobType": "Werkstudent",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_praktikum-content-management-e-commerce-berlin-447287",
+            "title": "Praktikum (m/w/d) Content Management E-Commerce",
+            "company": "Bela Living GmbH",
+            "location": "Berlin",
+            "remote": false,
+            "description": "Hi! Wir sind die Bela Living GmbH – ein junges, schnell wachsendes Unternehmen, das seit 2022 frischen Wind in die Möbelbranche bringt. Wir entwickeln und vertreiben hochwertige, stilvolle Möbel zu fairen Preisen. Mit unseren Marken Bellabino, Bellamio, skølm und STEELSØN möchten wir jedem ein schönes Zuhause ermöglichen. Du interessierst Dich für E-Commerce, hast ein Auge für Details und möchtest",
+            "url": "https://www.arbeitnow.com/jobs/companies/bela-living-gmbh/praktikum-content-management-e-commerce-berlin-447287",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Online Marketing"
+            ],
+            "jobType": "Praktikum",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_business-advisor-enterprise-dach-berlin-476405",
+            "title": "Business Advisor Enterprise DACH (m/w/d)",
+            "company": "Odoo DE GmbH",
+            "location": "Berlin",
+            "remote": false,
+            "description": "Hast du Lust, als Account Executive die Zukunft der Softwarebranche zu gestalten? Bei Odoo gestaltest du sie jeden Tag – deine eigene und die unserer Kund:innen. Mit unserem Mid-Market & Corporate Segment bauen wir aktuell einen spannenden neuen Bereich auf, der enormes Potenzial hat. Du arbeitest an vielfältigen Projekten mit namhaften Kund:innen aus unterschiedlichsten Branchen im DACH-Raum und ",
+            "url": "https://www.arbeitnow.com/jobs/companies/odoo-de-gmbh/business-advisor-enterprise-dach-berlin-476405",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Business Consulting"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_workday-consultant-automation-ai-berlin-277582",
+            "title": "Workday Consultant - Automation & AI (m/f/d)",
+            "company": "Flix",
+            "location": "Berlin, Berlin, Germany",
+            "remote": false,
+            "description": "At Flix, we offer a dynamic work environment with competitive pay, strong growth opportunities, and a tech-driven approach to making travel more accessible, sustainable, and affordable. You will join Flix's People &amp; Organization Digital Transformation team as a technically hands-on Business Analyst, bridging HR operations, Workday and emerging AI and automation technologies. You will understan",
+            "url": "https://www.arbeitnow.com/jobs/companies/flix/workday-consultant-automation-ai-berlin-277582",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [],
+            "jobType": "Full-time",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [
+              "Ai"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_sales-engineering-manager-core-mainland-europe-germany-209809",
+            "title": "Sales Engineering Manager Core - Mainland Europe",
+            "company": "Samsara",
+            "location": "Germany",
+            "remote": false,
+            "description": "Who we are Samsara (NYSE: IOT) is the pioneer of the Connected Operations™ Cloud, which is a platform that enables organizations that depend on physical operations to harness Internet of Things (IoT) data to develop actionable insights and improve their operations. At Samsara, we are helping improve the safety, efficiency and sustainability of the physical operations that power our global economy.",
+            "url": "https://www.arbeitnow.com/jobs/companies/samsara/sales-engineering-manager-core-mainland-europe-germany-209809",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [],
+            "jobType": "Full-time",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_senior-specialist-market-planning-berlin-371207",
+            "title": "Senior Specialist, Market Planning",
+            "company": "Wolt - English",
+            "location": "Berlin, Germany",
+            "remote": false,
+            "description": "About Wolt At Wolt, we create technology that brings joy, simplicity and earnings to the neighborhoods of the world. In 2014 we started with delivery of restaurant food. Now we're building the delivery of (almost) everything and you'll find us in over 500 cities in 30 countries around the world. In 2022 we joined forces with DoorDash and together we keep on dreaming big and expanding across the gl",
+            "url": "https://www.arbeitnow.com/jobs/companies/wolt-english/senior-specialist-market-planning-berlin-371207",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [],
+            "jobType": "Full-time",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_leiter-it-sap-allrounder-dresden-320612",
+            "title": "Leiter IT / SAP-Allrounder (m/w/d)",
+            "company": "Pertemps ERP",
+            "location": "Dresden",
+            "remote": false,
+            "description": "Leiter IT / SAP-Allrounder (m/w/d) – Hands-on & operativ Standort: Region Dresden / OstsachsenArbeitsmodell: Vor Ort (On-site)Anstellung: Unbefristete Festanstellung, Vollzeit Über die Position Für ein etabliertes, international aufgestelltes Unternehmen suchen wir einen erfahrenen Leiter IT / IT Business Partner (m/w/d) mit fundierter SAP-Expertise und ausgeprägter Hands-on-Mentalität. Wichtig: D",
+            "url": "https://www.arbeitnow.com/jobs/companies/pertemps-erp/leiter-it-sap-allrounder-dresden-320612",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "SAP/ERP Consulting",
+              "Development"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_recruiter-bewerbermanagement-administration-munich-368016",
+            "title": "Recruiter Bewerbermanagement & Administration (m/w/d)",
+            "company": "MY Humancapital GmbH",
+            "location": "Munich",
+            "remote": false,
+            "description": "Recruiter (m/w/d) – Bewerbermanagement & Administration 🚀 Du bist kommunikativ, digital fit und ein echtes Organisationstalent? Dann sollten wir uns kennenlernen! 💙 Du hast Spaß daran, mit Menschen zu sprechen, behältst auch bei vielen Bewerbungen den Überblick und arbeitest gerne mit digitalen Tools? Gleichzeitig magst Du es, wenn Dinge gut organisiert sind und alles seine Ordnung hat? Dann wer",
+            "url": "https://www.arbeitnow.com/jobs/companies/my-humancapital-gmbh/recruiter-bewerbermanagement-administration-munich-368016",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "HR"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_social-media-manager-freelance-berlin-363637",
+            "title": "Social Media Manager (Freelance, m/f/d)",
+            "company": "L1VE GmbH",
+            "location": "Berlin",
+            "remote": false,
+            "description": "Your mission About L1VE L1VE is a growing media and technology company with offices in Berlin and New York. With immersive 14K/3D/360° streaming technology and innovative live formats, we are changing the way people experience sports, music and entertainment. Your Role You are the voice of L1VE online. You build our social media from the ground up, take full ownership of it and work closely with o",
+            "url": "https://www.arbeitnow.com/jobs/companies/l1ve-gmbh/social-media-manager-freelance-berlin-363637",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Marketing and Communication"
+            ],
+            "jobType": "Freelancer / independent contractor (freiberufler / selbstständiger)",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_senior-pr-manager-ceo-office-berlin-155158",
+            "title": "(Senior) PR Manager (m/w/d) - CEO Office",
+            "company": "1KOMMA5˚",
+            "location": "Berlin",
+            "remote": false,
+            "description": "1KOMMA5° Bei 1KOMMA5° verfolgen wir eine Vision: Living on wind and sunlight forever for free . Dafür bauen wir mit Heartbeat AI das Energiesystem der Zukunft. Bist du dabei? Wir bringen regionales Handwerk und skalierbare Software zusammen: Solar, Speicher, Wärmepumpe und E-Mobilität denken wir nicht einzeln, sondern steuern sie als intelligentes, integriertes Gesamtsystem in unserem virtuellen K",
+            "url": "https://www.arbeitnow.com/jobs/companies/1komma50/senior-pr-manager-ceo-office-berlin-155158",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Marketing and Communication"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [
+              "Ai"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "arbeitnow_tech-lead-berlin-152424",
+            "title": "Tech Lead (m/f/d)",
+            "company": "Superchat",
+            "location": "Berlin",
+            "remote": false,
+            "description": "At Superchat, we're rebuilding how businesses talk to their customers. The phone call, the contact form, the support ticket: all of it is being replaced by messaging and AI. We're building the platform that runs underneath. Founded in 2020, Superchat has become the platform of choice for 10,000+ businesses worldwide , from globally recognized brands like Allianz, Auto1, Enpal, Danone, and GASAG to",
+            "url": "https://www.arbeitnow.com/jobs/companies/superchat/tech-lead-berlin-152424",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-10-30",
+            "tags": [
+              "Engineering"
+            ],
+            "jobType": "Permanent employment (unbefristeter arbeitsvertrag)",
+            "matchScore": 25,
+            "matchReasons": [],
+            "missingSkills": [
+              "Ai"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "remoteok_1131557",
+            "title": "Technical Solutions Analyst",
+            "company": "Varicent",
+            "location": "Merida",
+            "remote": true,
+            "description": "At Varicent, weâre not just transforming the Sales Performance Management (SPM) marketâweâre redefining how organizations achieve revenue success. Our cutting-edge SaaS solutions empower revenue leaders globally to design smarter go-to-market strategies, maximize seller performance, and unlock untapped potential. Varicent stands at the forefront of innovation, celebrated as a market leader i",
+            "url": "https://remoteOK.com/remote-jobs/remote-technical-solutions-analyst-varicent-1131557",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-12",
+            "tags": [
+              "analyst",
+              "saas",
+              "sales",
+              "software",
+              "technical"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 25,
+            "matchReasons": [
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [
+              "Go"
+            ],
+            "matchedSkills": []
+          },
+          {
+            "id": "remoteok_1131460",
+            "title": "Outside Sales Consultant Account Executive",
+            "company": "Follett Software, LLC",
+            "location": "Remote (Worldwide)",
+            "remote": true,
+            "description": "Company Overview: Everything we do is for educators. We're partnering with them to advance a bold vision for education that boosts district performance and student success. At Follett Software, we empower educators across roles with technology that streamlines processes and manages information and resources to improve their schools, increase student success, and drive the future of education. We b",
+            "url": "https://remoteOK.com/remote-jobs/remote-outside-sales-consultant-account-executive-follett-software-llc-1131460",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-05",
+            "tags": [
+              "sales",
+              "education",
+              "software",
+              "consult",
+              "consulting"
+            ],
+            "jobType": "Full-time Remote",
+            "matchScore": 25,
+            "matchReasons": [
+              "Remote flexibility offered"
+            ],
+            "missingSkills": [],
+            "matchedSkills": []
           }
         ],
-        "totalFound": 1,
-        "attributions": []
+        "attributions": [
+          {
+            "name": "Remotive",
+            "url": "https://remotive.com",
+            "text": "Powered by Remotive Remote Jobs API"
+          },
+          {
+            "name": "Arbeitnow",
+            "url": "https://www.arbeitnow.com",
+            "text": "Jobs provided via Arbeitnow Open Job Board API"
+          },
+          {
+            "name": "RemoteOK",
+            "url": "https://remoteok.com",
+            "text": "Remote positions aggregated via RemoteOK Public Feed"
+          },
+          {
+            "name": "The Muse",
+            "url": "https://www.themuse.com",
+            "text": "Job listings curated via The Muse Open Career Platform"
+          }
+        ],
+        "totalFound": 41,
+        "sourcesQueried": [
+          "Remotive",
+          "Arbeitnow",
+          "RemoteOK",
+          "The Muse"
+        ]
       },
-      "expiresAt": "2026-10-29T17:50:10.265Z",
-      "createdAt": "2026-10-29T11:50:10.265Z"
+      "expiresAt": "2026-10-30T22:05:14.145Z",
+      "createdAt": "2026-10-30T16:05:14.145Z"
     }
   ],
   "orders": [

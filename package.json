@@ -11,7 +11,8 @@
     "test:cover-letter": "node scripts/run-all-cover-letter-tests.mjs",
     "check:contrast": "tsx scripts/check-contrast.ts",
     "db:migrate": "node scripts/migrate-cover-letters.mjs",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "push": "node scripts/git-push.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^11.9.0",

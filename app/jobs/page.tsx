@@ -90,7 +90,10 @@ export default function JobMatchPage() {
   // Upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const hasCustomUploadRef = useRef<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadedProfile, setUploadedProfile] = useState<CandidateProfileExtract | null>(null);
 
   const handleCancelSearch = () => {
     if (abortControllerRef.current) {
@@ -116,7 +119,7 @@ export default function JobMatchPage() {
           }));
           setSavedResumes(items);
 
-          if (items.length > 0) {
+          if (items.length > 0 && !hasCustomUploadRef.current) {
             setSelectedResumeId(items[0].id);
             // Trigger automatic profile extraction from 1st resume
             extractProfileFromResume(items[0].id);
@@ -174,6 +177,11 @@ export default function JobMatchPage() {
 
     try {
       setIsUploading(true);
+      setErrorMessage(null);
+      hasCustomUploadRef.current = true;
+      setUploadedFileName(file.name);
+      setSelectedResumeId('custom_upload');
+
       const text = await extractTextFromFile(file);
       if (!text || text.trim().length === 0) {
         setErrorMessage(isAr ? 'لم نتمكن من قراءة محتوى الملف.' : 'Could not extract text from file.');
@@ -189,6 +197,7 @@ export default function JobMatchPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.profile) {
+          setUploadedProfile(data.profile);
           applyExtractedProfile(data.profile);
           setSelectedResumeId('custom_upload');
         }
@@ -458,7 +467,7 @@ export default function JobMatchPage() {
 
             {/* Resume Switcher & Upload Button */}
             <div className="flex items-center gap-2.5">
-              {savedResumes.length > 0 && (
+              {(savedResumes.length > 0 || uploadedFileName || selectedResumeId === 'custom_upload') && (
                 <div className="relative">
                   <select
                     aria-label={isAr ? 'اختر السيرة الذاتية للمطابقة' : 'Select resume to match jobs'}
@@ -467,18 +476,20 @@ export default function JobMatchPage() {
                       setSelectedResumeId(e.target.value);
                       if (e.target.value !== 'custom_upload') {
                         extractProfileFromResume(e.target.value);
+                      } else if (uploadedProfile) {
+                        applyExtractedProfile(uploadedProfile);
                       }
                     }}
-                    className="h-9 text-xs rounded-lg border border-border bg-bg px-3 pe-8 text-text-primary focus:outline-none focus:ring-1 focus:ring-brand font-sans"
+                    className="h-9 appearance-none text-xs rounded-lg border border-border bg-bg px-3 pe-8 text-text-primary focus:outline-none focus:ring-1 focus:ring-brand font-sans"
                   >
                     {savedResumes.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.title}
                       </option>
                     ))}
-                    {selectedResumeId === 'custom_upload' && (
+                    {(uploadedFileName || selectedResumeId === 'custom_upload') && (
                       <option value="custom_upload">
-                        {isAr ? 'ملف مرفوع مخصص' : 'Custom Uploaded File'}
+                        {uploadedFileName || (isAr ? 'ملف مرفوع مخصص' : 'Custom Uploaded File')}
                       </option>
                     )}
                   </select>

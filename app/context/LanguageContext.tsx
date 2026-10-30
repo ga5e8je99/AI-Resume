@@ -36,34 +36,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const STORAGE_KEY = 'jobmatch_user_language';
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<LanguageCode>(() => {
-    if (typeof window === 'undefined') return 'en';
-    try {
-      if (window.location.search) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const qLang = urlParams.get('lang') as LanguageCode | null;
-        if (qLang && SUPPORTED_LANGUAGES.some((l) => l.code === qLang)) {
-          return qLang;
-        }
-      }
-      const matchCookie = document.cookie.match(/(?:^|; )jobmatch_user_language=([^;]+)/);
-      if (matchCookie) {
-        const cookieLang = decodeURIComponent(matchCookie[1]) as LanguageCode;
-        if (SUPPORTED_LANGUAGES.some((l) => l.code === cookieLang)) {
-          return cookieLang;
-        }
-      }
-      const stored = localStorage.getItem(STORAGE_KEY) as LanguageCode | null;
-      if (stored && SUPPORTED_LANGUAGES.some((l) => l.code === stored)) {
-        return stored;
-      }
-      const htmlLang = document.documentElement.getAttribute('lang') as LanguageCode | null;
-      if (htmlLang && SUPPORTED_LANGUAGES.some((l) => l.code === htmlLang)) {
-        return htmlLang;
-      }
-    } catch {}
-    return 'en';
-  });
+  const [language, setLanguageState] = useState<LanguageCode>('en');
   const [mounted, setMounted] = useState<boolean>(false);
 
   // Initialize from URL param, localStorage, cookie, or browser preferences
@@ -102,7 +75,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       }
 
       if (saved) {
-        setLanguageState(saved);
+        React.startTransition(() => {
+          setLanguageState(saved);
+          setMounted(true);
+        });
       } else {
         // 4. Inspect browser language (Accept-Language / navigator.language)
         const browserLang = (typeof navigator !== 'undefined' ? navigator.language : '')?.toLowerCase() || '';
@@ -110,14 +86,20 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
           browserLang.startsWith(l.code)
         );
         if (match) {
-          setLanguageState(match.code);
           localStorage.setItem(STORAGE_KEY, match.code);
           document.cookie = `${STORAGE_KEY}=${encodeURIComponent(match.code)}; path=/; max-age=31536000; SameSite=Lax`;
+          React.startTransition(() => {
+            setLanguageState(match.code);
+            setMounted(true);
+          });
+        } else {
+          React.startTransition(() => {
+            setMounted(true);
+          });
         }
       }
     } catch (e) {
       // Ignore storage errors
-    } finally {
       setMounted(true);
     }
   }, []);
@@ -133,6 +115,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   // Apply HTML lang and dir attributes on change
   useEffect(() => {
+    if (!mounted) return;
     if (typeof document !== 'undefined') {
       document.documentElement.lang = language;
       document.documentElement.dir = languageInfo.dir;
@@ -144,7 +127,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         document.body.classList.remove('rtl');
       }
     }
-  }, [language, languageInfo, isRtl]);
+  }, [mounted, language, languageInfo, isRtl]);
 
   const setLanguage = (newLang: LanguageCode) => {
     if (!SUPPORTED_LANGUAGES.some((l) => l.code === newLang)) return;

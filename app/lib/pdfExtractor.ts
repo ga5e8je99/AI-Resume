@@ -78,8 +78,12 @@ export async function extractTextFromPdf(file: File): Promise<string> {
   }
 
   try {
-    // Dynamic import to avoid SSR issues
-    const pdfjs = await import('pdfjs-dist');
+    // Load pdf.min.mjs natively as an ES module in the browser to bypass Webpack eval-source-map Object.defineProperty bug
+    const pdfjsUrl = '/pdf.min.mjs';
+    const pdfjs: any =
+      typeof window !== 'undefined'
+        ? (window as any).pdfjsLib || (await import(/* webpackIgnore: true */ pdfjsUrl))
+        : await import(/* webpackIgnore: true */ 'pdfjs-dist');
 
     // Set worker source with exact matching version query
     if (typeof window !== 'undefined') {

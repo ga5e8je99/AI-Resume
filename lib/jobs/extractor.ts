@@ -33,6 +33,10 @@ export function extractProfileFromResumeData(resumeData: any): CandidateProfileE
   } else if (titleLower.includes('data') || titleLower.includes('machine learning')) {
     if (!targetTitles.includes('Data Scientist')) targetTitles.push('Data Scientist');
     if (!targetTitles.includes('Machine Learning Engineer')) targetTitles.push('Machine Learning Engineer');
+  } else if (titleLower.includes('graphic') || titleLower.includes('visual') || titleLower.includes('brand')) {
+    if (!targetTitles.includes('Graphic Designer')) targetTitles.push('Graphic Designer');
+    if (!targetTitles.includes('Visual Designer')) targetTitles.push('Visual Designer');
+    if (!targetTitles.includes('Brand Identity Designer')) targetTitles.push('Brand Identity Designer');
   } else {
     targetTitles.push(`Senior ${primaryTitle}`);
     targetTitles.push(`${primaryTitle} Specialist`);
@@ -101,10 +105,13 @@ export function extractProfileFromText(text: string): CandidateProfileExtract {
   // Look for title keywords in the first section
   let title = 'Software Engineer';
   const titleMatches = [
+    'senior graphic designer', 'graphic designer', 'lead visual designer', 'visual designer',
+    'brand designer', 'brand identity designer', 'art director', 'creative director',
+    'ui/ux designer', 'product designer', 'motion designer', 'package designer',
     'frontend engineer', 'frontend developer', 'backend engineer', 'backend developer',
     'full stack developer', 'full stack engineer', 'fullstack engineer', 'software engineer',
     'product manager', 'project manager', 'data engineer', 'data scientist',
-    'devops engineer', 'ui/ux designer', 'mobile developer', 'ios developer', 'android developer'
+    'devops engineer', 'mobile developer', 'ios developer', 'android developer'
   ];
 
   for (const tm of titleMatches) {
@@ -116,10 +123,13 @@ export function extractProfileFromText(text: string): CandidateProfileExtract {
 
   // Extract common skills found in text
   const skillsDictionary = [
+    'Photoshop', 'Illustrator', 'InDesign', 'After Effects', 'Premiere Pro',
+    'Figma', 'Sketch', 'Canva', 'Typography', 'Brand Identity', 'Color Theory',
+    'Logo Design', 'Motion Graphics', 'Packaging Design', 'Prepress',
     'React', 'Next.js', 'TypeScript', 'JavaScript', 'Node.js', 'Express',
     'Python', 'Django', 'FastAPI', 'Java', 'Spring', 'Go', 'PHP', 'Laravel',
     'SQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Docker', 'Kubernetes', 'AWS',
-    'Tailwind CSS', 'GraphQL', 'Git', 'Agile', 'Figma'
+    'Tailwind CSS', 'GraphQL', 'Git', 'Agile'
   ];
 
   const foundSkills = skillsDictionary.filter((s) => {

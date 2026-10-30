@@ -46,12 +46,7 @@ export default function BrandedLoader({
     langContext = null;
   }
 
-  const activeLang: LanguageCode =
-    langContext?.language ||
-    (typeof document !== 'undefined'
-      ? (document.documentElement.getAttribute('lang') as LanguageCode)
-      : 'en') ||
-    'en';
+  const activeLang: LanguageCode = langContext?.language || 'en';
   const dict = translations[activeLang] || translations.en;
 
   const resolvedStatus =
