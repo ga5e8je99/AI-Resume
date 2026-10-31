@@ -98,9 +98,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
           });
         }
       }
-    } catch (e) {
-      // Ignore storage errors
-      setMounted(true);
+    } catch {
+      // Ignore storage errors in restricted browsing modes
+      React.startTransition(() => {
+        setMounted(true);
+      });
     }
   }, []);
 

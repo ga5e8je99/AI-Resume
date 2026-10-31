@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ResumeData } from '../builder/types';
 import { GenerateResumeRequest, ResumeService, GeneratedResumeResult } from './resumeService';
 

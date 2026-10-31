@@ -4,8 +4,10 @@ import DataStore from '@/app/lib/datastore';
 import { CoverLetterService } from '@/app/lib/coverLetterService';
 import { AICoverLetterClient } from '@/app/lib/aiCoverLetterClient';
 import { GenerateCoverLetterRequest } from '@/app/cover-letter/types';
-import { applyRateLimit } from '@/app/lib/rateLimit';
+import { applyRateLimit, parseBoundedJsonBody, DEFAULT_MAX_AI_BODY_BYTES } from '@/lib/rate-limit';
 import { requireCredits, consumeCredit, CreditCheckResult } from '@/lib/credit-guard';
+
+export const maxDuration = 60;
 
 // POST /api/cover-letter/generate - Synthesize an AI-tailored cover letter with server-side AI and robust fallback
 export async function POST(req: NextRequest) {
@@ -36,25 +38,25 @@ export async function POST(req: NextRequest) {
       return creditCheck.errorResponse;
     }
 
-    // 3. Rate Limiting: 40 AI generations per minute per user/IP
-    const rateLimit = applyRateLimit(
+    // 3. Rate Limiting: 40 AI generations per minute per user + per IP
+    const rateLimit = await applyRateLimit(
       req,
-      { limit: 40, windowMs: 60 * 1000, keyPrefix: 'gen' },
+      { limit: 40, ipLimit: 80, windowMs: 60 * 1000, keyPrefix: 'gen' },
       authUser?.userId
     );
     if (!rateLimit.allowed && rateLimit.errorResponse) {
       return rateLimit.errorResponse;
     }
 
-    let body: GenerateCoverLetterRequest;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { success: false, error: 'Invalid JSON request payload' },
-        { status: 400 }
-      );
+    // 4. Enforce maximum body size (100KB) and parse JSON safely
+    const parsed = await parseBoundedJsonBody<GenerateCoverLetterRequest>(
+      req,
+      DEFAULT_MAX_AI_BODY_BYTES
+    );
+    if (!parsed.ok) {
+      return parsed.errorResponse;
     }
+    const body = parsed.data;
 
     // 2. Contract Validation
     const validation = CoverLetterService.validateRequest(body);

@@ -14,6 +14,12 @@ export interface UserProfile {
   jobMatchFreeUsed?: number;
   billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
   planExpiresAt?: string | null;
+  proExpiresAt?: string | null;
+  paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionStatus?: 'active' | 'past_due' | 'canceled' | 'expired' | 'none';
+  paymentFailedAt?: string | null;
   createdAt?: string;
 }
 

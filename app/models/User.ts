@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export type UserPlan = 'free' | 'pro' | 'enterprise';
 export type BillingCycle = 'monthly' | 'annual' | 'lifetime' | 'none';
 export type PaymentProvider = 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'expired' | 'none';
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
@@ -18,9 +19,14 @@ export interface IUser extends Document {
   jobMatchFreeUsed?: number;
   billingCycle: BillingCycle;
   planExpiresAt: Date | null;
+  proExpiresAt: Date | null;
   paymentProvider: PaymentProvider;
   providerCustomerId: string;
   providerSubscriptionId: string;
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
+  subscriptionStatus?: SubscriptionStatus;
+  paymentFailedAt?: Date | null;
   resetPasswordToken?: string | null;
   resetPasswordExpires?: Date | null;
   createdAt: Date;
@@ -88,6 +94,10 @@ const UserSchema = new Schema<IUser>(
       type: Date,
       default: null,
     },
+    proExpiresAt: {
+      type: Date,
+      default: null,
+    },
     paymentProvider: {
       type: String,
       enum: ['stripe', 'paymob', 'paddle', 'binance', 'none'],
@@ -100,6 +110,25 @@ const UserSchema = new Schema<IUser>(
     providerSubscriptionId: {
       type: String,
       default: '',
+    },
+    stripeCustomerId: {
+      type: String,
+      default: '',
+      index: true,
+    },
+    stripeSubscriptionId: {
+      type: String,
+      default: '',
+      index: true,
+    },
+    subscriptionStatus: {
+      type: String,
+      enum: ['active', 'past_due', 'canceled', 'expired', 'none'],
+      default: 'none',
+    },
+    paymentFailedAt: {
+      type: Date,
+      default: null,
     },
     resetPasswordToken: {
       type: String,

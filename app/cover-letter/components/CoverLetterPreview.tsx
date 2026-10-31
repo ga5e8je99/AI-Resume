@@ -386,7 +386,7 @@ export function CoverLetterPreview({
 
       {/* Rich Text Editing Helper Toolbar (Active when in edit mode) */}
       {isEditing && (
-        <div className="p-2.5 rounded-[8px] bg-surface-2/80 border border-line text-xs flex flex-wrap items-center justify-between gap-2 animate-in fade-in duration-150">
+        <div className="p-2.5 rounded-[8px] -surface-2 border border-line text-xs flex flex-wrap items-center justify-between gap-2 animate-in fade-in duration-150">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-semibold text-ink-3 me-1">
               {isAr ? 'تنسيق سريع:' : 'Formatting:'}

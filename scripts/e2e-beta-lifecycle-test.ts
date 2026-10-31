@@ -173,6 +173,7 @@ async function runBetaLifecycleE2E() {
   // STEP 5: Initiate Checkout for Pro Plan
   // --------------------------------------------------------------------------
   console.log('\n▶ STEP 5: Start Checkout for Pro Plan');
+  process.env.ALLOW_MOCK_PAYMENTS = 'true';
   const checkoutReq = new NextRequest('http://localhost:3000/api/checkout', {
     method: 'POST',
     headers: {

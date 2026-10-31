@@ -2,36 +2,57 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword, signToken } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
 import { sendEmail, getWelcomeEmailHtml } from '@/lib/email';
-import { applyRateLimit } from '@/app/lib/rateLimit';
+import { applyRateLimit, parseBoundedJsonBody } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
-    const rateLimit = applyRateLimit(
+    const ipLimit = await applyRateLimit(
       req,
-      { limit: 20, windowMs: 60 * 1000, keyPrefix: 'auth_register' }
+      { limit: 20, ipLimit: 20, windowMs: 60 * 1000, keyPrefix: 'auth_register_ip' }
     );
-    if (!rateLimit.allowed && rateLimit.errorResponse) {
-      return rateLimit.errorResponse;
+    if (!ipLimit.allowed && ipLimit.errorResponse) {
+      return ipLimit.errorResponse;
     }
 
-    const body = await req.json();
+    const parsed = await parseBoundedJsonBody(req, 16 * 1024);
+    if (!parsed.ok) {
+      return parsed.errorResponse;
+    }
+    const body = parsed.data;
     const { name, email, password } = body;
 
-    if (!name || !email || !password) {
+    if (
+      !name ||
+      !email ||
+      !password ||
+      typeof name !== 'string' ||
+      typeof email !== 'string' ||
+      typeof password !== 'string'
+    ) {
       return NextResponse.json(
         { error: 'Please provide full name, email, and password.' },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < 6 || password.length > 128) {
       return NextResponse.json(
         { error: 'Password must be at least 6 characters.' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim().slice(0, 150);
+
+    // Per-email + per-IP rate limiting (with Retry-After header on 429)
+    const rateLimit = await applyRateLimit(
+      req,
+      { limit: 10, ipLimit: 20, windowMs: 60 * 1000, keyPrefix: 'auth_register' },
+      cleanEmail
+    );
+    if (!rateLimit.allowed && rateLimit.errorResponse) {
+      return rateLimit.errorResponse;
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(cleanEmail)) {
       return NextResponse.json(

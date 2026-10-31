@@ -14,12 +14,11 @@ export default function LanguageSelector({
   variant = 'compact',
   className = '',
 }: LanguageSelectorProps) {
-  const { language, setLanguage, supportedLanguages, languageInfo } = useLanguage();
+  const { language, setLanguage, supportedLanguages, languageInfo, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const isAr = language === 'ar';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -88,17 +87,17 @@ export default function LanguageSelector({
         type="button"
         suppressHydrationWarning
         onClick={() => setIsOpen((prev) => !prev)}
-        className="h-8 px-2.5 rounded-md border border-border bg-surface hover:bg-surface-2 text-text-primary text-xs font-mono font-medium transition-all duration-150 active:scale-[0.98] shadow-subtle flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 cursor-pointer"
+        className="min-h-[44px] min-w-[44px] px-2.5 rounded-md border border-line-strong bg-surface hover:bg-surface-2 text-ink text-xs font-mono font-medium transition-all duration-150 active:scale-[0.98] shadow-subtle flex items-center justify-center gap-1 sm:gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 cursor-pointer"
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        aria-label={`${isAr ? 'تغيير اللغة' : 'Change language'}, ${languageInfo.code.toUpperCase()}`}
+        aria-label={`${t('nav_change_language_aria')}: ${languageInfo.code.toUpperCase()}`}
       >
         <Globe className="w-3.5 h-3.5 text-brand shrink-0" aria-hidden="true" />
-        <span className="font-mono uppercase tracking-wider text-[11px] font-semibold text-text-primary">
+        <span className="font-mono uppercase tracking-wider text-[11px] font-semibold text-ink">
           {languageInfo.code}
         </span>
         <ChevronDown
-          className={`w-3 h-3 text-text-muted transition-transform duration-150 ${
+          className={`w-3 h-3 text-ink-2 transition-transform duration-150 ${
             isOpen ? 'rotate-180' : ''
           }`}
           aria-hidden="true"
@@ -109,11 +108,11 @@ export default function LanguageSelector({
         <div
           role="menu"
           aria-orientation="vertical"
-          aria-label={isAr ? 'قائمة اللغات المدعومة' : 'Language options'}
-          className="absolute end-0 mt-1.5 w-44 rounded-xl bg-surface border border-border shadow-elevated py-1.5 z-dropdown text-start animate-in fade-in slide-in-from-top-2 duration-150"
+          aria-label={t('nav_language_options_aria')}
+          className="absolute end-0 mt-1.5 w-44 rounded-xl bg-surface border border-line-strong shadow-elevated py-1.5 z-dropdown text-start animate-in fade-in slide-in-from-top-2 duration-150"
         >
-          <div className="px-3 py-1 text-[10px] uppercase font-mono font-semibold tracking-wider text-text-muted border-b border-border mb-1">
-            {isAr ? 'اللغة' : 'Language'}
+          <div className="px-3 py-1 text-[10px] uppercase font-mono font-semibold tracking-wider text-ink-2 border-b border-line-strong mb-1">
+            {t('nav_lang_switch')}
           </div>
           <div className="py-0.5" role="none">
             {supportedLanguages.map((item, index) => {
@@ -130,11 +129,11 @@ export default function LanguageSelector({
                   className={`w-full text-start px-3 py-1.5 text-xs flex items-center justify-between transition-colors cursor-pointer focus-visible:outline-none focus-visible:bg-surface-2 ${
                     isSelected
                       ? 'bg-brand-soft text-brand font-semibold'
-                      : 'text-text-secondary hover:bg-surface-2 hover:text-text-primary'
+                      : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-4 rounded-[3px] bg-surface-2 border border-border text-[9px] font-mono font-semibold flex items-center justify-center text-text-primary shrink-0 uppercase">
+                    <span className="w-5 h-4 rounded-[3px] bg-surface-2 border border-line-strong text-[9px] font-mono font-semibold flex items-center justify-center text-ink shrink-0 uppercase">
                       {item.code}
                     </span>
                     <span className="text-xs">{item.nativeName}</span>

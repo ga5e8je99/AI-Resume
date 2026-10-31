@@ -25,25 +25,24 @@ export function Breadcrumbs({
   actions,
   className = '',
 }: BreadcrumbsProps) {
-  const { language, isRtl } = useLanguage();
-  const isAr = language === 'ar';
+  const { t } = useLanguage();
 
   return (
     <div className={`space-y-1.5 min-w-0 max-w-full ${className}`}>
       {/* Breadcrumb Trail */}
       {items.length > 0 && (
         <nav
-          aria-label={isAr ? 'مسار التنقل' : 'Breadcrumb trail'}
-          className="flex items-center gap-1.5 text-xs text-text-muted overflow-x-auto no-scrollbar py-0.5"
+          aria-label={t('shell_breadcrumb_aria')}
+          className="flex items-center gap-1.5 text-xs text-ink-2 overflow-x-auto no-scrollbar py-0.5"
         >
           <Link
             href="/"
-            className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors shrink-0"
-            title={isAr ? 'الرئيسية' : 'Home'}
+            className="inline-flex items-center gap-1 text-ink-2 hover:text-ink transition-colors shrink-0"
+            title={t('nav_home')}
           >
             <Home className="w-3.5 h-3.5" />
             <span className="sr-only sm:not-sr-only text-[11px]">
-              {isAr ? 'الرئيسية' : 'Home'}
+              {t('nav_home')}
             </span>
           </Link>
 
@@ -52,13 +51,13 @@ export function Breadcrumbs({
             return (
               <React.Fragment key={`${item.label}-${index}`}>
                 <ChevronRight
-                  className="w-3.5 h-3.5 text-text-muted shrink-0 rtl:rotate-180"
+                  className="w-3.5 h-3.5 text-ink-2 shrink-0 rtl:rotate-180"
                   aria-hidden="true"
                 />
                 {item.href && !isLast ? (
                   <Link
                     href={item.href}
-                    className="hover:text-text-primary text-text-secondary transition-colors truncate max-w-[120px] sm:max-w-[200px]"
+                    className="text-ink-2 hover:text-ink transition-colors truncate max-w-[120px] sm:max-w-[200px]"
                   >
                     {item.label}
                   </Link>
@@ -66,7 +65,7 @@ export function Breadcrumbs({
                   <span
                     aria-current={isLast ? 'page' : undefined}
                     className={`truncate max-w-[150px] sm:max-w-[240px] ${
-                      isLast ? 'text-text-primary font-medium' : 'text-text-muted'
+                      isLast ? 'text-ink font-medium' : 'text-ink-2'
                     }`}
                   >
                     {item.label}
@@ -83,12 +82,12 @@ export function Breadcrumbs({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
           <div className="min-w-0 flex-1">
             {title && (
-              <h1 className="text-xl sm:text-2xl font-serif font-bold text-text-primary tracking-tight truncate">
+              <h1 className="text-xl sm:text-2xl font-serif font-bold text-ink tracking-tight truncate">
                 {title}
               </h1>
             )}
             {description && (
-              <p className="text-xs sm:text-sm text-text-secondary mt-0.5 line-clamp-2 max-w-2xl">
+              <p className="text-xs sm:text-sm text-ink-2 mt-0.5 line-clamp-2 max-w-2xl">
                 {description}
               </p>
             )}

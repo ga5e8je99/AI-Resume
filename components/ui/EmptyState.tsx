@@ -27,13 +27,13 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-lg border border-border bg-surface ${className}`}
+      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-lg border -line-strong bg-surface ${className}`}
     >
-      <div className="w-12 h-12 rounded-lg border border-border bg-surface-2 flex items-center justify-center text-text-muted mb-4 shadow-subtle">
-        {icon || <FileQuestion className="w-6 h-6 text-text-muted" aria-hidden="true" />}
+      <div className="w-12 h-12 rounded-lg border -line-strong bg-surface-2 flex items-center justify-center -ink-2 mb-4 shadow-subtle">
+        {icon || <FileQuestion className="w-6 h-6 -ink-2" aria-hidden="true" />}
       </div>
-      <h3 className="font-serif text-lg font-semibold text-text-primary mb-1.5">{title}</h3>
-      <p className="text-sm text-text-secondary max-w-sm leading-relaxed mb-6">{description}</p>
+      <h3 className="font-serif text-lg font-semibold -ink mb-1.5">{title}</h3>
+      <p className="text-sm -ink-2 max-w-sm leading-relaxed mb-6">{description}</p>
       
       {(actionLabel || secondaryActionLabel) && (
         <div className="flex flex-wrap items-center justify-center gap-3">

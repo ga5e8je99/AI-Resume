@@ -16,8 +16,10 @@ const ScoreCircle = ({ score = 75 }: { score: number }) => {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (prefersReducedMotion) {
-      setAnimatedScore(score);
-      return;
+      const rafId = requestAnimationFrame(() => {
+        setAnimatedScore(score);
+      });
+      return () => cancelAnimationFrame(rafId);
     }
 
     let startTimestamp: number | null = null;

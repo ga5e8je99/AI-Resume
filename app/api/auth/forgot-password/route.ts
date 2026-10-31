@@ -2,62 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import DataStore from '@/app/lib/datastore';
 import { sendEmail, getPasswordResetEmailHtml } from '@/lib/email';
+import { applyRateLimit, parseBoundedJsonBody } from '@/lib/rate-limit';
 
-// In-memory sliding rate limiter (5 requests per 15 minutes per IP/email)
-interface RateLimitEntry {
-  timestamps: number[];
-}
-const rateLimitMap = new Map<string, RateLimitEntry>();
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_REQUESTS_PER_WINDOW = 5;
 
-function isRateLimited(identifier: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(identifier) || { timestamps: [] };
-
-  // Filter timestamps within window
-  const activeTimestamps = entry.timestamps.filter((ts) => now - ts < RATE_LIMIT_WINDOW_MS);
-
-  if (activeTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
-    rateLimitMap.set(identifier, { timestamps: activeTimestamps });
-    return true;
-  }
-
-  activeTimestamps.push(now);
-  rateLimitMap.set(identifier, { timestamps: activeTimestamps });
-
-  // Cleanup old entries if map gets large
-  if (rateLimitMap.size > 1000) {
-    for (const [key, val] of rateLimitMap.entries()) {
-      const valid = val.timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-      if (valid.length === 0) rateLimitMap.delete(key);
-    }
-  }
-
-  return false;
-}
-
 /**
  * POST /api/auth/forgot-password
- * Initiates password reset flow with enumeration protection, rate limiting,
+ * Initiates password reset flow with enumeration protection, shared rate limiting,
  * cryptographically random tokens, SHA-256 storage, and 15-minute expiry.
  */
 export async function POST(req: NextRequest) {
   try {
-    const ip =
-      req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-      req.headers.get('x-real-ip') ||
-      'unknown-ip';
-
-    let body: any = {};
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    const parsed = await parseBoundedJsonBody(req, 16 * 1024);
+    if (!parsed.ok) {
+      return parsed.errorResponse;
     }
+    const body = parsed.data;
 
     const { email, language = 'en' } = body;
-    if (!email || typeof email !== 'string') {
+    if (!email || typeof email !== 'string' || email.length > 150) {
       return NextResponse.json(
         { error: 'A valid email address is required.' },
         { status: 400 }
@@ -66,8 +30,19 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // Check rate limit for IP and email
-    if (isRateLimited(`ip:${ip}`) || isRateLimited(`email:${cleanEmail}`)) {
+    // Shared rate limit per email + per IP with Retry-After headers
+    const rateLimit = await applyRateLimit(
+      req,
+      {
+        limit: MAX_REQUESTS_PER_WINDOW,
+        ipLimit: MAX_REQUESTS_PER_WINDOW,
+        windowMs: RATE_LIMIT_WINDOW_MS,
+        keyPrefix: 'forgot_pw',
+      },
+      cleanEmail
+    );
+
+    if (!rateLimit.allowed) {
       return NextResponse.json(
         {
           error: 'RATE_LIMITED',
@@ -76,7 +51,10 @@ export async function POST(req: NextRequest) {
               ? 'عدد الطلبات كبير جداً. يرجى الانتظار 15 دقيقة ثم المحاولة مجدداً.'
               : 'Too many password reset requests. Please try again in 15 minutes.',
         },
-        { status: 429 }
+        {
+          status: 429,
+          headers: rateLimit.headers,
+        }
       );
     }
 

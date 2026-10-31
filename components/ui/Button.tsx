@@ -6,7 +6,12 @@ import { Loader2 } from 'lucide-react';
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'destructive' | 'outline' | 'highlight';
   size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
+  /** Alias kept for backward compatibility */
   isLoading?: boolean;
+  loadingText?: React.ReactNode;
+  startIcon?: React.ReactNode;
+  endIcon?: React.ReactNode;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
@@ -19,8 +24,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       className = '',
       variant = 'primary',
       size = 'md',
-      isLoading = false,
+      loading,
+      isLoading,
+      loadingText,
       disabled,
+      startIcon,
+      endIcon,
       leftIcon,
       rightIcon,
       type = 'button',
@@ -29,25 +38,27 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    // Normalize destructive to danger
+    const isBusy = Boolean(loading ?? isLoading);
     const effectiveVariant = variant === 'destructive' ? 'danger' : variant;
+    const resolvedStartIcon = startIcon ?? leftIcon;
+    const resolvedEndIcon = endIcon ?? rightIcon;
 
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-all duration-150 rounded-md select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg';
+      'btn inline-flex items-center justify-center font-medium transition-all duration-[var(--duration-fast,150ms)] ease-[var(--ease-out,cubic-bezier(.22,1,.36,1))] rounded-md select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
 
     const variants = {
       primary:
-        'bg-brand text-on-brand hover:bg-brand-hover active:bg-brand-hover border border-transparent shadow-subtle',
+        'bg-accent text-on-accent hover:bg-accent-hover active:bg-accent-hover border border-transparent shadow-subtle',
       secondary:
-        'bg-surface text-text-primary hover:bg-surface-2 active:bg-surface-2 border border-border-strong shadow-subtle',
+        'bg-surface text-ink hover:bg-surface-2 active:bg-surface-2 border border-line-strong shadow-subtle',
       outline:
-        'bg-transparent text-text-primary border border-border hover:border-border-strong hover:bg-surface-2 active:bg-surface-2',
+        'bg-transparent text-ink border border-line-strong hover:bg-surface-2 active:bg-surface-2',
       ghost:
-        'bg-transparent text-brand hover:bg-brand-soft active:bg-brand-soft border border-transparent',
+        'bg-transparent text-accent hover:bg-accent-soft active:bg-accent-soft border border-transparent',
       highlight:
-        'bg-highlight text-white hover:bg-highlight/90 active:bg-highlight/95 border border-transparent shadow-subtle',
+        'bg-accent text-on-accent hover:opacity-90 active:opacity-95 border border-transparent shadow-subtle',
       danger:
-        'bg-danger text-white hover:opacity-90 active:opacity-100 border border-transparent shadow-subtle',
+        'bg-danger text-on-accent hover:opacity-90 active:opacity-100 border border-transparent shadow-subtle',
     };
 
     const sizes = {
@@ -59,40 +70,43 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const iconSizeClass =
       size === 'sm' ? 'w-3.5 h-3.5' : size === 'lg' ? 'w-5 h-5' : 'w-4 h-4';
 
-    const hasOnlyRightIcon = !leftIcon && Boolean(rightIcon);
+    const hasOnlyEndIcon = !resolvedStartIcon && Boolean(resolvedEndIcon);
+    const ariaBusyAttr = isBusy || Boolean(props['aria-busy']);
 
     return (
       <button
         ref={ref}
         type={type}
-        disabled={disabled || isLoading}
-        aria-busy={isLoading ? 'true' : undefined}
+        disabled={disabled || isBusy}
+        aria-busy={ariaBusyAttr ? 'true' : undefined}
         className={`${baseStyles} ${variants[effectiveVariant]} ${sizes[size]} ${
           fullWidth ? 'w-full' : ''
         } ${className}`}
         {...props}
       >
-        {/* Left icon or spinner (when left icon exists or when button has no icon) */}
-        {isLoading && !hasOnlyRightIcon ? (
+        {/* Start icon or loading spinner */}
+        {isBusy && !hasOnlyEndIcon ? (
           <span className={`shrink-0 flex items-center justify-center ${iconSizeClass}`}>
             <Loader2 className={`${iconSizeClass} animate-spin text-current`} aria-hidden="true" />
           </span>
-        ) : leftIcon ? (
+        ) : resolvedStartIcon ? (
           <span className={`shrink-0 flex items-center justify-center ${iconSizeClass}`}>
-            {leftIcon}
+            {resolvedStartIcon}
           </span>
         ) : null}
 
-        <span className="truncate">{children}</span>
+        <span className="truncate">
+          {isBusy && loadingText !== undefined ? loadingText : children}
+        </span>
 
-        {/* Right icon or spinner (when button originally only had right icon) */}
-        {isLoading && hasOnlyRightIcon ? (
+        {/* End icon or loading spinner */}
+        {isBusy && hasOnlyEndIcon ? (
           <span className={`shrink-0 flex items-center justify-center ${iconSizeClass}`}>
             <Loader2 className={`${iconSizeClass} animate-spin text-current`} aria-hidden="true" />
           </span>
-        ) : !isLoading && rightIcon ? (
+        ) : !isBusy && resolvedEndIcon ? (
           <span className={`shrink-0 flex items-center justify-center ${iconSizeClass}`}>
-            {rightIcon}
+            {resolvedEndIcon}
           </span>
         ) : null}
       </button>
@@ -101,3 +115,4 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = 'Button';
+export default Button;

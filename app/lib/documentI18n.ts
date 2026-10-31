@@ -276,7 +276,9 @@ export function getStoredDocumentLanguage(fallback: DocumentLanguage = 'en'): Do
     if (stored && isDocumentLanguage(stored)) {
       return stored;
     }
-  } catch {}
+  } catch {
+    // Intentionally ignored: localStorage may be inaccessible in private browsing or restricted iframes
+  }
   return fallback;
 }
 
@@ -284,7 +286,9 @@ export function setStoredDocumentLanguage(lang: DocumentLanguage): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(DOCUMENT_OUTPUT_LANG_STORAGE_KEY, lang);
-  } catch {}
+  } catch {
+    // Intentionally ignored: localStorage write may fail in private browsing or when quota is exceeded
+  }
 }
 
 export function getDocumentDir(lang?: DocumentLanguage | string): 'ltr' | 'rtl' {

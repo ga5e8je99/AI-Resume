@@ -1,4 +1,4 @@
-import { PLANS, getPlanById, BillingCycle } from '../plans';
+import { getPlanById, getPlanPrice } from '../plans';
 import { CryptoNetwork } from '@/app/models/Order';
 
 export const BEP20_USDT_CONTRACT = '0x55d398326f99059fF775485246999027B3197955';
@@ -7,16 +7,23 @@ export const ORDER_EXPIRY_MINUTES = 30;
 
 /**
  * Returns the receiving wallet address from environment variables.
- * Never hard-codes addresses.
+ * Never hard-codes addresses, and ignores template placeholders.
  */
 export function getReceivingWalletAddress(network: CryptoNetwork): string {
+  let raw = '';
   if (network === 'BEP20') {
-    return (process.env.PAYMENT_WALLET_BEP20 || '').trim();
+    raw = (process.env.PAYMENT_WALLET_BEP20 || '').trim();
+  } else if (network === 'TRC20') {
+    raw = (process.env.PAYMENT_WALLET_TRC20 || '').trim();
   }
-  if (network === 'TRC20') {
-    return (process.env.PAYMENT_WALLET_TRC20 || '').trim();
+  if (
+    !raw ||
+    raw.includes('YourPersonalBinanceDepositAddress') ||
+    raw.includes('replace_with_')
+  ) {
+    return '';
   }
-  return '';
+  return raw;
 }
 
 /**
@@ -34,8 +41,8 @@ export function generateOrderReference(): string {
 }
 
 /**
- * Resolves the official price in USD/USDT from lib/plans.ts.
- * Never trusts client-submitted prices.
+ * Resolves the official price in USD/USDT strictly from lib/plans.ts.
+ * Never trusts client-submitted prices and uses zero hardcoded fallbacks.
  */
 export function getPlanPriceUsdt(
   planId: 'pro' | 'payg',
@@ -46,15 +53,8 @@ export function getPlanPriceUsdt(
     throw new Error(`Plan "${planId}" not found in system plans catalog.`);
   }
 
-  if (planId === 'payg') {
-    return plan.pricing.USD.oneTime || 5;
-  }
-
-  if (planId === 'pro') {
-    if (billingCycle === 'annual') {
-      return plan.pricing.USD.annualTotal || 84;
-    }
-    return plan.pricing.USD.monthly || 9;
+  if (planId === 'payg' || planId === 'pro') {
+    return getPlanPrice(planId, 'USD', billingCycle === 'annual' ? 'annual' : 'monthly');
   }
 
   throw new Error(`Unsupported plan for crypto payment: ${planId}`);

@@ -1,11 +1,10 @@
 'use client';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useEffect, useRef } from 'react';
-import Navbar from '../components/Navbar';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { Button } from '@/components/ui/Button';
 import {
   CoverLetterData,
   CoverLetterTone,
@@ -134,21 +133,23 @@ export default function CoverLetterPage() {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed && typeof parsed === 'object') {
-          if (parsed.companyName && !companyName) setCompanyName(parsed.companyName);
-          if (parsed.jobTitle && !jobTitle) setJobTitle(parsed.jobTitle);
-          if (parsed.hiringManager && !hiringManager) setHiringManager(parsed.hiringManager);
-          if (parsed.jobDescription && !jobDescription) setJobDescription(parsed.jobDescription);
-          if (parsed.customNotes && !customNotes) setCustomNotes(parsed.customNotes);
+          if (parsed.companyName) setCompanyName((prev) => prev || parsed.companyName);
+          if (parsed.jobTitle) setJobTitle((prev) => prev || parsed.jobTitle);
+          if (parsed.hiringManager) setHiringManager((prev) => prev || parsed.hiringManager);
+          if (parsed.jobDescription) setJobDescription((prev) => prev || parsed.jobDescription);
+          if (parsed.customNotes) setCustomNotes((prev) => prev || parsed.customNotes);
           if (parsed.tone) setTone(parsed.tone);
           if (parsed.language) {
             setLanguage(parsed.language);
             setStoredDocumentLanguage(parsed.language);
           }
           if (parsed.templateId) setTemplateId(parsed.templateId);
-          if (parsed.jobUrl && !jobUrl) setJobUrl(parsed.jobUrl);
+          if (parsed.jobUrl) setJobUrl((prev) => prev || parsed.jobUrl);
         }
       }
-    } catch {}
+    } catch {
+      // Ignore localStorage / JSON parse errors in restricted browsing modes
+    }
   }, []);
 
   // Auto-persist form inputs into local cache
@@ -172,18 +173,57 @@ export default function CoverLetterPage() {
               jobUrl,
             })
           );
-        } catch {}
+        } catch {
+          // Ignore localStorage quota or security restrictions
+        }
       }
     }, 350);
 
     return () => clearTimeout(debounceTimer);
   }, [companyName, jobTitle, hiringManager, jobDescription, customNotes, tone, language, templateId, jobUrl, activeView]);
 
+  const loadHistory = useCallback(async () => {
+    setIsLoadingHistory(true);
+    try {
+      const res = await fetch('/api/cover-letters?limit=50&summary=false');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.coverLetters)) {
+          setHistoryLetters(data.coverLetters);
+          setDraftsCount(data.coverLetters.length);
+          return;
+        }
+      }
+      const local = JSON.parse(localStorage.getItem('jobmatch_cover_letters') || '[]');
+      setHistoryLetters(local);
+      setDraftsCount(local.length);
+    } catch {
+      // Fallback to localStorage drafts when offline or unauthenticated
+      const local = JSON.parse(localStorage.getItem('jobmatch_cover_letters') || '[]');
+      setHistoryLetters(local);
+      setDraftsCount(local.length);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  const populateFromResume = useCallback(
+    (resume: { data?: { personalInfo?: { fullName?: string; email?: string; phone?: string; jobTitle?: string } } } | null | undefined) => {
+      if (!resume?.data?.personalInfo) return;
+      const p = resume.data.personalInfo;
+      if (p.fullName) setSenderName(p.fullName);
+      if (p.email) setSenderEmail(p.email);
+      if (p.phone) setSenderPhone(p.phone);
+      if (p.jobTitle) setJobTitle((prev) => prev || p.jobTitle!);
+    },
+    []
+  );
+
   // Fetch user resumes and drafts count if logged in
   useEffect(() => {
     if (user) {
-      if (!senderName) setSenderName(user.name);
-      if (!senderEmail) setSenderEmail(user.email);
+      if (user.name) setSenderName((prev) => prev || user.name);
+      if (user.email) setSenderEmail((prev) => prev || user.email);
 
       fetch('/api/resumes')
         .then((res) => (res.ok ? res.json() : { resumes: [] }))
@@ -200,40 +240,7 @@ export default function CoverLetterPage() {
         .catch((err) => console.error('Error fetching resumes:', err));
     }
     loadHistory();
-  }, [user]);
-
-  const loadHistory = async () => {
-    setIsLoadingHistory(true);
-    try {
-      const res = await fetch('/api/cover-letters?limit=50&summary=false');
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.coverLetters)) {
-          setHistoryLetters(data.coverLetters);
-          setDraftsCount(data.coverLetters.length);
-          return;
-        }
-      }
-      const local = JSON.parse(localStorage.getItem('jobmatch_cover_letters') || '[]');
-      setHistoryLetters(local);
-      setDraftsCount(local.length);
-    } catch {
-      const local = JSON.parse(localStorage.getItem('jobmatch_cover_letters') || '[]');
-      setHistoryLetters(local);
-      setDraftsCount(local.length);
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  };
-
-  const populateFromResume = (resume: { data?: { personalInfo?: { fullName?: string; email?: string; phone?: string; jobTitle?: string } } } | null | undefined) => {
-    if (!resume?.data?.personalInfo) return;
-    const p = resume.data.personalInfo;
-    if (p.fullName) setSenderName(p.fullName);
-    if (p.email) setSenderEmail(p.email);
-    if (p.phone) setSenderPhone(p.phone);
-    if (p.jobTitle && !jobTitle) setJobTitle(p.jobTitle);
-  };
+  }, [user, loadHistory, populateFromResume]);
 
   const handleResumeSelectChange = (resumeId: string) => {
     setSelectedResumeId(resumeId);
@@ -528,7 +535,9 @@ export default function CoverLetterPage() {
       filtered.unshift(letter);
       localStorage.setItem('jobmatch_cover_letters', JSON.stringify(filtered));
       localStorage.setItem('jobmatch_cover_letter_last_backup', JSON.stringify(letter));
-    } catch {}
+    } catch {
+      // Intentionally ignored: localStorage backup is best-effort and may fail if storage quota is exceeded
+    }
   };
 
   // Save to DB Drafts
@@ -620,7 +629,9 @@ export default function CoverLetterPage() {
     setLastFailedPayload(null);
     try {
       localStorage.removeItem('jobmatch_cover_letter_form_cache');
-    } catch {}
+    } catch {
+      // Intentionally ignored: localStorage may be unavailable in private browsing mode
+    }
     showToast(isAr ? 'تمت إعادة ضبط النموذج' : 'Form reset');
   };
 
@@ -683,10 +694,8 @@ export default function CoverLetterPage() {
     <div
       dir={isRtl ? 'rtl' : 'ltr'}
       lang={uiLang}
-      className="min-h-screen bg-paper text-ink flex flex-col selection:bg-accent-soft selection:text-accent"
+      className="min-h-[100dvh] bg-paper text-ink flex flex-col selection:bg-accent-soft selection:text-accent overflow-x-clip"
     >
-      <Navbar />
-
       {/* Floating Notification Toast */}
       {notification && (
         <div
@@ -991,7 +1000,7 @@ export default function CoverLetterPage() {
 
                 {/* File Upload Mode */}
                 {inputMode === 'file' ? (
-                  <div className="p-4 bg-surface-2/60 border border-dashed border-line-strong rounded-[8px] text-center space-y-2 hover:border-accent transition-colors">
+                  <div className="p-4 -surface-2 border border-dashed border-line-strong rounded-[8px] text-center space-y-2 hover:border-accent transition-colors">
                     <label className="cursor-pointer block space-y-2">
                       <input
                         type="file"
@@ -1027,7 +1036,7 @@ export default function CoverLetterPage() {
                     )}
                   </div>
                 ) : inputMode === 'url' ? (
-                  <div className="space-y-2 p-3 bg-surface-2/40 border border-line rounded-[8px]">
+                  <div className="space-y-2 p-3 -surface-2 border border-line rounded-[8px]">
                     <label className="block text-xs font-medium text-ink-2">
                       {isAr ? 'رابط الوظيفة:' : 'Job posting URL:'}
                     </label>
@@ -1040,15 +1049,18 @@ export default function CoverLetterPage() {
                         placeholder="https://company.com/careers/role"
                         className="flex-1 px-3 py-1.5 rounded-[6px] bg-paper border border-line text-xs sm:text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-accent disabled:opacity-50"
                       />
-                      <button
+                      <Button
                         type="button"
+                        variant="primary"
+                        size="sm"
                         onClick={handleExtractFromUrl}
-                        disabled={isExtractingUrl || isGenerating || !jobUrl.trim()}
-                        className="px-3 py-1.5 rounded-[6px] bg-accent hover:bg-accent-hover text-white text-xs font-medium transition-colors disabled:opacity-50 shrink-0 cursor-pointer flex items-center gap-1.5"
+                        disabled={isGenerating || !jobUrl.trim()}
+                        loading={isExtractingUrl}
+                        loadingText={isAr ? 'جلب...' : 'Fetching...'}
+                        className="shrink-0"
                       >
-                        {isExtractingUrl && <Loader2 className="w-3 h-3 animate-spin" />}
-                        <span>{isExtractingUrl ? (isAr ? 'جلب...' : 'Fetching...') : (isAr ? 'استخراج' : 'Extract')}</span>
-                      </button>
+                        <span>{isAr ? 'استخراج' : 'Extract'}</span>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -1069,7 +1081,7 @@ export default function CoverLetterPage() {
               </div>
 
               {/* Sender Details */}
-              <div className="p-3 bg-surface-2/40 rounded-[8px] border border-line space-y-2">
+              <div className="p-3 -surface-2 rounded-[8px] border border-line space-y-2">
                 <span className="text-[11px] font-semibold text-ink-2 block">
                   {t('cover_sender_info')}
                 </span>
@@ -1104,23 +1116,17 @@ export default function CoverLetterPage() {
               </div>
 
               {/* Submit Button */}
-              <button
+              <Button
                 type="submit"
-                disabled={isGenerating || activeView === 'generating'}
-                className="w-full py-2.5 rounded-[8px] bg-accent hover:bg-accent-hover text-white font-semibold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-accent"
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={isGenerating || activeView === 'generating'}
+                loadingText={t('upload_submitting_btn')}
+                leftIcon={<Sparkles className="w-4 h-4" />}
               >
-                {isGenerating || activeView === 'generating' ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>{t('upload_submitting_btn')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-white" />
-                    <span>{t('cover_generate_btn')}</span>
-                  </>
-                )}
-              </button>
+                <span>{t('cover_generate_btn')}</span>
+              </Button>
             </form>
           </div>
 

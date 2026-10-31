@@ -2,28 +2,23 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import Navbar from '../Navbar';
 import Footer from '../Footer';
 import HeroSection from '../HeroSection';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { DropzoneState } from '@/components/ui';
-
-// Below-the-fold components dynamically loaded to reduce initial main-thread script evaluation
-const TrustStrip = dynamic(() => import('./TrustStrip'), { ssr: true });
-const HowItWorks = dynamic(() => import('./HowItWorks'), { ssr: true });
-const FeatureShowcase = dynamic(() => import('./FeatureShowcase'), { ssr: true });
-const ComparisonSection = dynamic(() => import('./ComparisonSection'), { ssr: true });
-const PricingTeaser = dynamic(() => import('./PricingTeaser'), { ssr: true });
-const FaqSection = dynamic(() => import('./FaqSection'), { ssr: true });
-const CtaBand = dynamic(() => import('./CtaBand'), { ssr: true });
+import TrustStrip from './TrustStrip';
+import HowItWorks from './HowItWorks';
+import FeatureShowcase from './FeatureShowcase';
+import ComparisonSection from './ComparisonSection';
+import PricingTeaser from './PricingTeaser';
+import FaqSection from './FaqSection';
+import CtaBand from './CtaBand';
 
 export default function LandingPageClient() {
   const router = useRouter();
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   const { loginDemo } = useAuth();
-  const isAr = language === 'ar';
 
   // ATS Dropzone state
   const [dropzoneState, setDropzoneState] = useState<DropzoneState>('idle');
@@ -40,11 +35,7 @@ export default function LandingPageClient() {
       const { extractTextFromFile } = await import('../../lib/pdfExtractor');
       const text = await extractTextFromFile(file);
       if (!text || text.trim().length < 25) {
-        throw new Error(
-          isAr
-            ? 'لم يتم العثور على نصوص قابلة للقراءة في هذا الملف. تأكد من أن الملف نصي وليس صورة ممسوحة ضوئياً.'
-            : 'Could not extract readable digital text. Please ensure the document contains selectable text, not only scanned images.'
-        );
+        throw new Error(t('landing_err_unreadable_file'));
       }
 
       if (typeof window !== 'undefined') {
@@ -58,7 +49,7 @@ export default function LandingPageClient() {
       }, 700);
     } catch (err: any) {
       setDropzoneState('error');
-      setDropzoneError(err.message || (isAr ? 'فشل فحص الملف' : 'Failed to parse file'));
+      setDropzoneError(err.message || t('landing_err_parse_failed'));
     }
   };
 
@@ -95,9 +86,7 @@ export default function LandingPageClient() {
     name: 'JobMatch AI',
     operatingSystem: 'All (Modern Web Browsers)',
     applicationCategory: 'BusinessApplication',
-    description: isAr
-      ? 'منشئ السيرة الذاتية التحريري ومحرك تشخيص الـ ATS وتوليد خطابات التقديم بالذكاء الاصطناعي مع دعم أصيل للعربية والإنجليزية.'
-      : 'Editorial ATS-friendly resume builder, diagnostic scanner, and AI cover letter generator with native Arabic and English support.',
+    description: t('landing_jsonld_desc'),
     offers: {
       '@type': 'Offer',
       price: '0',
@@ -115,15 +104,13 @@ export default function LandingPageClient() {
   return (
     <div
       suppressHydrationWarning
-      className="min-h-screen bg-bg text-text-primary flex flex-col justify-between selection:bg-brand-soft selection:text-brand font-sans transition-colors duration-150"
+      className="min-h-[100dvh] bg-paper text-ink overflow-x-clip flex flex-col justify-between selection:bg-brand-soft selection:text-brand font-sans transition-colors duration-150"
     >
       {/* JSON-LD Schema for SEO */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-
-      <Navbar />
 
       <main id="main-content">
         {/* 1. Hero Section */}

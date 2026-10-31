@@ -201,11 +201,20 @@ export async function extractTextFromDocx(file: File): Promise<string> {
 }
 
 /**
- * Attempts to render the PDF page to a canvas and run Puter.js OCR if available
+ * Attempts to render the PDF page to a canvas and run Puter.js OCR if available.
+ * Dynamically loads Puter.js on first OCR fallback use.
  */
 async function attemptCanvasOcr(page: any): Promise<string> {
   if (typeof window === 'undefined') return '';
-  const puter = (window as any).puter;
+  let puter = (window as any).puter;
+  if (!puter?.ai?.img2txt) {
+    try {
+      const { ensurePuterLoaded } = await import('./puter');
+      puter = await ensurePuterLoaded();
+    } catch {
+      return '';
+    }
+  }
   if (!puter?.ai?.img2txt) return '';
 
   try {

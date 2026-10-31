@@ -499,40 +499,40 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 1. PERSONAL INFORMATION & DEMOGRAPHICS */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
         <button
           type="button"
           onClick={() => toggleSection('personal')}
-          className="w-full p-4 flex items-center justify-between text-start hover:bg-slate-850/50 transition-colors"
+          className="w-full p-4 flex items-center justify-between text-start hover:bg-surface-2 transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <User className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">1. Personal Info & Demographics</h3>
-              <p className="text-[10px] text-slate-400">
+              <h3 className="text-sm font-bold text-ink">1. Personal Info & Demographics</h3>
+              <p className="text-[10px] text-ink-2">
                 Contact details, Nationality, DOB, Driving license & Photo
               </p>
             </div>
           </div>
-          {openSections.personal ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          {openSections.personal ? <ChevronUp className="w-4 h-4 text-ink-2" /> : <ChevronDown className="w-4 h-4 text-ink-2" />}
         </button>
 
         {openSections.personal && (
-          <div className="p-4 pt-0 space-y-4 border-t border-slate-800/60">
+          <div className="p-4 pt-0 space-y-4 border-t border-line-strong">
             {/* Photo Upload Row */}
-            <div className="flex flex-wrap items-center gap-4 p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+            <div className="flex flex-wrap items-center gap-4 p-3 rounded-xl bg-surface-2 border border-line-strong">
               <div className="relative">
                 {data.personalInfo.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={data.personalInfo.photoUrl}
                     alt="CV Profile"
-                    className="w-16 h-16 rounded-xl object-cover border border-slate-700"
+                    className="w-16 h-16 rounded-xl object-cover border border-line-strong"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-xl bg-slate-800 flex items-center justify-center text-slate-500 border border-slate-700">
+                  <div className="w-16 h-16 rounded-xl bg-surface-2 flex items-center justify-center text-ink-2 border border-line-strong">
                     <Camera className="w-6 h-6" />
                   </div>
                 )}
@@ -540,15 +540,15 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
               <div className="flex-1 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-slate-200">
+                  <label className="text-xs font-semibold text-ink">
                     Professional Profile Photo
                   </label>
-                  <label className="flex items-center gap-1 text-[11px] text-slate-400 cursor-pointer">
+                  <label className="flex items-center gap-1 text-[11px] text-ink-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={data.personalInfo.showPhoto ?? true}
                       onChange={(e) => updatePersonalInfo('showPhoto', e.target.checked)}
-                      className="rounded bg-slate-800 border-slate-700 text-emerald-500"
+                      className="rounded bg-surface-2 border-line-strong text-accent"
                     />
                     <span>Show in CV</span>
                   </label>
@@ -564,7 +564,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   />
                   <label
                     htmlFor="cv-photo-upload"
-                    className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 cursor-pointer transition-colors"
+                    className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-surface-2 hover:bg-surface-2 text-ink border border-line-strong cursor-pointer transition-colors"
                   >
                     Upload Photo
                   </label>
@@ -572,7 +572,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     <button
                       type="button"
                       onClick={handleRemovePhoto}
-                      className="px-2 py-1 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="px-2 py-1 rounded-lg text-xs text-danger hover:bg-danger-soft transition-colors"
                     >
                       Remove
                     </button>
@@ -584,7 +584,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             {/* Standard Contact Inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-ink block mb-1">
                   Full Name *
                 </label>
                 <input
@@ -592,12 +592,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={data.personalInfo.fullName}
                   onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
                   placeholder="e.g. Dr. Ahmed Tarek"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-ink block mb-1">
                   Professional Title *
                 </label>
                 <input
@@ -605,12 +605,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={data.personalInfo.jobTitle}
                   onChange={(e) => updatePersonalInfo('jobTitle', e.target.value)}
                   placeholder="e.g. Principal AI Architect & Researcher"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-ink block mb-1">
                   Email Address *
                 </label>
                 <input
@@ -618,12 +618,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={data.personalInfo.email}
                   onChange={(e) => updatePersonalInfo('email', e.target.value)}
                   placeholder="dr.ahmed@example.com"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-ink block mb-1">
                   Phone Number *
                 </label>
                 <input
@@ -631,12 +631,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={data.personalInfo.phone}
                   onChange={(e) => updatePersonalInfo('phone', e.target.value)}
                   placeholder="+20 100 892 4512"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-ink block mb-1">
                   City & Country
                 </label>
                 <input
@@ -644,12 +644,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={data.personalInfo.location}
                   onChange={(e) => updatePersonalInfo('location', e.target.value)}
                   placeholder="Cairo, Egypt"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-ink block mb-1">
                   Detailed Address
                 </label>
                 <input
@@ -657,19 +657,19 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={data.personalInfo.address || ''}
                   onChange={(e) => updatePersonalInfo('address', e.target.value)}
                   placeholder="Dokki, Giza"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
             </div>
 
             {/* Extended Demographics (CV Specific) */}
-            <div className="pt-2 border-t border-slate-800/60">
-              <h4 className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-2.5">
+            <div className="pt-2 border-t border-line-strong">
+              <h4 className="text-[11px] font-bold text-accent uppercase tracking-wider mb-2.5">
                 CV Demographics (Vital for European & Regional CVs)
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  <label className="text-xs font-semibold text-ink block mb-1">
                     Nationality (الجنسية)
                   </label>
                   <input
@@ -677,12 +677,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={data.personalInfo.nationality || ''}
                     onChange={(e) => updatePersonalInfo('nationality', e.target.value)}
                     placeholder="e.g. Egyptian, Saudi, German"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  <label className="text-xs font-semibold text-ink block mb-1">
                     Date of Birth (تاريخ الميلاد)
                   </label>
                   <input
@@ -690,12 +690,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={data.personalInfo.dateOfBirth || ''}
                     onChange={(e) => updatePersonalInfo('dateOfBirth', e.target.value)}
                     placeholder="YYYY-MM-DD"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  <label className="text-xs font-semibold text-ink block mb-1">
                     Civil / Marital Status
                   </label>
                   <input
@@ -703,12 +703,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={data.personalInfo.maritalStatus || ''}
                     onChange={(e) => updatePersonalInfo('maritalStatus', e.target.value)}
                     placeholder="Married / Single"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  <label className="text-xs font-semibold text-ink block mb-1">
                     Driving License (رخصة القيادة)
                   </label>
                   <input
@@ -716,12 +716,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={data.personalInfo.drivingLicense || ''}
                     onChange={(e) => updatePersonalInfo('drivingLicense', e.target.value)}
                     placeholder="Category B / Valid"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  <label className="text-xs font-semibold text-ink block mb-1">
                     Visa / Military Status (الموقف التجنيدي / التأشيرة)
                   </label>
                   <input
@@ -729,16 +729,16 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={data.personalInfo.visaOrMilitaryStatus || ''}
                     onChange={(e) => updatePersonalInfo('visaOrMilitaryStatus', e.target.value)}
                     placeholder="e.g. Completed Military Service / Valid Schengen Visa"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
               </div>
             </div>
 
             {/* Links & Portfolios */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800/60">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-line-strong">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-ink block mb-1">
                   Portfolio / Website
                 </label>
                 <input
@@ -746,12 +746,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={data.personalInfo.website || ''}
                   onChange={(e) => updatePersonalInfo('website', e.target.value)}
                   placeholder="https://mysite.com"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-ink block mb-1">
                   LinkedIn Profile
                 </label>
                 <input
@@ -759,12 +759,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={data.personalInfo.linkedin || ''}
                   onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
                   placeholder="linkedin.com/in/username"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-ink block mb-1">
                   GitHub Profile
                 </label>
                 <input
@@ -772,7 +772,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={data.personalInfo.github || ''}
                   onChange={(e) => updatePersonalInfo('github', e.target.value)}
                   placeholder="github.com/username"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
             </div>
@@ -781,36 +781,36 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 2. EXECUTIVE SUMMARY */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
         <button
           type="button"
           onClick={() => toggleSection('summary')}
-          className="w-full p-4 flex items-center justify-between text-start hover:bg-slate-850/50 transition-colors"
+          className="w-full p-4 flex items-center justify-between text-start hover:bg-surface-2 transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">2. Executive Summary & Statement</h3>
-              <p className="text-[10px] text-slate-400">
+              <h3 className="text-sm font-bold text-ink">2. Executive Summary & Statement</h3>
+              <p className="text-[10px] text-ink-2">
                 High-impact overview of career trajectory and value proposition
               </p>
             </div>
           </div>
-          {openSections.summary ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          {openSections.summary ? <ChevronUp className="w-4 h-4 text-ink-2" /> : <ChevronDown className="w-4 h-4 text-ink-2" />}
         </button>
 
         {openSections.summary && (
-          <div className="p-4 pt-0 space-y-2 border-t border-slate-800/60">
+          <div className="p-4 pt-0 space-y-2 border-t border-line-strong">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-ink-2">
                 Write a 3-5 sentence compelling overview of your senior expertise.
               </span>
               <button
                 type="button"
                 onClick={() => setIsAiModalOpen(true)}
-                className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
+                className="text-xs font-semibold text-accent hover:text-accent flex items-center gap-1 transition-colors"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Write with AI</span>
@@ -821,31 +821,31 @@ export function CvForm({ data, onChange }: CvFormProps) {
               value={data.personalInfo.summary}
               onChange={(e) => updatePersonalInfo('summary', e.target.value)}
               placeholder="e.g. Accomplished Principal AI Architect with 12+ years of experience..."
-              className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none leading-relaxed"
+              className="w-full p-3 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none leading-relaxed"
             />
           </div>
         )}
       </div>
 
       {/* 3. WORK EXPERIENCE */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-line-strong">
           <button
             type="button"
             onClick={() => toggleSection('experience')}
             className="flex-1 flex items-center gap-2.5"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <Briefcase className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">3. Professional Experience</h3>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+                <h3 className="text-sm font-bold text-ink">3. Professional Experience</h3>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-surface-2 text-accent border border-line-strong">
                   {data.experience.length}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-ink-2">
                 Career history, roles, key achievements and impact
               </p>
             </div>
@@ -854,7 +854,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={addExperience}
-              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-soft hover:bg-accent-soft text-accent border border-accent/30 flex items-center gap-1 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Role</span>
@@ -862,7 +862,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={() => toggleSection('experience')}
-              className="p-1 text-slate-400 hover:text-white"
+              className="p-1 text-ink-2 hover:text-ink"
             >
               {openSections.experience ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -874,16 +874,16 @@ export function CvForm({ data, onChange }: CvFormProps) {
             {data.experience.map((exp, expIdx) => (
               <div
                 key={exp.id}
-                className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3 relative group"
+                className="p-4 rounded-xl bg-surface-2 border border-line-strong space-y-3 relative group"
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-emerald-400">
+                  <span className="text-xs font-bold text-accent">
                     Role #{expIdx + 1}
                   </span>
                   <button
                     type="button"
                     onClick={() => removeExperience(exp.id)}
-                    className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    className="p-1 rounded-lg text-ink-2 hover:text-danger hover:bg-danger-soft transition-colors"
                     title="Remove Role"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -892,7 +892,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                    <label className="text-[11px] font-semibold text-ink block mb-1">
                       Job Title / Position *
                     </label>
                     <input
@@ -900,12 +900,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                       value={exp.position}
                       onChange={(e) => updateExperience(exp.id, 'position', e.target.value)}
                       placeholder="e.g. Director of Applied Research"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                    <label className="text-[11px] font-semibold text-ink block mb-1">
                       Company / Organization *
                     </label>
                     <input
@@ -913,12 +913,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                       value={exp.company}
                       onChange={(e) => updateExperience(exp.id, 'company', e.target.value)}
                       placeholder="e.g. OmniCloud Technologies"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                    <label className="text-[11px] font-semibold text-ink block mb-1">
                       Location
                     </label>
                     <input
@@ -926,13 +926,13 @@ export function CvForm({ data, onChange }: CvFormProps) {
                       value={exp.location || ''}
                       onChange={(e) => updateExperience(exp.id, 'location', e.target.value)}
                       placeholder="e.g. Dubai / Cairo"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                      <label className="text-[11px] font-semibold text-ink block mb-1">
                         Start Date
                       </label>
                       <input
@@ -940,11 +940,11 @@ export function CvForm({ data, onChange }: CvFormProps) {
                         value={exp.startDate}
                         onChange={(e) => updateExperience(exp.id, 'startDate', e.target.value)}
                         placeholder="2021-03"
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                        className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                      <label className="text-[11px] font-semibold text-ink block mb-1">
                         End Date
                       </label>
                       <input
@@ -953,7 +953,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                         value={exp.current ? 'Present' : exp.endDate}
                         onChange={(e) => updateExperience(exp.id, 'endDate', e.target.value)}
                         placeholder="Present"
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none disabled:opacity-50"
+                        className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none disabled:opacity-50"
                       />
                     </div>
                   </div>
@@ -965,26 +965,26 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     id={`current-exp-${exp.id}`}
                     checked={exp.current}
                     onChange={(e) => updateExperience(exp.id, 'current', e.target.checked)}
-                    className="rounded bg-slate-800 border-slate-700 text-emerald-500"
+                    className="rounded bg-surface-2 border-line-strong text-accent"
                   />
                   <label
                     htmlFor={`current-exp-${exp.id}`}
-                    className="text-xs text-slate-400 cursor-pointer"
+                    className="text-xs text-ink-2 cursor-pointer"
                   >
                     I currently work in this role
                   </label>
                 </div>
 
                 {/* Bullets */}
-                <div className="space-y-2 pt-2 border-t border-slate-800/60">
+                <div className="space-y-2 pt-2 border-t border-line-strong">
                   <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-semibold text-slate-300">
+                    <span className="text-[11px] font-semibold text-ink">
                       Key Responsibilities & Quantified Achievements:
                     </span>
                     <button
                       type="button"
                       onClick={() => addExpBullet(exp.id)}
-                      className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+                      className="text-[11px] text-accent hover:text-accent font-semibold flex items-center gap-1"
                     >
                       <Plus className="w-3 h-3" />
                       <span>Add Bullet</span>
@@ -993,19 +993,19 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
                   {exp.description.map((bullet, bIdx) => (
                     <div key={bIdx} className="flex items-center gap-2">
-                      <span className="text-slate-600 text-xs">•</span>
+                      <span className="text-ink-2 text-xs">•</span>
                       <input
                         type="text"
                         value={bullet}
                         onChange={(e) => updateExpBullet(exp.id, bIdx, e.target.value)}
                         placeholder="e.g. Spearheaded high-scale deployment serving 4.5M users..."
-                        className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                       />
                       {exp.description.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeExpBullet(exp.id, bIdx)}
-                          className="p-1 text-slate-500 hover:text-red-400"
+                          className="p-1 text-ink-2 hover:text-danger"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -1020,24 +1020,24 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 4. EDUCATION & DEGREES */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-line-strong">
           <button
             type="button"
             onClick={() => toggleSection('education')}
             className="flex-1 flex items-center gap-2.5"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <GraduationCap className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">4. Education & Academic Degrees</h3>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+                <h3 className="text-sm font-bold text-ink">4. Education & Academic Degrees</h3>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-surface-2 text-accent border border-line-strong">
                   {data.education.length}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-ink-2">
                 Degrees, universities, GPAs, and academic honors
               </p>
             </div>
@@ -1046,7 +1046,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={addEducation}
-              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-soft hover:bg-accent-soft text-accent border border-accent/30 flex items-center gap-1 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Degree</span>
@@ -1054,7 +1054,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={() => toggleSection('education')}
-              className="p-1 text-slate-400 hover:text-white"
+              className="p-1 text-ink-2 hover:text-ink"
             >
               {openSections.education ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -1066,16 +1066,16 @@ export function CvForm({ data, onChange }: CvFormProps) {
             {data.education.map((edu, eduIdx) => (
               <div
                 key={edu.id}
-                className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3 relative"
+                className="p-4 rounded-xl bg-surface-2 border border-line-strong space-y-3 relative"
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-emerald-400">
+                  <span className="text-xs font-bold text-accent">
                     Degree #{eduIdx + 1}
                   </span>
                   <button
                     type="button"
                     onClick={() => removeEducation(edu.id)}
-                    className="p-1 rounded-lg text-slate-500 hover:text-red-400"
+                    className="p-1 rounded-lg text-ink-2 hover:text-danger"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1083,7 +1083,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                    <label className="text-[11px] font-semibold text-ink block mb-1">
                       Degree Title *
                     </label>
                     <input
@@ -1091,12 +1091,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                       value={edu.degree}
                       onChange={(e) => updateEducation(edu.id, 'degree', e.target.value)}
                       placeholder="e.g. Ph.D. in Computer Science"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                    <label className="text-[11px] font-semibold text-ink block mb-1">
                       Major / Field of Study
                     </label>
                     <input
@@ -1104,12 +1104,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                       value={edu.fieldOfStudy}
                       onChange={(e) => updateEducation(edu.id, 'fieldOfStudy', e.target.value)}
                       placeholder="Distributed Systems"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                    <label className="text-[11px] font-semibold text-ink block mb-1">
                       Institution / University *
                     </label>
                     <input
@@ -1117,13 +1117,13 @@ export function CvForm({ data, onChange }: CvFormProps) {
                       value={edu.institution}
                       onChange={(e) => updateEducation(edu.id, 'institution', e.target.value)}
                       placeholder="Cairo University"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                      <label className="text-[11px] font-semibold text-ink block mb-1">
                         Years (Start - End)
                       </label>
                       <input
@@ -1135,11 +1135,11 @@ export function CvForm({ data, onChange }: CvFormProps) {
                           updateEducation(edu.id, 'endDate', (parts[1] || '').trim());
                         }}
                         placeholder="2013 - 2017"
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                        className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-semibold text-slate-300 block mb-1">
+                      <label className="text-[11px] font-semibold text-ink block mb-1">
                         GPA / Honors
                       </label>
                       <input
@@ -1147,7 +1147,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                         value={edu.gpa || ''}
                         onChange={(e) => updateEducation(edu.id, 'gpa', e.target.value)}
                         placeholder="4.0 / First Class"
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                        className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                       />
                     </div>
                   </div>
@@ -1159,24 +1159,24 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 5. LANGUAGES (CV ESSENTIAL) */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-line-strong">
           <button
             type="button"
             onClick={() => toggleSection('languages')}
             className="flex-1 flex items-center gap-2.5"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <Globe className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">5. Languages & Fluency</h3>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+                <h3 className="text-sm font-bold text-ink">5. Languages & Fluency</h3>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-surface-2 text-accent border border-line-strong">
                   {(data.languages || []).length}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-ink-2">
                 Spoken languages and CEFR proficiency levels
               </p>
             </div>
@@ -1185,7 +1185,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={addLanguage}
-              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-soft hover:bg-accent-soft text-accent border border-accent/30 flex items-center gap-1 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Language</span>
@@ -1193,7 +1193,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={() => toggleSection('languages')}
-              className="p-1 text-slate-400 hover:text-white"
+              className="p-1 text-ink-2 hover:text-ink"
             >
               {openSections.languages ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -1205,7 +1205,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             {(data.languages || []).map((lang) => (
               <div
                 key={lang.id}
-                className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-wrap items-center gap-3"
+                className="p-3 rounded-xl bg-surface-2 border border-line-strong flex flex-wrap items-center gap-3"
               >
                 <div className="flex-1 min-w-[140px]">
                   <input
@@ -1213,7 +1213,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={lang.name}
                     onChange={(e) => updateLanguage(lang.id, 'name', e.target.value)}
                     placeholder="e.g. English, Arabic, German"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
 
@@ -1223,7 +1223,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     onChange={(e) =>
                       updateLanguage(lang.id, 'proficiency', e.target.value as any)
                     }
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:border-emerald-500 outline-none"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   >
                     <option value="Native">Native (لغة أم)</option>
                     <option value="Bilingual">Bilingual</option>
@@ -1246,7 +1246,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     }
                     className="w-full accent-emerald-500 cursor-pointer"
                   />
-                  <span className="text-[10px] text-slate-400 font-mono w-7">
+                  <span className="text-[10px] text-ink-2 font-mono w-7">
                     {lang.levelPercentage || 80}%
                   </span>
                 </div>
@@ -1254,7 +1254,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                 <button
                   type="button"
                   onClick={() => removeLanguage(lang.id)}
-                  className="p-1 text-slate-500 hover:text-red-400"
+                  className="p-1 text-ink-2 hover:text-danger"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -1265,31 +1265,31 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 6. SKILLS CATEGORIES */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
         <button
           type="button"
           onClick={() => toggleSection('skills')}
-          className="w-full p-4 flex items-center justify-between text-start hover:bg-slate-850/50 transition-colors"
+          className="w-full p-4 flex items-center justify-between text-start hover:bg-surface-2 transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">6. Categorized Skills & Tools</h3>
-              <p className="text-[10px] text-slate-400">
+              <h3 className="text-sm font-bold text-ink">6. Categorized Skills & Tools</h3>
+              <p className="text-[10px] text-ink-2">
                 Technical competencies, soft skills, tools & platforms
               </p>
             </div>
           </div>
-          {openSections.skills ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          {openSections.skills ? <ChevronUp className="w-4 h-4 text-ink-2" /> : <ChevronDown className="w-4 h-4 text-ink-2" />}
         </button>
 
         {openSections.skills && (
-          <div className="p-4 pt-0 space-y-4 border-t border-slate-800/60">
+          <div className="p-4 pt-0 space-y-4 border-t border-line-strong">
             {/* Technical Skills */}
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
+              <label className="text-xs font-semibold text-ink block mb-1">
                 Core Technical Skills (Press Enter to add)
               </label>
               <input
@@ -1298,19 +1298,19 @@ export function CvForm({ data, onChange }: CvFormProps) {
                 onChange={(e) => setNewSkillInput(e.target.value)}
                 onKeyDown={handleAddSkill}
                 placeholder="e.g. Distributed Systems, PyTorch, Cloud Architecture"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none mb-2"
+                className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none mb-2"
               />
               <div className="flex flex-wrap gap-1.5">
                 {data.skills.map((skill, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-slate-800 border border-slate-700 text-slate-200"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-surface-2 border border-line-strong text-ink"
                   >
                     <span>{skill}</span>
                     <button
                       type="button"
                       onClick={() => removeSkill(skill)}
-                      className="text-slate-400 hover:text-red-400"
+                      className="text-ink-2 hover:text-danger"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -1320,8 +1320,8 @@ export function CvForm({ data, onChange }: CvFormProps) {
             </div>
 
             {/* Soft Skills */}
-            <div className="pt-2 border-t border-slate-800/60">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
+            <div className="pt-2 border-t border-line-strong">
+              <label className="text-xs font-semibold text-ink block mb-1">
                 Leadership & Soft Skills (Press Enter to add)
               </label>
               <input
@@ -1330,19 +1330,19 @@ export function CvForm({ data, onChange }: CvFormProps) {
                 onChange={(e) => setNewSoftSkillInput(e.target.value)}
                 onKeyDown={handleAddSoftSkill}
                 placeholder="e.g. Strategic Planning, Team Mentorship, Stakeholder Management"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none mb-2"
+                className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none mb-2"
               />
               <div className="flex flex-wrap gap-1.5">
                 {(data.softSkills || []).map((s, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-emerald-500/10 border border-emerald-500/25 text-emerald-300"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-accent-soft border border-accent/30 text-accent"
                   >
                     <span>{s}</span>
                     <button
                       type="button"
                       onClick={() => removeSoftSkill(s)}
-                      className="text-slate-400 hover:text-red-400"
+                      className="text-ink-2 hover:text-danger"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -1352,8 +1352,8 @@ export function CvForm({ data, onChange }: CvFormProps) {
             </div>
 
             {/* Tools */}
-            <div className="pt-2 border-t border-slate-800/60">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
+            <div className="pt-2 border-t border-line-strong">
+              <label className="text-xs font-semibold text-ink block mb-1">
                 Tools & Technologies (Press Enter to add)
               </label>
               <input
@@ -1362,19 +1362,19 @@ export function CvForm({ data, onChange }: CvFormProps) {
                 onChange={(e) => setNewToolInput(e.target.value)}
                 onKeyDown={handleAddTool}
                 placeholder="e.g. Docker, Kubernetes, Terraform, Git"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none mb-2"
+                className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none mb-2"
               />
               <div className="flex flex-wrap gap-1.5">
                 {(data.tools || []).map((t, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-slate-800 border border-slate-700 text-slate-200"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-surface-2 border border-line-strong text-ink"
                   >
                     <span>{t}</span>
                     <button
                       type="button"
                       onClick={() => removeTool(t)}
-                      className="text-slate-400 hover:text-red-400"
+                      className="text-ink-2 hover:text-danger"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -1387,52 +1387,52 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 7. CERTIFICATIONS & LICENSES */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
         <button
           type="button"
           onClick={() => toggleSection('certifications')}
-          className="w-full p-4 flex items-center justify-between text-start hover:bg-slate-850/50 transition-colors"
+          className="w-full p-4 flex items-center justify-between text-start hover:bg-surface-2 transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <Shield className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">7. Certifications & Licenses</h3>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+                <h3 className="text-sm font-bold text-ink">7. Certifications & Licenses</h3>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-surface-2 text-accent border border-line-strong">
                   {data.certifications.length}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-ink-2">
                 AWS, Google Cloud, Cisco, PMP or professional bar licenses
               </p>
             </div>
           </div>
-          {openSections.certifications ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          {openSections.certifications ? <ChevronUp className="w-4 h-4 text-ink-2" /> : <ChevronDown className="w-4 h-4 text-ink-2" />}
         </button>
 
         {openSections.certifications && (
-          <div className="p-4 pt-0 space-y-3 border-t border-slate-800/60">
+          <div className="p-4 pt-0 space-y-3 border-t border-line-strong">
             <input
               type="text"
               value={newCertInput}
               onChange={(e) => setNewCertInput(e.target.value)}
               onKeyDown={handleAddCert}
               placeholder="e.g. AWS Certified Solutions Architect – Professional (Press Enter)"
-              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+              className="w-full px-3 py-2 rounded-xl bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
             />
             <div className="space-y-1.5">
               {data.certifications.map((c, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-surface-2 border border-line-strong text-xs text-ink"
                 >
                   <span>{c}</span>
                   <button
                     type="button"
                     onClick={() => removeCert(c)}
-                    className="text-slate-500 hover:text-red-400"
+                    className="text-ink-2 hover:text-danger"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1444,24 +1444,24 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 8. COURSES & TRAINING */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-line-strong">
           <button
             type="button"
             onClick={() => toggleSection('courses')}
             className="flex-1 flex items-center gap-2.5"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <BookOpen className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">8. Courses & Training Programs</h3>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+                <h3 className="text-sm font-bold text-ink">8. Courses & Training Programs</h3>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-surface-2 text-accent border border-line-strong">
                   {(data.courses || []).length}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-ink-2">
                 Specialized executive workshops and training courses
               </p>
             </div>
@@ -1470,7 +1470,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={addCourse}
-              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-soft hover:bg-accent-soft text-accent border border-accent/30 flex items-center gap-1 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Course</span>
@@ -1478,7 +1478,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={() => toggleSection('courses')}
-              className="p-1 text-slate-400 hover:text-white"
+              className="p-1 text-ink-2 hover:text-ink"
             >
               {openSections.courses ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -1490,7 +1490,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             {(data.courses || []).map((c) => (
               <div
                 key={c.id}
-                className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 relative"
+                className="p-3 rounded-xl bg-surface-2 border border-line-strong space-y-2 relative"
               >
                 <div className="flex justify-between items-center">
                   <input
@@ -1498,12 +1498,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={c.title}
                     onChange={(e) => updateCourse(c.id, 'title', e.target.value)}
                     placeholder="Course Title (e.g. Deep Learning Specialization)"
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => removeCourse(c.id)}
-                    className="p-1 text-slate-500 hover:text-red-400 ms-2"
+                    className="p-1 text-ink-2 hover:text-danger ms-2"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1514,14 +1514,14 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={c.institution}
                     onChange={(e) => updateCourse(c.id, 'institution', e.target.value)}
                     placeholder="Provider / Platform (e.g. MIT Sloan / Coursera)"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                   <input
                     type="text"
                     value={c.date}
                     onChange={(e) => updateCourse(c.id, 'date', e.target.value)}
                     placeholder="Year (e.g. 2023)"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
               </div>
@@ -1531,24 +1531,24 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 9. PUBLICATIONS & RESEARCH (ACADEMIC / EXPERT CV) */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-line-strong">
           <button
             type="button"
             onClick={() => toggleSection('publications')}
             className="flex-1 flex items-center gap-2.5"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <FileCode className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">9. Scientific Publications & Articles</h3>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+                <h3 className="text-sm font-bold text-ink">9. Scientific Publications & Articles</h3>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-surface-2 text-accent border border-line-strong">
                   {(data.publications || []).length}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-ink-2">
                 Peer-reviewed papers, journals, conference proceedings, or thought leadership
               </p>
             </div>
@@ -1557,7 +1557,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={addPublication}
-              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-soft hover:bg-accent-soft text-accent border border-accent/30 flex items-center gap-1 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Paper</span>
@@ -1565,7 +1565,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={() => toggleSection('publications')}
-              className="p-1 text-slate-400 hover:text-white"
+              className="p-1 text-ink-2 hover:text-ink"
             >
               {openSections.publications ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -1577,7 +1577,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             {(data.publications || []).map((pub) => (
               <div
                 key={pub.id}
-                className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 relative"
+                className="p-3.5 rounded-xl bg-surface-2 border border-line-strong space-y-2 relative"
               >
                 <div className="flex justify-between items-center">
                   <input
@@ -1585,12 +1585,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={pub.title}
                     onChange={(e) => updatePublication(pub.id, 'title', e.target.value)}
                     placeholder="Paper Title (e.g. Dynamic Quantization & Latency Bounds...)"
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => removePublication(pub.id)}
-                    className="p-1 text-slate-500 hover:text-red-400 ms-2"
+                    className="p-1 text-ink-2 hover:text-danger ms-2"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1601,14 +1601,14 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={pub.publisher}
                     onChange={(e) => updatePublication(pub.id, 'publisher', e.target.value)}
                     placeholder="Journal / Venue (e.g. IEEE TPDS)"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                   <input
                     type="text"
                     value={pub.date}
                     onChange={(e) => updatePublication(pub.id, 'date', e.target.value)}
                     placeholder="Date (e.g. 2024-02)"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
                 <input
@@ -1616,7 +1616,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                   value={pub.description || ''}
                   onChange={(e) => updatePublication(pub.id, 'description', e.target.value)}
                   placeholder="Short impact note or abstract summary..."
-                  className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                  className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                 />
               </div>
             ))}
@@ -1625,24 +1625,24 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 10. HONORS & AWARDS */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-line-strong">
           <button
             type="button"
             onClick={() => toggleSection('awards')}
             className="flex-1 flex items-center gap-2.5"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <Award className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">10. Honors & Scientific Awards</h3>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+                <h3 className="text-sm font-bold text-ink">10. Honors & Scientific Awards</h3>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-surface-2 text-accent border border-line-strong">
                   {(data.awards || []).length}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-ink-2">
                 Industry recognitions, innovation medals, and fellowships
               </p>
             </div>
@@ -1651,7 +1651,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={addAward}
-              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-soft hover:bg-accent-soft text-accent border border-accent/30 flex items-center gap-1 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Award</span>
@@ -1659,7 +1659,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={() => toggleSection('awards')}
-              className="p-1 text-slate-400 hover:text-white"
+              className="p-1 text-ink-2 hover:text-ink"
             >
               {openSections.awards ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -1671,7 +1671,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             {(data.awards || []).map((award) => (
               <div
                 key={award.id}
-                className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 relative"
+                className="p-3 rounded-xl bg-surface-2 border border-line-strong space-y-2 relative"
               >
                 <div className="flex justify-between items-center">
                   <input
@@ -1679,12 +1679,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={award.title}
                     onChange={(e) => updateAward(award.id, 'title', e.target.value)}
                     placeholder="Award Name (e.g. National Science Excellence Medal)"
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => removeAward(award.id)}
-                    className="p-1 text-slate-500 hover:text-red-400 ms-2"
+                    className="p-1 text-ink-2 hover:text-danger ms-2"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1695,14 +1695,14 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={award.issuer}
                     onChange={(e) => updateAward(award.id, 'issuer', e.target.value)}
                     placeholder="Issuer / Body (e.g. ASRT / Tech Summit)"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                   <input
                     type="text"
                     value={award.date}
                     onChange={(e) => updateAward(award.id, 'date', e.target.value)}
                     placeholder="Year (e.g. 2023)"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
               </div>
@@ -1712,24 +1712,24 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 11. VOLUNTEERING & COMMUNITY */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-line-strong">
           <button
             type="button"
             onClick={() => toggleSection('volunteering')}
             className="flex-1 flex items-center gap-2.5"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <HeartHandshake className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">11. Volunteering & Leadership</h3>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+                <h3 className="text-sm font-bold text-ink">11. Volunteering & Leadership</h3>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-surface-2 text-accent border border-line-strong">
                   {(data.volunteering || []).length}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-ink-2">
                 Community service, advisory roles, and non-profit contributions
               </p>
             </div>
@@ -1738,7 +1738,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={addVolunteer}
-              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors"
+              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-soft hover:bg-accent-soft text-accent border border-accent/30 flex items-center gap-1 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Role</span>
@@ -1746,7 +1746,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={() => toggleSection('volunteering')}
-              className="p-1 text-slate-400 hover:text-white"
+              className="p-1 text-ink-2 hover:text-ink"
             >
               {openSections.volunteering ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -1758,7 +1758,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             {(data.volunteering || []).map((v) => (
               <div
                 key={v.id}
-                className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 relative"
+                className="p-3.5 rounded-xl bg-surface-2 border border-line-strong space-y-2 relative"
               >
                 <div className="flex justify-between items-center">
                   <input
@@ -1766,12 +1766,12 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={v.role}
                     onChange={(e) => updateVolunteer(v.id, 'role', e.target.value)}
                     placeholder="Role (e.g. Technical Advisory & Mentor)"
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => removeVolunteer(v.id)}
-                    className="p-1 text-slate-500 hover:text-red-400 ms-2"
+                    className="p-1 text-ink-2 hover:text-danger ms-2"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1782,7 +1782,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                     value={v.organization}
                     onChange={(e) => updateVolunteer(v.id, 'organization', e.target.value)}
                     placeholder="Organization (e.g. TechStars Middle East)"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                   <input
                     type="text"
@@ -1793,7 +1793,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
                       updateVolunteer(v.id, 'endDate', (p[1] || '').trim());
                     }}
                     placeholder="2019 - Present"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                   />
                 </div>
               </div>
@@ -1803,24 +1803,24 @@ export function CvForm({ data, onChange }: CvFormProps) {
       </div>
 
       {/* 12. REFERENCES */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-md">
-        <div className="w-full p-4 flex items-center justify-between text-start border-b border-slate-800/60">
+      <div className="rounded-2xl border border-line-strong bg-surface overflow-hidden shadow-md">
+        <div className="w-full p-4 flex items-center justify-between text-start border-b border-line-strong">
           <button
             type="button"
             onClick={() => toggleSection('references')}
             className="flex-1 flex items-center gap-2.5"
           >
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">12. Professional References</h3>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-emerald-300 border border-slate-700">
+                <h3 className="text-sm font-bold text-ink">12. Professional References</h3>
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-surface-2 text-accent border border-line-strong">
                   {data.referencesAvailableUponRequest ? 'On Request' : (data.references || []).length}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-ink-2">
                 Endorsers or &apos;Available upon request&apos; statement
               </p>
             </div>
@@ -1830,7 +1830,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
               <button
                 type="button"
                 onClick={addReference}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 transition-colors"
+                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-soft hover:bg-accent-soft text-accent border border-accent/30 flex items-center gap-1 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Contact</span>
@@ -1839,7 +1839,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
             <button
               type="button"
               onClick={() => toggleSection('references')}
-              className="p-1 text-slate-400 hover:text-white"
+              className="p-1 text-ink-2 hover:text-ink"
             >
               {openSections.references ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -1848,7 +1848,7 @@ export function CvForm({ data, onChange }: CvFormProps) {
 
         {openSections.references && (
           <div className="p-4 space-y-3">
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-surface-2 border border-line-strong">
               <input
                 type="checkbox"
                 id="ref-toggle-request"
@@ -1856,11 +1856,11 @@ export function CvForm({ data, onChange }: CvFormProps) {
                 onChange={(e) =>
                   onChange({ ...data, referencesAvailableUponRequest: e.target.checked })
                 }
-                className="rounded bg-slate-800 border-slate-700 text-emerald-500 cursor-pointer"
+                className="rounded bg-surface-2 border-line-strong text-accent cursor-pointer"
               />
               <label
                 htmlFor="ref-toggle-request"
-                className="text-xs text-slate-300 cursor-pointer font-medium"
+                className="text-xs text-ink cursor-pointer font-medium"
               >
                 Display standard: <em>&quot;References available upon request&quot;</em> (Hide names &amp; phones)
               </label>
@@ -1871,14 +1871,14 @@ export function CvForm({ data, onChange }: CvFormProps) {
                 {(data.references || []).map((ref) => (
                   <div
                     key={ref.id}
-                    className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 relative"
+                    className="p-3.5 rounded-xl bg-surface-2 border border-line-strong space-y-2 relative"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-emerald-400">Reference Contact</span>
+                      <span className="text-xs font-bold text-accent">Reference Contact</span>
                       <button
                         type="button"
                         onClick={() => removeReference(ref.id)}
-                        className="p-1 text-slate-500 hover:text-red-400"
+                        className="p-1 text-ink-2 hover:text-danger"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1890,28 +1890,28 @@ export function CvForm({ data, onChange }: CvFormProps) {
                         value={ref.name}
                         onChange={(e) => updateReference(ref.id, 'name', e.target.value)}
                         placeholder="Full Name (e.g. Dr. Marcus Vance)"
-                        className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                        className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                       />
                       <input
                         type="text"
                         value={ref.position}
                         onChange={(e) => updateReference(ref.id, 'position', e.target.value)}
                         placeholder="Position (e.g. VP of Global Engineering)"
-                        className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                        className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                       />
                       <input
                         type="text"
                         value={ref.company}
                         onChange={(e) => updateReference(ref.id, 'company', e.target.value)}
                         placeholder="Company / University"
-                        className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                        className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                       />
                       <input
                         type="email"
                         value={ref.email}
                         onChange={(e) => updateReference(ref.id, 'email', e.target.value)}
                         placeholder="Email (optional)"
-                        className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-emerald-500 outline-none"
+                        className="w-full px-3 py-1.5 rounded-lg bg-surface border border-line-strong text-xs text-ink focus:border-accent outline-none"
                       />
                     </div>
                   </div>

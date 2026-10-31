@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
 export interface DialogProps {
@@ -21,6 +21,19 @@ export function Dialog({
   maxWidth = 'md',
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [isRendered, setIsRendered] = useState(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      const raf = requestAnimationFrame(() => setIsRendered(true));
+      return () => cancelAnimationFrame(raf);
+    }
+
+    if (isRendered) {
+      const timer = setTimeout(() => setIsRendered(false), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isRendered]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -68,7 +81,10 @@ export function Dialog({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  const shouldShow = isOpen || isRendered;
+  if (!shouldShow) return null;
+
+  const isClosing = !isOpen && isRendered;
 
   const maxWidths = {
     sm: 'md:max-w-sm',
@@ -83,7 +99,10 @@ export function Dialog({
       aria-modal="true"
       aria-labelledby="dialog-title"
       aria-describedby={description ? 'dialog-description' : undefined}
-      className="fixed inset-0 z-modal flex items-end md:items-center justify-center p-0 md:p-6 modal-backdrop-animate"
+      data-state={isClosing ? 'closed' : 'open'}
+      className={`fixed inset-0 z-modal flex items-end md:items-center justify-center p-0 md:p-6 ${
+        isClosing ? 'modal-backdrop-exit pointer-events-none' : 'modal-backdrop-animate modal-backdrop-enter'
+      }`}
     >
       {/* Backdrop overlay */}
       <div
@@ -95,15 +114,20 @@ export function Dialog({
       {/* Sheet on mobile, centered dialog on desktop */}
       <div
         ref={dialogRef}
-        className={`relative w-full ${maxWidths[maxWidth]} max-h-[90dvh] overflow-y-auto rounded-t-2xl md:rounded-2xl border-t md:border border-border bg-elevated p-6 sm:p-8 shadow-elevated z-10 text-start pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 modal-card-animate`}
+        onAnimationEnd={() => {
+          if (!isOpen) setIsRendered(false);
+        }}
+        className={`relative w-full ${maxWidths[maxWidth]} max-h-[90dvh] overflow-y-auto rounded-t-2xl md:rounded-2xl border-t md:border border-line-strong bg-elevated p-6 sm:p-8 shadow-elevated z-10 text-start pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 ${
+          isClosing ? 'modal-card-exit' : 'modal-card-animate modal-card-enter'
+        }`}
       >
-        <div className="flex items-start justify-between gap-4 pb-4 border-b border-border mb-5">
+        <div className="flex items-start justify-between gap-4 pb-4 border-b border-line-strong mb-5">
           <div>
-            <h2 id="dialog-title" className="font-serif text-xl font-semibold text-text-primary tracking-tight">
+            <h2 id="dialog-title" className="font-serif text-xl font-semibold text-ink tracking-tight">
               {title}
             </h2>
             {description && (
-              <p id="dialog-description" className="text-xs text-text-secondary mt-1 leading-relaxed">
+              <p id="dialog-description" className="text-xs text-ink-2 mt-1 leading-relaxed">
                 {description}
               </p>
             )}
@@ -112,13 +136,13 @@ export function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg cursor-pointer"
+            className="btn p-1.5 rounded-md text-ink-2 hover:text-ink hover:bg-surface-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-paper cursor-pointer"
           >
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
-        <div className="text-text-primary">{children}</div>
+        <div className="text-ink">{children}</div>
       </div>
     </div>
   );

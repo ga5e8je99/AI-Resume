@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { hashPassword, signToken } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
-import { applyRateLimit } from '@/app/lib/rateLimit';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +12,7 @@ const DEMO_NAME = 'Alex Rivera (Demo)';
 export async function POST(req: NextRequest) {
   try {
     // 1. Rate Limiting: 20 demo logins per minute per client IP
-    const rateLimit = applyRateLimit(
+    const rateLimit = await applyRateLimit(
       req,
       { limit: 20, windowMs: 60 * 1000, keyPrefix: 'demo_auth' }
     );

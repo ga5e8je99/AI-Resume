@@ -35,42 +35,41 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { language, isRtl } = useLanguage();
-  const isAr = language === 'ar';
+  const { isRtl, t } = useLanguage();
 
   const navItems = [
     {
-      label: isAr ? 'لوحة التحكم' : 'Dashboard',
+      label: t('nav_dashboard'),
       href: '/dashboard',
       icon: LayoutDashboard,
       badge: null,
     },
     {
-      label: isAr ? 'منشئ السيرة الذاتية' : 'Resume Builder',
+      label: t('nav_resume_builder'),
       href: '/builder',
       icon: FileText,
       badge: null,
     },
     {
-      label: isAr ? 'السيرة الأكاديمية' : 'Academic CV',
+      label: t('nav_cv_builder'),
       href: '/cv-builder',
       icon: Layers,
       badge: 'CV',
     },
     {
-      label: isAr ? 'خطاب التقديم' : 'Cover Letter',
+      label: t('nav_cover_letter'),
       href: '/cover-letter',
       icon: Mail,
       badge: 'AI',
     },
     {
-      label: isAr ? 'فحص الـ ATS' : 'ATS Review',
+      label: t('nav_ats_review'),
       href: '/review',
       icon: ShieldCheck,
       badge: null,
     },
     {
-      label: isAr ? 'الأسعار والترقية' : 'Pricing & Plans',
+      label: t('nav_pricing'),
       href: '/pricing',
       icon: CreditCard,
       badge: user?.plan === 'pro' ? 'PRO' : null,
@@ -79,7 +78,7 @@ export function AppSidebar({
 
   if (user?.role === 'admin') {
     navItems.push({
-      label: isAr ? 'لوحة الإدارة' : 'Admin Panel',
+      label: t('nav_admin'),
       href: '/admin',
       icon: ShieldAlert,
       badge: 'Admin',
@@ -88,27 +87,26 @@ export function AppSidebar({
 
   return (
     <aside
-      aria-label={isAr ? 'الشريط الجانبي للتنقل' : 'Sidebar Navigation'}
-      className={`hidden md:flex flex-col shrink-0 h-screen sticky top-0 bg-surface border-e border-border transition-all duration-200 z-sticky ${
-        collapsed ? 'w-16' : 'w-64'
-      } ${className}`}
+      aria-label={t('shell_sidebar_aria')}
+      className={`hidden lg:flex flex-col shrink-0 h-[100dvh] sticky top-0 bg-surface border-e border-line-strong transition-all duration-200 z-sticky ${collapsed ? 'w-16' : 'w-64'
+        } ${className}`}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-4 border-b border-border justify-between">
+      <div className="h-16 flex items-center px-3 border-b border-line-strong justify-between">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2.5 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-md p-1"
-          title={isAr ? 'جوب ماتش AI' : 'JobMatch AI'}
+          className="min-h-[44px] min-w-[44px] flex items-center gap-2.5 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-md p-1.5"
+          title={t('nav_brand')}
         >
           {collapsed ? (
             <div className="w-8 h-8 rounded-md bg-brand-soft border border-brand/20 flex items-center justify-center font-serif font-bold text-brand text-base shrink-0">
               J
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <Logo size="sm" withLink={false} />
               {user?.isDemo && (
-                <span className="hidden lg:inline-flex text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                <span className="hidden lg:inline-flex text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-warning-soft text-warning border border-warning/25">
                   DEMO
                 </span>
               )}
@@ -129,22 +127,20 @@ export function AppSidebar({
             <Link
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-all group relative cursor-pointer ${
-                isActive
+              className={`min-h-[44px] min-w-[44px] flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-all group relative cursor-pointer ${isActive
                   ? 'bg-brand-soft text-brand font-semibold shadow-subtle border-s-2 border-brand'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
-              } ${collapsed ? 'justify-center px-0' : ''}`}
+                  : 'text-ink-2 hover:text-ink hover:bg-surface-2'
+                } ${collapsed ? 'justify-center px-0' : ''}`}
             >
               <Icon
-                className={`w-4 h-4 shrink-0 transition-transform ${
-                  isActive ? 'text-brand' : 'text-text-muted group-hover:text-text-primary'
-                }`}
+                className={`w-4 h-4 shrink-0 transition-transform ${isActive ? 'text-brand' : 'text-ink-2 group-hover:text-ink'
+                  }`}
                 aria-hidden="true"
               />
 
               {!collapsed && (
                 <>
-                  <span className="truncate flex-1">{item.label}</span>
+                  <span className="truncate flex-1 min-w-0">{item.label}</span>
                   {item.badge && (
                     <Badge
                       variant={item.badge === 'PRO' ? 'accent' : 'default'}
@@ -172,15 +168,15 @@ export function AppSidebar({
       </nav>
 
       {/* Bottom Footer Section */}
-      <div className="p-3 border-t border-border space-y-2">
+      <div className="p-3 border-t border-line-strong space-y-2">
         {/* Demo status alert if user is demo */}
         {user?.isDemo && !collapsed && (
-          <div className="p-2.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-400 flex items-start gap-2">
+          <div className="p-2.5 rounded-md bg-warning-soft border border-warning/20 text-[11px] text-warning flex items-start gap-2">
             <Zap className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="font-semibold">{isAr ? 'وضع تجريبي نشط' : 'Demo Mode Active'}</p>
-              <p className="text-[10px] text-amber-400/80 truncate">
-                {isAr ? 'جلسة تجريبية غير مقيدة' : 'Temporary demo session'}
+              <p className="font-semibold">{t('shell_demo_active')}</p>
+              <p className="text-[10px] text-warning/80 truncate">
+                {t('shell_demo_sub')}
               </p>
             </div>
           </div>
@@ -188,14 +184,14 @@ export function AppSidebar({
 
         {/* AI Credits Pill if expanded */}
         {!collapsed && (
-          <div className="px-2.5 py-2 rounded-md bg-surface-2/60 border border-border flex items-center justify-between text-xs">
-            <span className="text-text-secondary flex items-center gap-1.5 text-[11px]">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>{isAr ? 'رصيد الذكاء الاصطناعي:' : 'AI Credits:'}</span>
+          <div className="px-2.5 py-2 min-h-[44px] rounded-md bg-surface-2 border border-line-strong flex items-center justify-between text-xs">
+            <span className="text-ink-2 flex items-center gap-1.5 text-[11px]">
+              <Sparkles className="w-3.5 h-3.5 text-warning" />
+              <span>{t('shell_ai_credits')}</span>
             </span>
-            <span className="font-mono font-semibold text-text-primary text-[11px]">
+            <span className="font-mono font-semibold text-ink text-[11px]">
               {user?.plan === 'pro'
-                ? (isAr ? 'غير محدود' : 'Unlimited')
+                ? t('credits_unlimited')
                 : (user?.aiCredits ?? 3)}
             </span>
           </div>
@@ -207,20 +203,15 @@ export function AppSidebar({
           onClick={onToggleCollapse}
           aria-label={
             collapsed
-              ? isAr
-                ? 'توسيع الشريط الجانبي'
-                : 'Expand sidebar'
-              : isAr
-              ? 'طي الشريط الجانبي'
-              : 'Collapse sidebar'
+              ? t('shell_expand_sidebar')
+              : t('shell_collapse_sidebar')
           }
-          className={`w-full flex items-center gap-2 py-2 px-2.5 rounded-md border border-border bg-surface hover:bg-surface-2 text-text-muted hover:text-text-primary text-xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
-            collapsed ? 'justify-center px-0' : 'justify-between'
-          }`}
+          className={`min-h-[44px] min-w-[44px] w-full flex items-center gap-2 py-2.5 px-3 rounded-md border border-line-strong bg-surface hover:bg-surface-2 text-ink-2 hover:text-ink text-xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${collapsed ? 'justify-center px-0' : 'justify-between'
+            }`}
         >
           {!collapsed && (
             <span className="text-[11px] font-medium">
-              {isAr ? 'طي القائمة' : 'Collapse'}
+              {t('shell_collapse_label')}
             </span>
           )}
           {collapsed ? (

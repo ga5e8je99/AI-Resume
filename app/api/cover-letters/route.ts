@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser, validateCsrfOrigin } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';

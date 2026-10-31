@@ -2,6 +2,7 @@ import assert from 'assert';
 import DataStore from '../app/lib/datastore';
 import { generateSmartLinks } from '../lib/jobs/smart-links';
 import { searchAllProviders } from '../lib/jobs/providers';
+import { rankJobs } from '../lib/jobs/matcher';
 import { getCachedJobResults, setCachedJobResults } from '../lib/jobs/cache';
 
 async function runE2E() {
@@ -14,24 +15,26 @@ async function runE2E() {
   const { remoteOKProvider } = await import('../lib/jobs/providers/remoteok');
 
   const p1 = await remotiveProvider.search({ query: 'React Developer' });
-  console.log(`Remotive: ${p1.length} jobs`);
+  console.log(`Remotive: ${p1.jobs.length} jobs (status: ${p1.status}, ${p1.tookMs}ms)`);
   const p2 = await arbeitnowProvider.search({ query: 'React Developer' });
-  console.log(`Arbeitnow: ${p2.length} jobs`);
+  console.log(`Arbeitnow: ${p2.jobs.length} jobs (status: ${p2.status}, ${p2.tookMs}ms)`);
   const p3 = await remoteOKProvider.search({ query: 'React Developer' });
-  console.log(`RemoteOK: ${p3.length} jobs`);
+  console.log(`RemoteOK: ${p3.jobs.length} jobs (status: ${p3.status}, ${p3.tookMs}ms)`);
 
-  const res = await searchAllProviders({
+  const searchParams = {
     query: 'React Developer',
     location: 'Remote',
     remote: true,
     skills: ['React', 'TypeScript'],
-  });
+  };
+  const res = await searchAllProviders(searchParams);
+  const ranked = rankJobs(res.jobs, searchParams);
 
-  assert.ok(res.jobs.length > 0, 'Live providers must return jobs');
-  assert.ok(res.jobs[0].matchScore !== undefined, 'Jobs must have match score');
-  assert.ok(res.jobs[0].url.startsWith('http'), 'Job URL must be valid');
+  assert.ok(ranked.length > 0, 'Live providers must return jobs');
+  assert.ok(ranked[0].matchScore !== undefined, 'Jobs must have match score');
+  assert.ok(ranked[0].url.startsWith('http'), 'Job URL must be valid');
   assert.ok(res.attributions.length > 0, 'Attributions must be present');
-  console.log(`  Found ${res.jobs.length} jobs. Top job: "${res.jobs[0].title}" (${res.jobs[0].matchScore}%)`);
+  console.log(`  Found ${ranked.length} jobs. Top job: "${ranked[0].title}" (${ranked[0].matchScore}%)`);
 
   // 2. Test 10 Smart Links
   console.log('\n2. 10 Smart Deep Links...');

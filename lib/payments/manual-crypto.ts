@@ -9,6 +9,7 @@ import {
 export interface VerificationResult {
   verified: boolean;
   status: 'paid' | 'pending_review' | 'rejected';
+  error?: 'INVALID_TXID_FORMAT' | 'TXID_ALREADY_USED' | string;
   reason?: string;
   txDetails?: {
     txid: string;
@@ -27,18 +28,28 @@ export type FetchFunction = (
 ) => Promise<{ ok: boolean; status: number; json: () => Promise<any> }>;
 
 /**
- * Validates the syntax of a transaction hash per network
+ * Normalizes a transaction hash (trim + lowercase)
+ */
+export function normalizeTxid(txid: string): string {
+  if (!txid || typeof txid !== 'string') return '';
+  return txid.trim().toLowerCase();
+}
+
+/**
+ * Validates the syntax of a transaction hash per network:
+ * - BEP20: 0x + 64 lowercase/uppercase hex characters
+ * - TRC20: 64 lowercase/uppercase hex characters
  */
 export function isValidTxidFormat(txid: string, network: 'BEP20' | 'TRC20'): boolean {
-  if (!txid || typeof txid !== 'string') return false;
-  const clean = txid.trim();
+  const clean = normalizeTxid(txid);
+  if (!clean) return false;
   if (network === 'BEP20') {
     // 0x followed by 64 hex characters
-    return /^0x[a-fA-F0-9]{64}$/.test(clean);
+    return /^0x[0-9a-f]{64}$/.test(clean);
   }
   if (network === 'TRC20') {
-    // 64 hex characters (may or may not have 0x prefix)
-    return /^(0x)?[a-fA-F0-9]{64}$/.test(clean);
+    // 64 hex characters
+    return /^[0-9a-f]{64}$/.test(clean);
   }
   return false;
 }
@@ -51,7 +62,7 @@ export async function verifyBep20Tx(
   txid: string,
   customFetch?: FetchFunction
 ): Promise<VerificationResult> {
-  const cleanTxid = txid.trim();
+  const cleanTxid = normalizeTxid(txid);
   const apiKey = (process.env.BSCSCAN_API_KEY || '').trim();
   const expectedWallet = getReceivingWalletAddress('BEP20').toLowerCase();
 
@@ -182,10 +193,7 @@ export async function verifyTrc20Tx(
   txid: string,
   customFetch?: FetchFunction
 ): Promise<VerificationResult> {
-  let cleanTxid = txid.trim();
-  if (cleanTxid.startsWith('0x')) {
-    cleanTxid = cleanTxid.slice(2);
-  }
+  const cleanTxid = normalizeTxid(txid);
 
   const apiKey = (process.env.TRONGRID_API_KEY || '').trim();
   const expectedWallet = getReceivingWalletAddress('TRC20').trim();
@@ -313,49 +321,82 @@ export async function verifyTrc20Tx(
   }
 }
 
+let verifyLockQueue: Promise<any> = Promise.resolve();
+
+async function withVerifyLock<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = verifyLockQueue;
+  let release!: () => void;
+  verifyLockQueue = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
 /**
  * Universal Crypto Verification Dispatcher
- * Verifies idempotency, format, and on-chain status
+ * Verifies idempotency, format, and on-chain status atomically
  */
 export async function verifyCryptoPayment(
   order: StoredOrder,
   txid: string,
   customFetch?: FetchFunction
 ): Promise<VerificationResult> {
-  const cleanTxid = txid.trim();
+  return withVerifyLock(async () => {
+    const cleanTxid = normalizeTxid(txid);
 
-  // 1. Format validation
-  if (!isValidTxidFormat(cleanTxid, order.network as any)) {
-    return {
-      verified: false,
-      status: 'rejected',
-      reason: `Invalid transaction hash format for ${order.network}. Please check and re-enter.`,
-    };
-  }
+    // 1. Format validation
+    if (!isValidTxidFormat(cleanTxid, order.network as any)) {
+      return {
+        verified: false,
+        status: 'rejected',
+        error: 'INVALID_TXID_FORMAT',
+        reason: `Invalid transaction hash format for ${order.network}. Please check and re-enter.`,
+      };
+    }
 
-  // 2. Idempotency check: Make sure this TXID is not already linked to another order
-  const existingWithTxid = await DataStore.findOrderByTxid(cleanTxid);
-  if (existingWithTxid && existingWithTxid.id !== order.id) {
-    return {
-      verified: false,
-      status: 'rejected',
-      reason: 'This transaction hash has already been claimed for another order.',
-    };
-  }
+    // 2. Idempotency check: Make sure this TXID is not already linked to another order
+    const existingWithTxid = await DataStore.findOrderByTxid(cleanTxid, order.network);
+    if (existingWithTxid && existingWithTxid.id !== order.id) {
+      return {
+        verified: false,
+        status: 'rejected',
+        error: 'TXID_ALREADY_USED',
+        reason: 'TXID_ALREADY_USED: This transaction hash has already been claimed for another order.',
+      };
+    }
 
-  // 3. Dispatch to network-specific explorer
-  let result: VerificationResult;
-  if (order.network === 'BEP20') {
-    result = await verifyBep20Tx(order, cleanTxid, customFetch);
-  } else if (order.network === 'TRC20') {
-    result = await verifyTrc20Tx(order, cleanTxid, customFetch);
-  } else {
-    return {
-      verified: false,
-      status: 'rejected',
-      reason: `Unsupported crypto network: ${order.network}`,
-    };
-  }
+    // 3. Dispatch to network-specific explorer
+    let result: VerificationResult;
+    if (order.network === 'BEP20') {
+      result = await verifyBep20Tx(order, cleanTxid, customFetch);
+    } else if (order.network === 'TRC20') {
+      result = await verifyTrc20Tx(order, cleanTxid, customFetch);
+    } else {
+      return {
+        verified: false,
+        status: 'rejected',
+        reason: `Unsupported crypto network: ${order.network}`,
+      };
+    }
 
-  return result;
+    // 4. Atomically claim TXID on the order if verification succeeded so concurrent calls see it immediately
+    if (result.verified && result.status === 'paid') {
+      const claim = await DataStore.claimOrderTxid(order.id, cleanTxid);
+      if (!claim.success && claim.error === 'TXID_ALREADY_USED') {
+        return {
+          verified: false,
+          status: 'rejected',
+          error: 'TXID_ALREADY_USED',
+          reason: 'TXID_ALREADY_USED: This transaction hash has already been claimed for another order.',
+        };
+      }
+    }
+
+    return result;
+  });
 }

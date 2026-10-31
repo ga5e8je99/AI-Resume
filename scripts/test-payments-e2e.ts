@@ -1,7 +1,11 @@
-import { createCheckout } from '../lib/payments';
+import { createCheckout, ProviderNotConfiguredError } from '../lib/payments';
 import { verifyPaymobHmac } from '../lib/payments/paymob';
-import { getPlanById } from '../lib/plans';
+import { getPlanById, getPlanPrice, getPaygCredits } from '../lib/plans';
 import DataStore from '../app/lib/datastore';
+import { signToken } from '../app/lib/auth';
+import { POST as checkoutPOST } from '../app/api/checkout/route';
+import { GET as orderStatusGET } from '../app/api/orders/status/route';
+import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 
 function assert(condition: boolean, msg: string) {
@@ -17,12 +21,17 @@ async function runPaymentTests() {
   console.log('>>> RUNNING UNIFIED PAYMENT & WEBHOOK TEST SUITE <<<');
   console.log('============================================================\n');
 
-  // Test 1: Plan catalog server-side price protection
-  console.log('▶ [Test 1] Server-side price enforcement');
+  // Test 1: Plan catalog server-side price & credit single source of truth
+  console.log('▶ [Test 1] Server-side price & credit enforcement from lib/plans.ts');
   const proPlan = getPlanById('pro');
-  assert(!!proPlan, 'Pro plan exists in server catalog');
-  assert(proPlan!.pricing.USD.monthly === 9, 'Server verifies Pro is $9, not user-submitted price');
-  assert(proPlan!.pricing.EGP.monthly === 350, 'Server verifies Pro is 350 EGP');
+  const paygPlan = getPlanById('payg');
+  assert(!!proPlan && !!paygPlan, 'Pro and PAYG plans exist in server catalog');
+  assert(getPlanPrice('pro', 'USD', 'monthly') === 9, 'Pro Monthly is $9');
+  assert(getPlanPrice('pro', 'USD', 'annual') === 84, 'Pro Annual is $84');
+  assert(getPlanPrice('pro', 'EGP', 'monthly') === 350, 'Pro Monthly is 350 EGP');
+  assert(getPlanPrice('payg', 'USD') === 5, 'PAYG is $5 (no hardcoded $3 fallback)');
+  assert(getPlanPrice('payg', 'EGP') === 199, 'PAYG is 199 EGP');
+  assert(getPaygCredits() === 15, 'PAYG grants 15 credits');
 
   // Free plan checkout rejection
   try {
@@ -36,24 +45,91 @@ async function runPaymentTests() {
     assert(err.message.includes('Free plan'), 'Free plan correctly rejected from checkout');
   }
 
-  // Test 2: Provider Dispatcher (Paymob for EGP, Stripe for USD)
-  console.log('\n▶ [Test 2] Universal payment provider selection');
+  // Test 2: ProviderNotConfiguredError & HTTP 503 when keys are missing
+  console.log('\n▶ [Test 2] ProviderNotConfiguredError & /api/checkout 503 enforcement');
+  delete process.env.ALLOW_MOCK_PAYMENTS;
+  try {
+    await createCheckout({
+      user: { id: 'usr_test', email: 'test@example.com' },
+      planId: 'pro',
+      currency: 'USD',
+      billingCycle: 'monthly',
+    });
+    assert(false, 'Should throw ProviderNotConfiguredError when ALLOW_MOCK_PAYMENTS is not true');
+  } catch (err: any) {
+    assert(
+      err instanceof ProviderNotConfiguredError && err.code === 'PROVIDER_NOT_CONFIGURED',
+      'Throws ProviderNotConfiguredError when Stripe keys are missing and mock is disabled'
+    );
+  }
+
+  // Even if ALLOW_MOCK_PAYMENTS='true', NODE_ENV === 'production' MUST forbid mock and return 503
+  const prevNodeEnv = process.env.NODE_ENV;
+  process.env.ALLOW_MOCK_PAYMENTS = 'true';
+  (process.env as any).NODE_ENV = 'production';
+
+  try {
+    await createCheckout({
+      user: { id: 'usr_test', email: 'test@example.com' },
+      planId: 'payg',
+      currency: 'EGP',
+    });
+    assert(false, 'Should throw ProviderNotConfiguredError in production even if ALLOW_MOCK_PAYMENTS=true');
+  } catch (err: any) {
+    assert(
+      err instanceof ProviderNotConfiguredError && err.code === 'PROVIDER_NOT_CONFIGURED',
+      'Production strictly blocks mock payments and throws ProviderNotConfiguredError'
+    );
+  }
+
+  // Verify /api/checkout route returns HTTP 503 with { error: 'PROVIDER_NOT_CONFIGURED' }
+  const checkoutUser = await DataStore.createUserAccount({
+    name: 'Checkout 503 Tester',
+    email: `checkout503_${Date.now()}@example.com`,
+    password: 'password123',
+    role: 'user',
+  });
+  const token = signToken({
+    userId: checkoutUser.id,
+    email: checkoutUser.email,
+    name: checkoutUser.name,
+    role: 'user',
+  });
+  const checkoutReq = new NextRequest('http://localhost:3000/api/checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ planId: 'payg', currency: 'USD' }),
+  });
+  const checkoutRes = await checkoutPOST(checkoutReq);
+  const checkoutBody = await checkoutRes.json();
+  assert(checkoutRes.status === 503, `/api/checkout returns HTTP 503 when provider is unconfigured (got ${checkoutRes.status})`);
+  assert(
+    checkoutBody.error === 'PROVIDER_NOT_CONFIGURED',
+    `/api/checkout returns { error: 'PROVIDER_NOT_CONFIGURED' } (got ${checkoutBody.error})`
+  );
+
+  (process.env as any).NODE_ENV = prevNodeEnv || 'development';
+  process.env.ALLOW_MOCK_PAYMENTS = 'true';
+
   const usdCheckout = await createCheckout({
-    user: { id: 'usr_test', email: 'test@example.com' },
+    user: { id: checkoutUser.id, email: checkoutUser.email },
     planId: 'pro',
     currency: 'USD',
     billingCycle: 'monthly',
   });
-  assert(usdCheckout.provider === 'stripe', 'USD routes to Stripe Checkout');
+  assert(usdCheckout.provider === 'stripe', 'USD routes to Stripe Checkout when mock is explicitly enabled in non-prod');
   assert(!!usdCheckout.url, 'Stripe checkout returns valid URL');
 
   const egpCheckout = await createCheckout({
-    user: { id: 'usr_test', email: 'test@example.com' },
+    user: { id: checkoutUser.id, email: checkoutUser.email },
     planId: 'pro',
     currency: 'EGP',
     billingCycle: 'monthly',
   });
-  assert(egpCheckout.provider === 'paymob', 'EGP routes to Paymob');
+  assert(egpCheckout.provider === 'paymob', 'EGP routes to Paymob when mock is explicitly enabled in non-prod');
   assert(!!egpCheckout.url, 'Paymob checkout returns valid URL');
 
   // Test 3: Paymob HMAC SHA512 Calculation & Verification
@@ -181,8 +257,63 @@ async function runPaymentTests() {
   assert(paymentRecord.amount === 9, 'Payment amount logged accurately ($9)');
   assert(paymentRecord.status === 'succeeded', 'Payment status is "succeeded"');
 
+  // Test 8: GET /api/orders/status auth, ownership, and strict non-sensitive shape
+  console.log('\n▶ [Test 8] GET /api/orders/status auth & ownership enforcement');
+  const orderRef = egpCheckout.reference!;
+  assert(!!orderRef, 'Paymob checkout returned order reference');
+
+  // 8a: Unauthenticated request -> 401
+  const unauthStatusReq = new NextRequest(
+    `http://localhost:3000/api/orders/status?reference=${encodeURIComponent(orderRef)}`,
+    { method: 'GET' }
+  );
+  const unauthStatusRes = await orderStatusGET(unauthStatusReq);
+  assert(unauthStatusRes.status === 401, 'Unauthenticated /api/orders/status returns 401');
+
+  // 8b: Different user -> 403
+  const otherToken = signToken({
+    userId: testUserId,
+    email: createdUser.email,
+    name: createdUser.name,
+    role: 'user',
+  });
+  const forbiddenStatusReq = new NextRequest(
+    `http://localhost:3000/api/orders/status?reference=${encodeURIComponent(orderRef)}`,
+    {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${otherToken}` },
+    }
+  );
+  const forbiddenStatusRes = await orderStatusGET(forbiddenStatusReq);
+  assert(
+    forbiddenStatusRes.status === 403,
+    'Request by non-owner to /api/orders/status returns 403'
+  );
+
+  // 8c: Owner request -> 200 with strictly { status, planId, provider, amount, currency }
+  const ownerStatusReq = new NextRequest(
+    `http://localhost:3000/api/orders/status?reference=${encodeURIComponent(orderRef)}`,
+    {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  const ownerStatusRes = await orderStatusGET(ownerStatusReq);
+  const ownerStatusBody = await ownerStatusRes.json();
+  assert(ownerStatusRes.status === 200, 'Owner /api/orders/status returns 200');
+  const returnedKeys = Object.keys(ownerStatusBody).sort().join(',');
+  assert(
+    returnedKeys === 'amount,currency,planId,provider,status',
+    `Response contains strictly { status, planId, provider, amount, currency } (got: ${returnedKeys})`
+  );
+  assert(ownerStatusBody.status === 'awaiting_payment', 'Initial order status is awaiting_payment');
+  assert(ownerStatusBody.planId === 'pro', 'Order planId is pro');
+  assert(ownerStatusBody.provider === 'paymob', 'Order provider is paymob');
+  assert(ownerStatusBody.amount === 350, 'Order amount is 350');
+  assert(ownerStatusBody.currency === 'EGP', 'Order currency is EGP');
+
   console.log('\n============================================================');
-  console.log('>>> ALL 7 PAYMENT & WEBHOOK UNIT TESTS PASSED! <<<');
+  console.log('>>> ALL 8 PAYMENT & WEBHOOK UNIT TESTS PASSED! <<<');
   console.log('============================================================');
 }
 

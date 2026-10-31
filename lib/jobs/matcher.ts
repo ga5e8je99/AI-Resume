@@ -72,16 +72,40 @@ export function scoreJob(job: Job, params: JobSearchParams): ScoreBreakdown {
     }
   }
 
-  // Seniority bonus / alignment
+  score += Math.min(40, titleScore);
+
+  // Seniority bonus / alignment (evaluated per candidate seniority)
   if (params.seniority && params.seniority !== 'any') {
     const sLower = params.seniority.toLowerCase();
-    if (normalizedJobTitle.includes(sLower)) {
-      titleScore = Math.min(40, titleScore + 5);
+    const seniorityKeywords: Record<string, string[]> = {
+      junior: ['junior', 'entry', 'entry-level', 'intern', 'graduate', 'jr'],
+      mid: ['mid', 'mid-level', 'intermediate'],
+      senior: ['senior', 'sr', 'staff'],
+      lead: ['lead', 'principal', 'head', 'director', 'manager', 'architect', 'vp', 'chief'],
+    };
+
+    const userLevelTerms = seniorityKeywords[sLower] || [sLower];
+    const matchesUserSeniority = userLevelTerms.some((term) => {
+      const re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      return re.test(normalizedJobTitle) || re.test(fullJobText);
+    });
+
+    if (matchesUserSeniority) {
+      score += 5;
       reasons.push(`Seniority level (${params.seniority}) aligns with position`);
+    } else {
+      const otherLevels = Object.entries(seniorityKeywords).filter(([lvl]) => lvl !== sLower);
+      const matchesDifferentTitleSeniority = otherLevels.some(([, terms]) =>
+        terms.some((term) => {
+          const re = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          return re.test(normalizedJobTitle);
+        })
+      );
+      if (matchesDifferentTitleSeniority) {
+        score -= 8;
+      }
     }
   }
-
-  score += Math.min(40, titleScore);
 
   // -------------------------------------------------------------
   // 2. Skill Overlap & Missing Skills (up to 40 points)

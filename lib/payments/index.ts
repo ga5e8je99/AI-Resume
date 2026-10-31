@@ -1,5 +1,9 @@
 import { CurrencyCode, BillingCycle, getPlanById } from '../plans';
-import { createStripeCheckoutSession } from './stripe';
+import {
+  createStripeCheckoutSession,
+  ProviderNotConfiguredError,
+  isMockPaymentsAllowed,
+} from './stripe';
 import { createPaymobCheckoutSession } from './paymob';
 import { isBinancePayConfigured, createBinancePayOrder } from './binance-pay';
 import {
@@ -10,7 +14,7 @@ import {
   ORDER_EXPIRY_MINUTES,
 } from './crypto-utils';
 import DataStore from '@/app/lib/datastore';
-import { CryptoNetwork, PaymentMethodType } from '@/app/models/Order';
+import { CryptoNetwork } from '@/app/models/Order';
 
 export type ExtendedCurrencyCode = CurrencyCode | 'USDT';
 
@@ -19,6 +23,7 @@ export interface CreateCheckoutParams {
     id: string;
     email: string;
     name?: string;
+    stripeCustomerId?: string;
   };
   planId: string;
   currency?: ExtendedCurrencyCode;
@@ -46,6 +51,8 @@ export interface CheckoutResult {
  *    - Method B: Direct manual crypto transfer to personal Binance wallet with on-chain verification
  * 2. EGP -> Paymob (Egypt local channels)
  * 3. USD -> Stripe (Cards)
+ *
+ * Throws clear errors (including ProviderNotConfiguredError) instead of returning fake success.
  */
 export async function createCheckout({
   user,
@@ -57,6 +64,10 @@ export async function createCheckout({
   successUrl,
   cancelUrl,
 }: CreateCheckoutParams): Promise<CheckoutResult> {
+  if (!user || !user.id || !user.email) {
+    throw new Error('Authenticated user with valid ID and email is required to create checkout.');
+  }
+
   const plan = getPlanById(planId);
   if (!plan) {
     throw new Error(`Plan "${planId}" not found in system catalog.`);
@@ -66,6 +77,10 @@ export async function createCheckout({
     throw new Error('Free plan does not require checkout.');
   }
 
+  if (currency !== 'USD' && currency !== 'EGP' && currency !== 'USDT') {
+    throw new Error(`Unsupported checkout currency: "${currency}".`);
+  }
+
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
@@ -73,9 +88,27 @@ export async function createCheckout({
   // Crypto / Binance Route (Method A or Method B)
   if (currency === 'USDT' || method === 'binance' || method === 'manual_crypto') {
     const basePrice = getPlanPriceUsdt(
-      planId as 'pro' | 'payg',
+      plan.id as 'pro' | 'payg',
       billingCycle === 'annual' ? 'annual' : 'monthly'
     );
+
+    const recipientAddress = getReceivingWalletAddress(network);
+    const binanceConfigured = isBinancePayConfigured();
+
+    // Ensure at least one crypto provider is configured (unless mock mode is explicitly allowed)
+    if (method === 'manual_crypto' && !recipientAddress && !isMockPaymentsAllowed()) {
+      throw new ProviderNotConfiguredError(
+        'manual_crypto',
+        `Crypto wallet for network "${network}" is not configured (missing PAYMENT_WALLET_${network}).`
+      );
+    }
+
+    if (method !== 'manual_crypto' && !binanceConfigured && !recipientAddress && !isMockPaymentsAllowed()) {
+      throw new ProviderNotConfiguredError(
+        'binance_pay',
+        `Crypto payment provider is not configured (missing Binance Pay credentials and PAYMENT_WALLET_${network}).`
+      );
+    }
 
     // Fetch existing active orders to guarantee a unique cents suffix
     const activeOrders = await DataStore.listOrders({ status: 'awaiting_payment' });
@@ -84,26 +117,32 @@ export async function createCheckout({
 
     const reference = generateOrderReference();
     const expiresAt = new Date(Date.now() + ORDER_EXPIRY_MINUTES * 60 * 1000);
-    const recipientAddress = getReceivingWalletAddress(network);
 
     // Method A: Binance Pay Merchant API (if credentials exist and not forced manual)
-    if (isBinancePayConfigured() && method !== 'manual_crypto') {
+    if (binanceConfigured && method !== 'manual_crypto') {
       const binanceOrder = await createBinancePayOrder({
         merchantTradeNo: reference,
         orderAmount: amount,
-        planId: planId as any,
+        planId: plan.id as 'pro' | 'payg',
         planName: plan.name.en,
         returnUrl: successUrl || `${appUrl}/payment/success?reference=${reference}&provider=binance_pay`,
         cancelUrl: cancelUrl || `${appUrl}/payment/cancelled?reference=${reference}&provider=binance_pay`,
         webhookUrl: `${appUrl}/api/webhooks/binance-pay`,
       });
 
-      if (binanceOrder.success && (binanceOrder.checkoutUrl || binanceOrder.universalUrl)) {
+      const checkoutUrl = binanceOrder.checkoutUrl || binanceOrder.universalUrl;
+      if (!binanceOrder.success || !checkoutUrl) {
+        if (!recipientAddress) {
+          throw new Error(
+            binanceOrder.errorMessage || 'Binance Pay failed to create a checkout session.'
+          );
+        }
+      } else {
         await DataStore.createOrder({
           userId: user.id,
           userEmail: user.email,
-          planId: planId as any,
-          billingCycle: planId === 'payg' ? 'once' : billingCycle,
+          planId: plan.id as 'pro' | 'payg',
+          billingCycle: plan.id === 'payg' ? 'once' : billingCycle,
           baseAmount: basePrice,
           amount,
           currency: 'USDT',
@@ -113,12 +152,12 @@ export async function createCheckout({
           expiresAt,
           metadata: {
             prepayId: binanceOrder.prepayId,
-            checkoutUrl: binanceOrder.checkoutUrl,
+            checkoutUrl,
           },
         });
 
         return {
-          url: binanceOrder.checkoutUrl || binanceOrder.universalUrl || '',
+          url: checkoutUrl,
           provider: 'binance_pay',
           orderId: reference,
           reference,
@@ -127,12 +166,19 @@ export async function createCheckout({
       }
     }
 
-    // Method B: Manual Crypto Payment (Personal Binance deposit address fallback)
+    // Method B: Manual Crypto Payment (Personal Binance deposit address)
+    if (!recipientAddress && !isMockPaymentsAllowed()) {
+      throw new ProviderNotConfiguredError(
+        'manual_crypto',
+        `Crypto wallet for network "${network}" is not configured (missing PAYMENT_WALLET_${network}).`
+      );
+    }
+
     const storedOrder = await DataStore.createOrder({
       userId: user.id,
       userEmail: user.email,
-      planId: planId as any,
-      billingCycle: planId === 'payg' ? 'once' : billingCycle,
+      planId: plan.id as 'pro' | 'payg',
+      billingCycle: plan.id === 'payg' ? 'once' : billingCycle,
       baseAmount: basePrice,
       amount,
       currency: 'USDT',
@@ -161,31 +207,39 @@ export async function createCheckout({
   if (currency === 'EGP') {
     const paymobSession = await createPaymobCheckoutSession({
       user,
-      planId,
+      planId: plan.id,
       billingCycle,
       successUrl,
       cancelUrl,
     });
+    if (!paymobSession.url) {
+      throw new Error('Paymob checkout failed to return a redirect URL.');
+    }
     return {
       url: paymobSession.url,
       provider: 'paymob',
       orderId: paymobSession.orderId,
+      reference: paymobSession.reference,
     };
   }
 
   // Default to Stripe for international USD card checkouts
   const stripeSession = await createStripeCheckoutSession({
     user,
-    planId,
+    planId: plan.id,
     billingCycle,
     successUrl,
     cancelUrl,
   });
+  if (!stripeSession.url) {
+    throw new Error('Stripe checkout failed to return a redirect URL.');
+  }
 
   return {
     url: stripeSession.url,
     provider: 'stripe',
     sessionId: stripeSession.sessionId,
+    reference: stripeSession.reference,
   };
 }
 

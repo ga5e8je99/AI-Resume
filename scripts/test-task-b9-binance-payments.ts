@@ -1,5 +1,8 @@
 import assert from 'assert';
+import crypto from 'crypto';
+import { NextRequest } from 'next/server';
 import DataStore from '../app/lib/datastore';
+import { signToken } from '../app/lib/auth';
 import {
   calculateUniqueCryptoAmount,
   getPlanPriceUsdt,
@@ -16,6 +19,10 @@ import {
   verifyTrc20Tx,
   verifyCryptoPayment,
 } from '../lib/payments/manual-crypto';
+import { POST as binanceWebhookPost } from '../app/api/webhooks/binance-pay/route';
+import { GET as cryptoOrderGet } from '../app/api/payments/crypto/order/route';
+import { POST as cryptoVerifyPost } from '../app/api/payments/crypto/verify/route';
+import { checkRateLimitAsync, clearAllRateLimits } from '../lib/rate-limit';
 
 async function runTaskB9Tests() {
   console.log('================================================================');
@@ -62,9 +69,9 @@ async function runTaskB9Tests() {
 
   // Test 4: TXID Format Validation
   console.log('\n--- Test 4: Transaction Hash (TXID) Format Validation ---');
-  const validBep20Txid = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+  const validBep20Txid = '0x' + crypto.randomBytes(32).toString('hex').toLowerCase();
   const invalidBep20Txid = '0x12345short';
-  const validTrc20Txid = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+  const validTrc20Txid = crypto.randomBytes(32).toString('hex').toLowerCase();
   const invalidTrc20Txid = 'not-a-hex-string';
 
   assert.strictEqual(isValidTxidFormat(validBep20Txid, 'BEP20'), true);
@@ -299,7 +306,7 @@ async function runTaskB9Tests() {
   });
 
   await DataStore.completeOrder(secondOrder.id, {
-    txid: '0x9999999999999999999999999999999999999999999999999999999999999999',
+    txid: '0x' + crypto.randomBytes(32).toString('hex').toLowerCase(),
     actor: 'test_suite',
     note: 'Extension payment',
   });
@@ -330,8 +337,17 @@ async function runTaskB9Tests() {
   const duplicateCheck = await verifyCryptoPayment(duplicateOrder, validBep20Txid);
   assert.strictEqual(duplicateCheck.verified, false);
   assert.strictEqual(duplicateCheck.status, 'rejected');
+  assert.strictEqual(duplicateCheck.error, 'TXID_ALREADY_USED');
   assert.ok(duplicateCheck.reason?.includes('already been claimed'), 'Must reject reused TXID');
-  console.log('  ✓ Duplicate TXID successfully blocked by idempotency guard');
+
+  // Also test DataStore.completeOrder directly with reused TXID on second order
+  const duplicateCompleteResult = await DataStore.completeOrder(duplicateOrder.id, {
+    txid: validBep20Txid.toUpperCase(), // Even with uppercase variation, normalization catches it
+    actor: 'test_suite',
+  });
+  assert.strictEqual(duplicateCompleteResult.success, false);
+  assert.strictEqual(duplicateCompleteResult.error, 'TXID_ALREADY_USED');
+  console.log('  ✓ Duplicate TXID (including case variation) blocked with TXID_ALREADY_USED');
 
   // Test 10: Admin Approval & Rejection Flow
   console.log('\n--- Test 10: Admin Manual Approval & Rejection Flow ---');
@@ -381,9 +397,337 @@ async function runTaskB9Tests() {
   assert.strictEqual(rejectedOrder?.status, 'rejected');
   console.log('  ✓ Admin rejected order successfully updated in database and audit log');
 
+  // Test 11: Concurrent Promise.all with the SAME TXID (Atomic Uniqueness)
+  console.log('\n--- Test 11: Concurrent Promise.all Requests with Same TXID ---');
+  const concurrentTxid1 =
+    '0x' + crypto.randomBytes(32).toString('hex').toLowerCase();
+  const concurrentOrder1 = await DataStore.createOrder({
+    userId: testUserId,
+    userEmail: testUserEmail,
+    planId: 'payg',
+    billingCycle: 'once',
+    baseAmount: 5,
+    amount: 5.41,
+    currency: 'USDT',
+    method: 'manual_crypto',
+    network: 'BEP20',
+    reference: `ORD-CONC1-${Date.now().toString().slice(-6)}`,
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+  });
+  const concurrentOrder2 = await DataStore.createOrder({
+    userId: testUserId,
+    userEmail: testUserEmail,
+    planId: 'payg',
+    billingCycle: 'once',
+    baseAmount: 5,
+    amount: 5.42,
+    currency: 'USDT',
+    method: 'manual_crypto',
+    network: 'BEP20',
+    reference: `ORD-CONC2-${Date.now().toString().slice(-6)}`,
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+  });
+
+  const [concRes1, concRes2] = await Promise.all([
+    DataStore.completeOrder(concurrentOrder1.id, { txid: concurrentTxid1, actor: 'concurrent_test' }),
+    DataStore.completeOrder(concurrentOrder2.id, { txid: concurrentTxid1, actor: 'concurrent_test' }),
+  ]);
+
+  const succeededCount = [concRes1, concRes2].filter((r) => r.success).length;
+  const failedWithTxidUsed = [concRes1, concRes2].filter(
+    (r) => !r.success && r.error === 'TXID_ALREADY_USED'
+  ).length;
+  assert.strictEqual(succeededCount, 1, 'Exactly one concurrent completeOrder call must succeed');
+  assert.strictEqual(
+    failedWithTxidUsed,
+    1,
+    'The other concurrent completeOrder call must fail with TXID_ALREADY_USED'
+  );
+  console.log('  ✓ Concurrent Promise.all on DataStore.completeOrder: 1 succeeded, 1 rejected with TXID_ALREADY_USED');
+
+  // Also test concurrent Promise.all on verifyCryptoPayment
+  const concurrentTxid2 =
+    '0x' + crypto.randomBytes(32).toString('hex').toLowerCase();
+  const concurrentOrderA = await DataStore.createOrder({
+    userId: testUserId,
+    userEmail: testUserEmail,
+    planId: 'payg',
+    billingCycle: 'once',
+    baseAmount: 5,
+    amount: 5.15,
+    currency: 'USDT',
+    method: 'manual_crypto',
+    network: 'BEP20',
+    reference: `ORD-CONCA-${Date.now().toString().slice(-6)}`,
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+  });
+  const concurrentOrderB = await DataStore.createOrder({
+    userId: testUserId,
+    userEmail: testUserEmail,
+    planId: 'payg',
+    billingCycle: 'once',
+    baseAmount: 5,
+    amount: 5.15,
+    currency: 'USDT',
+    method: 'manual_crypto',
+    network: 'BEP20',
+    reference: `ORD-CONCB-${Date.now().toString().slice(-6)}`,
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+  });
+
+  const mockConcurrentBscFetch: any = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      status: '1',
+      message: 'OK',
+      result: [
+        {
+          hash: concurrentTxid2,
+          contractAddress: BEP20_USDT_CONTRACT,
+          to: '0x1111111111111111111111111111111111111111',
+          from: '0x2222222222222222222222222222222222222222',
+          value: '5150000000000000000',
+          tokenDecimal: '18',
+          confirmations: '12',
+          timeStamp: Math.floor(Date.now() / 1000).toString(),
+        },
+      ],
+    }),
+  });
+
+  const [verifyResA, verifyResB] = await Promise.all([
+    verifyCryptoPayment(concurrentOrderA, concurrentTxid2, mockConcurrentBscFetch),
+    verifyCryptoPayment(concurrentOrderB, concurrentTxid2, mockConcurrentBscFetch),
+  ]);
+
+  const verifySuccessCount = [verifyResA, verifyResB].filter((r) => r.verified && r.status === 'paid').length;
+  const verifyDuplicateCount = [verifyResA, verifyResB].filter(
+    (r) => !r.verified && r.error === 'TXID_ALREADY_USED'
+  ).length;
+  assert.strictEqual(verifySuccessCount, 1, 'Exactly one concurrent verifyCryptoPayment must succeed');
+  assert.strictEqual(verifyDuplicateCount, 1, 'The second concurrent verifyCryptoPayment must return TXID_ALREADY_USED');
+  console.log('  ✓ Concurrent Promise.all on verifyCryptoPayment: 1 verified, 1 rejected with TXID_ALREADY_USED');
+
+  // Test 12: Malformed TXID & Regex Injection Prevention in findOrderByTxid & verifyCryptoPayment
+  console.log('\n--- Test 12: Malformed TXID & Regex Injection Prevention ---');
+  const malformedInputs = [
+    '.*',
+    '^0x.*$',
+    '0x12345',
+    '0xgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg',
+    '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef', // 0x prefix invalid on TRC20
+  ];
+  for (const badTxid of malformedInputs.slice(0, 4)) {
+    const found = await DataStore.findOrderByTxid(badTxid);
+    assert.strictEqual(found, null, `Malformed TXID "${badTxid}" must return null in findOrderByTxid`);
+    const vRes = await verifyCryptoPayment(concurrentOrderA, badTxid, mockConcurrentBscFetch);
+    assert.strictEqual(vRes.verified, false);
+    assert.strictEqual(vRes.error, 'INVALID_TXID_FORMAT');
+  }
+  assert.strictEqual(
+    isValidTxidFormat(malformedInputs[4], 'TRC20'),
+    false,
+    'TRC20 TXID must be strictly 64 hex without 0x prefix'
+  );
+  console.log('  ✓ Malformed TXIDs and regex wildcards safely rejected without RegExp construction');
+
+  // Test 13: Binance Pay Webhook Hardening (Signature, Underpaid Amount, Wrong Currency, Cents-Suffix)
+  console.log('\n--- Test 13: Binance Pay Webhook Security & Amount/Currency Enforcement ---');
+  process.env.BINANCE_PAY_SECRET = 'test_binance_webhook_secret_999';
+  const binanceOrder = await DataStore.createOrder({
+    userId: testUserId,
+    userEmail: testUserEmail,
+    planId: 'payg',
+    billingCycle: 'once',
+    baseAmount: 5,
+    amount: 5.19,
+    currency: 'USDT',
+    method: 'binance_pay',
+    network: 'binance',
+    reference: `ORD-BPAY-${Date.now().toString().slice(-6)}`,
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+  });
+
+  function buildSignedBinanceWebhookReq(payloadObj: any, overrideSig?: string) {
+    const rawBody = JSON.stringify(payloadObj);
+    const ts = Date.now().toString();
+    const n = generateBinanceNonce(32);
+    const sig =
+      overrideSig !== undefined
+        ? overrideSig
+        : signBinancePayRequest(ts, n, rawBody, process.env.BINANCE_PAY_SECRET!);
+    return new NextRequest('http://localhost:3000/api/webhooks/binance-pay', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'binancepay-timestamp': ts,
+        'binancepay-nonce': n,
+        'binancepay-certificate-sn': 'TEST_CERT_SN',
+        ...(sig ? { 'binancepay-signature': sig } : {}),
+      },
+      body: rawBody,
+    });
+  }
+
+  // 13a: Missing/Invalid signature -> 400
+  const invalidSigReq = buildSignedBinanceWebhookReq(
+    {
+      bizStatus: 'PAY_SUCCESS',
+      data: { merchantTradeNo: binanceOrder.reference, totalFee: '5.19', currency: 'USDT' },
+    },
+    'INVALID_SIGNATURE_HEX'
+  );
+  const invalidSigRes = await binanceWebhookPost(invalidSigResReqFix(invalidSigReq));
+  assert.strictEqual(invalidSigRes.status, 400, 'Invalid signature must return 400');
+
+  // 13b: Underpaid amount (4.50 < 5.19) -> 400 + PaymentEvent rejected + Order NOT paid
+  const underpaidTxId = `bpay_under_${Date.now()}`;
+  const underpaidWebhookReq = buildSignedBinanceWebhookReq({
+    bizStatus: 'PAY_SUCCESS',
+    data: {
+      merchantTradeNo: binanceOrder.reference,
+      transactionId: underpaidTxId,
+      totalFee: '4.50',
+      currency: 'USDT',
+    },
+  });
+  const underpaidWebhookRes = await binanceWebhookPost(underpaidWebhookReq);
+  assert.strictEqual(underpaidWebhookRes.status, 400, 'Underpaid Binance webhook must return 400');
+  const underpaidOrderCheck = await DataStore.findOrderById(binanceOrder.id);
+  assert.strictEqual(
+    underpaidOrderCheck?.status,
+    'awaiting_payment',
+    'Order must remain awaiting_payment on underpaid webhook'
+  );
+  const underpaidEvent = await DataStore.findPaymentEvent(
+    `binance_pay_reject_${binanceOrder.reference}_${underpaidTxId}`
+  );
+  assert.strictEqual(underpaidEvent?.status, 'rejected', 'Rejected PaymentEvent must be recorded');
+  console.log('  ✓ Underpaid Binance webhook rejected (HTTP 400) and PaymentEvent recorded as rejected');
+
+  // 13c: Wrong currency (BUSD instead of USDT) -> 400 + PaymentEvent rejected
+  const wrongCurrTxId = `bpay_curr_${Date.now()}`;
+  const wrongCurrReq = buildSignedBinanceWebhookReq({
+    bizStatus: 'PAY_SUCCESS',
+    data: {
+      merchantTradeNo: binanceOrder.reference,
+      transactionId: wrongCurrTxId,
+      totalFee: '5.19',
+      currency: 'BUSD',
+    },
+  });
+  const wrongCurrRes = await binanceWebhookPost(wrongCurrReq);
+  assert.strictEqual(wrongCurrRes.status, 400, 'Wrong currency Binance webhook must return 400');
+  const wrongCurrEvent = await DataStore.findPaymentEvent(
+    `binance_pay_reject_${binanceOrder.reference}_${wrongCurrTxId}`
+  );
+  assert.strictEqual(wrongCurrEvent?.status, 'rejected', 'Currency mismatch PaymentEvent must be rejected');
+  console.log('  ✓ Wrong currency Binance webhook rejected (HTTP 400) and PaymentEvent recorded as rejected');
+
+  // 13d: Valid payment (>= expected amount) -> 200 + Order completed
+  const validBpayTxId = `bpay_ok_${Date.now()}`;
+  const validBpayReq = buildSignedBinanceWebhookReq({
+    bizStatus: 'PAY_SUCCESS',
+    data: {
+      merchantTradeNo: binanceOrder.reference,
+      transactionId: validBpayTxId,
+      totalFee: '5.19',
+      currency: 'USDT',
+    },
+  });
+  const validBpayRes = await binanceWebhookPost(validBpayReq);
+  assert.strictEqual(validBpayRes.status, 200, 'Valid Binance webhook must return 200');
+  const completedBpayOrder = await DataStore.findOrderById(binanceOrder.id);
+  assert.strictEqual(completedBpayOrder?.status, 'paid', 'Order must be marked paid after valid webhook');
+  console.log('  ✓ Valid Binance webhook completed order and recorded processed PaymentEvent');
+
+  // Test 14: Auth & Ownership Enforcement on /api/payments/crypto/order and /verify
+  console.log('\n--- Test 14: Auth (401) & Ownership (403) on Crypto Order & Verify Endpoints ---');
+  const ownerToken = signToken({
+    userId: testUserId,
+    email: testUserEmail,
+    name: 'Crypto Tester',
+    role: 'user',
+  });
+  const attackerToken = signToken({
+    userId: 'usr_attacker_999',
+    email: 'attacker@example.com',
+    name: 'Attacker',
+    role: 'user',
+  });
+
+  // Unauthenticated GET /api/payments/crypto/order -> 401
+  const unauthOrderReq = new NextRequest(
+    `http://localhost:3000/api/payments/crypto/order?reference=${createdOrder.reference}`,
+    { method: 'GET' }
+  );
+  const unauthOrderRes = await cryptoOrderGet(unauthOrderReq);
+  assert.strictEqual(unauthOrderRes.status, 401, 'Unauthenticated GET /crypto/order must return 401');
+
+  // Attacker GET /api/payments/crypto/order -> 403
+  const forbiddenOrderReq = new NextRequest(
+    `http://localhost:3000/api/payments/crypto/order?reference=${createdOrder.reference}`,
+    {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${attackerToken}` },
+    }
+  );
+  const forbiddenOrderRes = await cryptoOrderGet(forbiddenOrderReq);
+  assert.strictEqual(forbiddenOrderRes.status, 403, 'Non-owner GET /crypto/order must return 403');
+
+  // Owner GET /api/payments/crypto/order -> 200
+  const ownerOrderReq = new NextRequest(
+    `http://localhost:3000/api/payments/crypto/order?reference=${createdOrder.reference}`,
+    {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${ownerToken}` },
+    }
+  );
+  const ownerOrderRes = await cryptoOrderGet(ownerOrderReq);
+  assert.strictEqual(ownerOrderRes.status, 200, 'Owner GET /crypto/order must return 200');
+
+  // Unauthenticated POST /api/payments/crypto/verify -> 401
+  const unauthVerifyReq = new NextRequest('http://localhost:3000/api/payments/crypto/verify', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ reference: createdOrder.reference, txid: validBep20Txid }),
+  });
+  const unauthVerifyRes = await cryptoVerifyPost(unauthVerifyReq);
+  assert.strictEqual(unauthVerifyRes.status, 401, 'Unauthenticated POST /crypto/verify must return 401');
+
+  // Attacker POST /api/payments/crypto/verify -> 403
+  const forbiddenVerifyReq = new NextRequest('http://localhost:3000/api/payments/crypto/verify', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      Authorization: `Bearer ${attackerToken}`,
+    },
+    body: JSON.stringify({ reference: createdOrder.reference, txid: validBep20Txid }),
+  });
+  const forbiddenVerifyRes = await cryptoVerifyPost(forbiddenVerifyReq);
+  assert.strictEqual(forbiddenVerifyRes.status, 403, 'Non-owner POST /crypto/verify must return 403');
+  console.log('  ✓ /api/payments/crypto/order and /verify strictly enforce 401 Auth and 403 Ownership');
+
+  // Test 15: Shared Rate Limiter (lib/rate-limit.ts)
+  console.log('\n--- Test 15: Shared Rate Limiter (lib/rate-limit.ts) ---');
+  await clearAllRateLimits();
+  const rlKey = `test_shared_rl_${Date.now()}`;
+  const rl1 = await checkRateLimitAsync(rlKey, { limit: 2, windowMs: 60000 });
+  const rl2 = await checkRateLimitAsync(rlKey, { limit: 2, windowMs: 60000 });
+  const rl3 = await checkRateLimitAsync(rlKey, { limit: 2, windowMs: 60000 });
+  assert.strictEqual(rl1.allowed, true);
+  assert.strictEqual(rl2.allowed, true);
+  assert.strictEqual(rl3.allowed, false, 'Third request exceeding limit of 2 must be rate-limited');
+  console.log('  ✓ Shared rate limiter accurately tracks and blocks excess requests');
+
   console.log('\n================================================================');
-  console.log('🎉 ALL 10 TESTS PASSED: Task B9 Binance Payment System Verified!');
+  console.log('🎉 ALL 15 TESTS PASSED: Task B9 Binance & Crypto Hardening Verified!');
   console.log('================================================================\n');
+}
+
+function invalidSigResReqFix(req: NextRequest): NextRequest {
+  return req;
 }
 
 runTaskB9Tests().catch((err) => {

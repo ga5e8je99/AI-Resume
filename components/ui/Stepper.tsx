@@ -45,7 +45,7 @@ export function Stepper({
               {/* Connector line for desktop between steps */}
               {idx < steps.length - 1 && (
                 <div
-                  className="hidden md:block absolute top-4 start-10 end-0 h-px bg-border -z-10"
+                  className="hidden md:block absolute top-4 start-10 end-0 h-px -line -z-10"
                   aria-hidden="true"
                 />
               )}
@@ -58,8 +58,8 @@ export function Stepper({
                       : isCurrent
                       ? 'bg-surface text-brand border-2 border-brand font-bold ring-4 ring-brand/10'
                       : isUpcoming
-                      ? 'bg-surface-2 text-text-muted border border-border'
-                      : 'bg-surface text-text-primary border border-border'
+                      ? 'bg-surface-2 -ink-2 border -line-strong'
+                      : 'bg-surface -ink border -line-strong'
                   }`}
                   aria-current={isCurrent ? 'step' : undefined}
                 >
@@ -73,7 +73,7 @@ export function Stepper({
                 <div className="md:hidden">
                   <span
                     className={`text-xs font-semibold ${
-                      isCurrent ? 'text-brand' : 'text-text-primary'
+                      isCurrent ? 'text-brand' : '-ink'
                     }`}
                   >
                     {step.title}
@@ -84,13 +84,13 @@ export function Stepper({
               <div className="hidden md:block">
                 <h3
                   className={`font-serif text-base font-semibold tracking-tight mb-1 ${
-                    isCurrent ? 'text-brand' : 'text-text-primary'
+                    isCurrent ? 'text-brand' : '-ink'
                   }`}
                 >
                   {step.title}
                 </h3>
                 {step.description && (
-                  <p className="text-xs text-text-secondary leading-relaxed">
+                  <p className="text-xs -ink-2 leading-relaxed">
                     {step.description}
                   </p>
                 )}

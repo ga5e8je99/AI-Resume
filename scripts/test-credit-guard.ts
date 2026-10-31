@@ -13,8 +13,11 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import fs from 'node:fs';
-import { requireCredits, consumeCredit } from '../lib/credit-guard';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireCredits, consumeCredit, refundCredit, withCreditGuard } from '../lib/credit-guard';
 import { getUserEntitlements } from '../lib/credits';
+import { signToken } from '../app/lib/auth';
+import { POST as extractProfilePOST } from '../app/api/jobs/extract-profile/route';
 import DataStore from '../app/lib/datastore';
 
 console.log('============================================================');
@@ -121,17 +124,164 @@ async function runTests() {
   assert.strictEqual(demoDed.deducted, false, 'Demo user must never be deducted');
   console.log('✔ Test 7 Passed: Demo users are never charged.');
 
-  // Clean up test users from local JSON DB
+  console.log('\n▶ [Test 8] Testing Unregistered / Non-Existent User -> HTTP 401 (No 3-Credit Fallback)');
+  const checkGhost = await requireCredits(`non_existent_user_${Date.now()}`);
+  assert.strictEqual(checkGhost.allowed, false, 'Non-existent user must not be allowed');
+  assert(checkGhost.errorResponse, 'Must return errorResponse for non-existent user');
+  assert.strictEqual(checkGhost.errorResponse.status, 401, 'Must return HTTP 401 Unauthorized');
+  const ghostBody = await checkGhost.errorResponse.json();
+  assert.strictEqual(ghostBody.error, 'UNAUTHORIZED');
+
+  const dedGhost = await consumeCredit(`non_existent_user_${Date.now()}`);
+  assert.strictEqual(dedGhost.success, false, 'consumeCredit must fail for non-existent user');
+  assert.strictEqual(dedGhost.deducted, false);
+  assert.strictEqual(dedGhost.error, 'UNAUTHORIZED');
+  console.log('✔ Test 8 Passed: Non-existent user receives 401 Unauthorized instead of 3 fallback credits.');
+
+  console.log('\n▶ [Test 9] Testing withCreditGuard & refundCredit Lifecycle');
+  const guardUser = await DataStore.createUserAccount({
+    name: 'Guard Tester',
+    email: `guard_${Date.now()}@test.com`,
+    password: 'password123',
+    plan: 'free',
+    aiCredits: 2,
+  });
+  const guardToken = signToken({ userId: guardUser.id, email: guardUser.email, name: guardUser.name });
+
+  // 9a. Unauthenticated request to withCreditGuard -> 401
+  const guardedOkHandler = withCreditGuard(async () => {
+    return NextResponse.json({ ok: true }, { status: 200 });
+  });
+  const unauthGuardReq = new NextRequest('http://localhost:3000/api/test', { method: 'POST' });
+  const unauthGuardRes = await guardedOkHandler(unauthGuardReq);
+  assert.strictEqual(unauthGuardRes.status, 401, 'Unauthenticated request to withCreditGuard must return 401');
+
+  // 9b. Failing handler (500) -> does NOT deduct credit
+  const guardedFailHandler = withCreditGuard(async () => {
+    return NextResponse.json({ error: 'UPSTREAM_ERROR' }, { status: 500 });
+  });
+  const failReq = new NextRequest('http://localhost:3000/api/test', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${guardToken}` },
+  });
+  const failRes = await guardedFailHandler(failReq);
+  assert.strictEqual(failRes.status, 500);
+  const afterFailUser = await DataStore.findUserById(guardUser.id);
+  assert.strictEqual(afterFailUser?.aiCredits, 2, 'Credits must remain 2 when handler returns 500');
+
+  // 9c. Succeeding handler (200) -> deducts 1 credit (2 -> 1)
+  const okReq = new NextRequest('http://localhost:3000/api/test', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${guardToken}` },
+  });
+  const okRes = await guardedOkHandler(okReq);
+  assert.strictEqual(okRes.status, 200);
+  const afterOkUser = await DataStore.findUserById(guardUser.id);
+  assert.strictEqual(afterOkUser?.aiCredits, 1, 'Credits must be 1 after successful 200 handler');
+
+  // 9d. refundCredit restores credit (1 -> 2)
+  const refRes = await refundCredit(guardUser.id);
+  assert.strictEqual(refRes.success, true);
+  assert.strictEqual(refRes.remaining, 2, 'refundCredit must restore credits back to 2');
+  console.log('✔ Test 9 Passed: withCreditGuard & refundCredit work atomically.');
+
+  console.log('\n▶ [Test 10] Testing extract-profile Auth & IDOR Protection (User B on User A resume -> 404)');
+  const userA = await DataStore.createUserAccount({
+    name: 'User A Owner',
+    email: `user_a_${Date.now()}@test.com`,
+    password: 'password123',
+    plan: 'free',
+    aiCredits: 3,
+  });
+  const userB = await DataStore.createUserAccount({
+    name: 'User B Attacker',
+    email: `user_b_${Date.now()}@test.com`,
+    password: 'password123',
+    plan: 'free',
+    aiCredits: 3,
+  });
+
+  const resumeA = await DataStore.createUserResume(userA.id, {
+    title: 'User A Private Resume',
+    templateId: 'modern',
+    theme: 'blue',
+    data: {
+      personalInfo: {
+        fullName: 'User A Owner',
+        jobTitle: 'Senior Backend Engineer',
+        location: 'Cairo, Egypt',
+      },
+      skills: ['Node.js', 'TypeScript', 'MongoDB'],
+      experience: [
+        {
+          title: 'Senior Backend Engineer',
+          company: 'SecretCorp',
+          description: 'Built distributed systems with Node.js and TypeScript.',
+        },
+      ],
+    },
+  });
+
+  const tokenA = signToken({ userId: userA.id, email: userA.email, name: userA.name });
+  const tokenB = signToken({ userId: userB.id, email: userB.email, name: userB.name });
+
+  // 10a. Unauthenticated request -> 401
+  const unauthExtractReq = new NextRequest('http://localhost:3000/api/jobs/extract-profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resumeId: resumeA.id }),
+  });
+  const unauthExtractRes = await extractProfilePOST(unauthExtractReq);
+  assert.strictEqual(unauthExtractRes.status, 401, 'Unauthenticated extract-profile must return 401');
+
+  // 10b. User B tries to extract-profile on User A's resume -> 404 (not 403!)
+  const userBExtractReq = new NextRequest('http://localhost:3000/api/jobs/extract-profile', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${tokenB}`,
+    },
+    body: JSON.stringify({ resumeId: resumeA.id }),
+  });
+  const userBExtractRes = await extractProfilePOST(userBExtractReq);
+  assert.strictEqual(
+    userBExtractRes.status,
+    404,
+    `User B accessing User A's resume must receive 404, got ${userBExtractRes.status}`
+  );
+  const userBBody = await userBExtractRes.json();
+  assert.strictEqual(userBBody.error, 'RESUME_NOT_FOUND');
+
+  // 10c. User A accesses their own resume -> 200
+  const userAExtractReq = new NextRequest('http://localhost:3000/api/jobs/extract-profile', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${tokenA}`,
+    },
+    body: JSON.stringify({ resumeId: resumeA.id }),
+  });
+  const userAExtractRes = await extractProfilePOST(userAExtractReq);
+  assert.strictEqual(userAExtractRes.status, 200, 'Owner User A must receive 200');
+  const userABody = await userAExtractRes.json();
+  assert.strictEqual(userABody.success, true);
+  assert.strictEqual(userABody.profile.targetTitles[0], 'Senior Backend Engineer');
+  console.log('✔ Test 10 Passed: User B gets 404 on User A resume; User A gets 200 on own resume.');
+
+  // Clean up test users & resumes from local JSON DB
   try {
     const raw = fs.readFileSync(localDbPath, 'utf-8');
     const data = JSON.parse(raw);
-    const testIds = [freeUser.id, proUser.id, expiredPro.id, demoUser.id];
+    const testIds = [freeUser.id, proUser.id, expiredPro.id, demoUser.id, guardUser.id, userA.id, userB.id];
     data.users = data.users.filter((u: any) => !testIds.includes(u.id));
+    if (Array.isArray(data.resumes)) {
+      data.resumes = data.resumes.filter((r: any) => r.id !== resumeA.id);
+    }
     fs.writeFileSync(localDbPath, JSON.stringify(data, null, 2), 'utf-8');
   } catch {}
 
   console.log('\n============================================================');
-  console.log('>>> ALL 7 CREDIT GUARD & DEDUCTION UNIT TESTS PASSED! <<<');
+  console.log('>>> ALL 10 CREDIT GUARD & IDOR PROTECTION TESTS PASSED! <<<');
   console.log('============================================================\n');
 }
 

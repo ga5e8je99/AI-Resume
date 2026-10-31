@@ -1,45 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
-import { verifyCryptoPayment } from '@/lib/payments/manual-crypto';
+import { verifyCryptoPayment, normalizeTxid } from '@/lib/payments/manual-crypto';
 import { sendEmail, getPaymentReceiptEmailHtml } from '@/lib/email';
-
-// Rate limiter: IP -> array of timestamps
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const MAX_VERIFY_REQUESTS = 12;
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = (rateLimitMap.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  if (timestamps.length >= MAX_VERIFY_REQUESTS) {
-    return true;
-  }
-  timestamps.push(now);
-  rateLimitMap.set(ip, timestamps);
-  return false;
-}
+import { applyRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/payments/crypto/verify
- * Submits a transaction hash (TXID) for on-chain verification
+ * Submits a transaction hash (TXID) for on-chain verification.
+ * Protected by JWT authentication, order ownership check, and shared rate limiter.
  *
  * Body: { reference: string, txid: string }
  */
 export async function POST(req: NextRequest) {
   try {
-    const ip =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      req.headers.get('x-real-ip') ||
-      'anonymous';
-
-    if (isRateLimited(ip)) {
+    const authUser = getAuthenticatedUser(req);
+    if (!authUser || !authUser.userId) {
       return NextResponse.json(
         {
-          error: 'RATE_LIMIT_EXCEEDED',
-          message: 'Too many verification attempts. Please wait 1 minute before retrying.',
+          error: 'UNAUTHORIZED',
+          message: 'Authentication required.',
         },
-        { status: 429 }
+        { status: 401 }
       );
+    }
+
+    const rl = await applyRateLimit(req, {
+      prefix: 'crypto_verify',
+      maxRequests: 12,
+      windowMs: 60 * 1000,
+      userId: authUser.userId,
+      errorMessage: 'Too many verification attempts. Please wait 1 minute before retrying.',
+    });
+    if (!rl.allowed && rl.response) {
+      return rl.response;
     }
 
     const body = await req.json().catch(() => ({}));
@@ -55,7 +49,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleanTxid = txid.trim();
+    const cleanTxid = normalizeTxid(txid);
 
     // Find the order
     const order = reference
@@ -72,8 +66,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Requirement 5: Ensure the authenticated user owns this order
+    if (String(order.userId) !== String(authUser.userId)) {
+      return NextResponse.json(
+        {
+          error: 'FORBIDDEN',
+          message: 'You do not have permission to verify this order.',
+        },
+        { status: 403 }
+      );
+    }
+
     // Idempotency: if already completed, return immediately
     if (order.status === 'paid') {
+      if (order.txid && order.txid.trim().toLowerCase() !== cleanTxid) {
+        return NextResponse.json(
+          {
+            success: false,
+            status: 'paid',
+            error: 'ORDER_ALREADY_PAID',
+            message: 'This order is already confirmed and paid.',
+          },
+          { status: 400 }
+        );
+      }
       return NextResponse.json({
         success: true,
         status: 'paid',
@@ -103,12 +119,28 @@ export async function POST(req: NextRequest) {
     const verification = await verifyCryptoPayment(order, cleanTxid);
 
     if (verification.verified && verification.status === 'paid') {
-      // Auto-activate plan/credits
+      // Auto-activate plan/credits atomically
       const completeResult = await DataStore.completeOrder(order.id, {
         txid: cleanTxid,
         actor: 'on_chain_verifier',
         note: `On-chain verification succeeded on ${order.network} (${verification.txDetails?.amount} USDT, ${verification.txDetails?.confirmations} confs)`,
       });
+
+      if (!completeResult.success) {
+        const errCode = completeResult.error || 'VERIFICATION_FAILED';
+        return NextResponse.json(
+          {
+            success: false,
+            status: 'rejected',
+            error: errCode,
+            message:
+              errCode === 'TXID_ALREADY_USED'
+                ? 'This transaction hash has already been claimed for another order.'
+                : 'Order completion failed.',
+          },
+          { status: 400 }
+        );
+      }
 
       // Send payment receipt email
       const user = await DataStore.findUserById(order.userId);
@@ -170,7 +202,7 @@ export async function POST(req: NextRequest) {
       {
         success: false,
         status: 'rejected',
-        error: 'VERIFICATION_FAILED',
+        error: verification.error || 'VERIFICATION_FAILED',
         message: verification.reason || 'Transaction verification failed.',
       },
       { status: 400 }

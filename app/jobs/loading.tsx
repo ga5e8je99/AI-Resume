@@ -1,100 +1,78 @@
 import React from 'react';
-import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { JobCardSkeleton } from './_components/JobCard';
 
 export default function JobsLoading() {
   return (
-    <div
-      role="status"
-      aria-label="Loading Job Match"
-      aria-live="polite"
-      className="min-h-screen bg-bg text-text-primary flex flex-col"
-    >
-      <span className="sr-only">Loading job match positions and platform links...</span>
-
-      {/* Header Skeleton */}
-      <header className="h-16 bg-surface border-b border-border px-4 sm:px-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Skeleton variant="circular" width={32} height={32} />
-          <Skeleton variant="text" width={130} height={18} />
+    <div className="min-h-[100dvh] bg-paper text-ink" role="status" aria-busy="true">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full space-y-8">
+        {/* Top Header & Quota Status Bar */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-line-strong">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-44 rounded-full" />
+            <Skeleton className="h-9 w-80 sm:w-96 rounded-md" />
+            <Skeleton className="h-4 w-full max-w-xl rounded" />
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <Skeleton className="h-12 w-44 rounded-lg" />
+            <Skeleton className="h-9 w-24 rounded-lg" />
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Skeleton variant="rectangular" width={90} height={34} className="rounded-md" />
-          <Skeleton variant="circular" width={36} height={36} />
-        </div>
-      </header>
 
-      <main className="max-w-[1240px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Search & Profile Parameters Card Skeleton */}
-        <div className="p-6 rounded-xl border border-border bg-surface space-y-4 shadow-subtle">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1.5 flex-1 max-w-md">
-              <Skeleton variant="text" width="60%" height={22} />
-              <Skeleton variant="text" width="90%" height={14} />
+        {/* Parameters & Profile Extraction Card */}
+        <div className="rounded-xl border border-line-strong bg-surface p-5 sm:p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-line-strong">
+            <div className="space-y-1.5">
+              <Skeleton className="h-5 w-64 rounded" />
+              <Skeleton className="h-3.5 w-80 rounded" />
             </div>
-            <Skeleton variant="rectangular" width={140} height={38} className="rounded-md" />
+            <div className="flex items-center gap-2.5">
+              <Skeleton className="h-9 w-40 rounded-lg" />
+              <Skeleton className="h-9 w-28 rounded-lg" />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <Skeleton variant="rectangular" height={40} className="rounded-md" />
-            <Skeleton variant="rectangular" height={40} className="rounded-md" />
-            <Skeleton variant="rectangular" height={40} className="rounded-md" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-2 space-y-2">
+              <Skeleton className="h-4 w-32 rounded" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <div className="flex gap-2">
+                <Skeleton className="h-6 w-28 rounded" />
+                <Skeleton className="h-6 w-28 rounded" />
+                <Skeleton className="h-6 w-28 rounded" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20 rounded" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24 rounded" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+            </div>
           </div>
+
+          <Skeleton className="h-12 w-full rounded-lg" />
         </div>
 
-        {/* 10 Platforms Panel Skeleton */}
-        <div className="p-5 rounded-xl border border-border bg-surface space-y-3 shadow-subtle">
+        {/* Matched Job Cards Skeleton matching JobCard */}
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Skeleton variant="text" width={220} height={18} />
-            <Skeleton variant="text" width={80} height={12} />
+            <Skeleton className="h-7 w-56 rounded" />
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-20 rounded-lg" />
+              <Skeleton className="h-8 w-24 rounded-lg" />
+              <Skeleton className="h-8 w-32 rounded-lg" />
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="p-3 rounded-lg border border-border bg-bg space-y-2">
-                <Skeleton variant="text" width="70%" height={14} />
-                <Skeleton variant="text" width="40%" height={10} />
-              </div>
+
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <JobCardSkeleton key={i} />
             ))}
           </div>
         </div>
-
-        {/* Jobs List Header & Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-          <div className="flex items-center gap-3">
-            <Skeleton variant="text" width={180} height={22} />
-            <Skeleton variant="rectangular" width={60} height={24} className="rounded-full" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Skeleton variant="rectangular" width={80} height={32} className="rounded-md" />
-            <Skeleton variant="rectangular" width={100} height={32} className="rounded-md" />
-          </div>
-        </div>
-
-        {/* Job Cards Skeleton List */}
-        <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="p-5 rounded-xl border border-border bg-surface space-y-3 shadow-subtle"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-2 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Skeleton variant="text" width="45%" height={18} />
-                    <Skeleton variant="rectangular" width={70} height={20} className="rounded-full" />
-                  </div>
-                  <Skeleton variant="text" width="30%" height={14} />
-                </div>
-                <Skeleton variant="rectangular" width={90} height={34} className="rounded-md" />
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Skeleton variant="rectangular" width={60} height={20} className="rounded" />
-                <Skeleton variant="rectangular" width={80} height={20} className="rounded" />
-                <Skeleton variant="rectangular" width={70} height={20} className="rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

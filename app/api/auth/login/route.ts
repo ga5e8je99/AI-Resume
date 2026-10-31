@@ -1,29 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { comparePassword, signToken } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
-import { applyRateLimit } from '@/app/lib/rateLimit';
+import { applyRateLimit, parseBoundedJsonBody } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
-    const rateLimit = applyRateLimit(
+    const ipLimit = await applyRateLimit(
       req,
-      { limit: 30, windowMs: 60 * 1000, keyPrefix: 'auth_login' }
+      { limit: 30, ipLimit: 30, windowMs: 60 * 1000, keyPrefix: 'auth_login_ip' }
     );
-    if (!rateLimit.allowed && rateLimit.errorResponse) {
-      return rateLimit.errorResponse;
+    if (!ipLimit.allowed && ipLimit.errorResponse) {
+      return ipLimit.errorResponse;
     }
 
-    const body = await req.json();
+    const parsed = await parseBoundedJsonBody(req, 16 * 1024);
+    if (!parsed.ok) {
+      return parsed.errorResponse;
+    }
+    const body = parsed.data;
     const { email, password } = body;
 
-    if (!email || !password) {
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
       return NextResponse.json(
         { error: 'Please enter both email and password.' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim().slice(0, 150);
+
+    // Per-account + per-IP rate limiting (with Retry-After header on 429)
+    const rateLimit = await applyRateLimit(
+      req,
+      { limit: 15, ipLimit: 30, windowMs: 60 * 1000, keyPrefix: 'auth_login' },
+      cleanEmail
+    );
+    if (!rateLimit.allowed && rateLimit.errorResponse) {
+      return rateLimit.errorResponse;
+    }
+
     const user = await DataStore.findUserByEmail(cleanEmail);
     if (!user || !user.password) {
       return NextResponse.json(

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Sparkles, Crown, CheckCircle2, X, ArrowRight, Zap } from 'lucide-react';
 import { trackCreditsExhausted } from '@/lib/analytics';
@@ -14,7 +14,20 @@ interface UpgradeModalProps {
 
 export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [isRendered, setIsRendered] = useState(isOpen);
   const { isRtl, t } = useLanguage();
+
+  useEffect(() => {
+    if (isOpen) {
+      const raf = requestAnimationFrame(() => setIsRendered(true));
+      return () => cancelAnimationFrame(raf);
+    }
+
+    if (isRendered) {
+      const timer = setTimeout(() => setIsRendered(false), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isRendered]);
 
   useEffect(() => {
     if (isOpen) {
@@ -65,7 +78,10 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  const shouldShow = isOpen || isRendered;
+  if (!shouldShow) return null;
+
+  const isClosing = !isOpen && isRendered;
 
   return (
     <div
@@ -73,16 +89,26 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="upgrade-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-xs modal-backdrop-animate"
+      data-state={isClosing ? 'closed' : 'open'}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-xs ${
+        isClosing ? 'modal-backdrop-exit pointer-events-none' : 'modal-backdrop-animate modal-backdrop-enter'
+      }`}
       dir={isRtl ? 'rtl' : 'ltr'}
     >
-      <div className="relative w-full max-w-lg rounded-[10px] bg-surface border border-line-strong shadow-elevated overflow-hidden text-start modal-card-animate">
+      <div
+        onAnimationEnd={() => {
+          if (!isOpen) setIsRendered(false);
+        }}
+        className={`relative w-full max-w-lg rounded-[10px] bg-surface border border-line-strong shadow-elevated overflow-hidden text-start ${
+          isClosing ? 'modal-card-exit' : 'modal-card-animate modal-card-enter'
+        }`}
+      >
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
           aria-label={t('common_close')}
-          className="absolute top-4 end-4 z-10 p-2 rounded-[6px] text-ink-3 hover:text-ink hover:bg-surface-2 transition-colors focus-visible:outline-2 outline-offset-2 outline-[var(--focus)]"
+          className="btn absolute top-4 end-4 z-10 p-2 rounded-[6px] text-ink-3 hover:text-ink hover:bg-surface-2 transition-colors active:scale-[0.98] focus-visible:outline-2 outline-offset-2 outline-[var(--focus)]"
         >
           <X className="w-5 h-5" />
         </button>
@@ -110,7 +136,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
           </p>
 
           {/* Pro Benefits List */}
-          <div className="space-y-2.5 bg-surface-2 border border-line rounded-[8px] p-4">
+          <div className="space-y-2.5 bg-surface-2 border border-line-strong rounded-[8px] p-4">
             <div className="flex items-start gap-2.5 text-xs sm:text-sm text-ink-2">
               <CheckCircle2 className="w-4 h-4 text-accent shrink-0 mt-0.5" />
               <span>{t('upgrade_modal_benefit1')}</span>
@@ -130,7 +156,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             <Link
               href="/pricing"
               onClick={onClose}
-              className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-[6px] bg-accent hover:bg-accent-hover text-on-accent font-medium text-sm transition-colors"
+              className="btn w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-[6px] bg-accent hover:bg-accent-hover text-on-accent font-medium text-sm transition-colors active:scale-[0.98]"
             >
               <Sparkles className="w-4 h-4" />
               <span>{t('upgrade_modal_view_plans')}</span>
@@ -140,7 +166,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-[6px] text-ink-2 hover:text-ink hover:bg-surface-2 border border-line text-xs sm:text-sm font-medium transition-colors text-center cursor-pointer"
+              className="btn w-full sm:w-auto px-4 py-2.5 rounded-[6px] text-ink-2 hover:text-ink hover:bg-surface-2 border border-line-strong text-xs sm:text-sm font-medium transition-colors text-center cursor-pointer active:scale-[0.98]"
             >
               {t('upgrade_modal_maybe_later')}
             </button>

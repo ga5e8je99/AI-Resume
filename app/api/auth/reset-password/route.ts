@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import DataStore from '@/app/lib/datastore';
 import { hashPassword } from '@/app/lib/auth';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/reset-password
@@ -11,6 +12,15 @@ import { hashPassword } from '@/app/lib/auth';
  */
 export async function POST(req: NextRequest) {
   try {
+    const rateLimit = await applyRateLimit(req, {
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+      keyPrefix: 'auth_reset_password',
+    });
+    if (!rateLimit.allowed && rateLimit.errorResponse) {
+      return rateLimit.errorResponse;
+    }
+
     let body: any = {};
     try {
       body = await req.json();

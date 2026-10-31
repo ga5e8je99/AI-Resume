@@ -8,6 +8,7 @@ import { ToastProvider } from '../context/ToastContext';
 import ScrollToTop from './ScrollToTop';
 import PostHogProvider from './PostHogProvider';
 import CookieConsentBanner from './CookieConsentBanner';
+import Navbar from './Navbar';
 import RouteProgressBar from '@/components/navigation/RouteProgressBar';
 import FirstVisitSplash from '@/components/brand/FirstVisitSplash';
 
@@ -28,6 +29,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
             <PostHogProvider>
               <RouteProgressBar />
               <FirstVisitSplash />
+              <Navbar />
               {children}
               <CookieConsentBanner />
               <ScrollToTop />

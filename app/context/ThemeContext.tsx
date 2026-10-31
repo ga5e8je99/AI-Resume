@@ -1,6 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useSyncExternalStore,
+} from 'react';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
@@ -11,66 +17,112 @@ interface ThemeContextType {
   setTheme: (theme: ThemePreference) => void;
 }
 
+const THEME_STORAGE_KEY = 'jobmatch_theme';
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemePreference>('system');
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('dark');
-  const [mounted, setMounted] = useState(false);
+const themeStoreListeners = new Set<() => void>();
 
-  useEffect(() => {
+function subscribeThemePreference(listener: () => void): () => void {
+  themeStoreListeners.add(listener);
+  if (typeof window === 'undefined') {
+    return () => {
+      themeStoreListeners.delete(listener);
+    };
+  }
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === THEME_STORAGE_KEY) {
+      listener();
+    }
+  };
+  window.addEventListener('storage', handleStorage);
+  return () => {
+    themeStoreListeners.delete(listener);
+    window.removeEventListener('storage', handleStorage);
+  };
+}
+
+function getThemePreferenceSnapshot(): ThemePreference {
+  if (typeof window !== 'undefined') {
     try {
-      const saved = localStorage.getItem('jobmatch_theme') as ThemePreference | null;
-      if (saved && (saved === 'light' || saved === 'dark' || saved === 'system')) {
-        setThemeState(saved);
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === 'light' || saved === 'dark' || saved === 'system') {
+        return saved;
       }
-    } catch {}
-    setMounted(true);
-  }, []);
+    } catch {
+      // Intentionally ignored: localStorage may be inaccessible in private browsing or sandboxed iframes
+    }
+  }
+  return 'system';
+}
+
+function getThemePreferenceServerSnapshot(): ThemePreference {
+  return 'system';
+}
+
+function subscribeSystemColorScheme(listener: () => void): () => void {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return () => {};
+  }
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  mediaQuery.addEventListener('change', listener);
+  return () => mediaQuery.removeEventListener('change', listener);
+}
+
+function getSystemColorSchemeSnapshot(): ResolvedTheme {
+  if (typeof window !== 'undefined') {
+    if (typeof window.matchMedia === 'function') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    const attr = document.documentElement.getAttribute('data-theme');
+    if (attr === 'dark' || attr === 'light') {
+      return attr;
+    }
+  }
+  return 'light';
+}
+
+function getSystemColorSchemeServerSnapshot(): ResolvedTheme {
+  return 'light';
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const theme = useSyncExternalStore(
+    subscribeThemePreference,
+    getThemePreferenceSnapshot,
+    getThemePreferenceServerSnapshot
+  );
+
+  const systemTheme = useSyncExternalStore(
+    subscribeSystemColorScheme,
+    getSystemColorSchemeSnapshot,
+    getSystemColorSchemeServerSnapshot
+  );
+
+  const resolvedTheme: ResolvedTheme = theme === 'system' ? systemTheme : theme;
 
   useEffect(() => {
     const root = document.documentElement;
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const resolved: ResolvedTheme = resolvedTheme;
 
-    const applyTheme = () => {
-      let resolved: ResolvedTheme = 'light';
-      if (theme === 'system') {
-        resolved = mediaQuery.matches ? 'dark' : 'light';
-      } else {
-        resolved = theme;
-      }
+    root.setAttribute('data-theme', resolved);
 
-      setResolvedTheme(resolved);
+    if (resolved === 'dark') {
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+  }, [resolvedTheme]);
 
-      if (resolved === 'dark') {
-        root.setAttribute('data-theme', 'dark');
-        root.classList.add('dark');
-        root.style.colorScheme = 'dark';
-      } else {
-        root.removeAttribute('data-theme');
-        root.classList.remove('dark');
-        root.style.colorScheme = 'light';
-      }
-    };
-
-    applyTheme();
-
-    const handleSystemChange = () => {
-      if (theme === 'system') {
-        applyTheme();
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleSystemChange);
-    return () => mediaQuery.removeEventListener('change', handleSystemChange);
-  }, [theme]);
-
-  const setTheme = (newTheme: ThemePreference) => {
-    setThemeState(newTheme);
+  const setTheme = useCallback((newTheme: ThemePreference) => {
     try {
-      localStorage.setItem('jobmatch_theme', newTheme);
-    } catch {}
-  };
+      localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+    } catch {
+      // Intentionally ignored: localStorage write may fail in private browsing; in-memory listeners still update UI
+    }
+    themeStoreListeners.forEach((listener) => listener());
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>

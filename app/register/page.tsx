@@ -157,7 +157,7 @@ export default function RegisterPage() {
       className="min-h-[100dvh] bg-paper text-ink flex flex-col lg:grid lg:grid-cols-12 selection:bg-accent-soft selection:text-ink relative"
     >
       {/* LEFT / FORM PANEL */}
-      <main id="main-content" className="lg:col-span-7 xl:col-span-6 flex flex-col justify-between p-6 sm:p-10 lg:p-12 min-h-screen">
+      <main id="main-content" className="lg:col-span-7 xl:col-span-6 flex flex-col justify-between p-6 sm:p-10 lg:p-12 min-h-[100dvh]">
         {/* Top Navbar */}
         <header className="flex items-center justify-between gap-4">
           <Logo size="md" />
@@ -500,7 +500,7 @@ export default function RegisterPage() {
 
         {/* Top Tagline */}
         <div className="relative z-10 text-start">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-line bg-surface-2/80 text-xs font-medium text-ink-2 mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-line -surface-2 text-xs font-medium text-ink-2 mb-4">
             <ShieldCheck className="w-3.5 h-3.5 text-accent" />
             <span>{t('footer_client_privacy')}</span>
           </div>
@@ -511,7 +511,7 @@ export default function RegisterPage() {
 
         {/* Value Prop Cards */}
         <div className="relative z-10 my-6 max-w-[460px] w-full mx-auto space-y-3">
-          <div className="rounded-[10px] border border-line bg-surface-2/90 p-4 text-start backdrop-blur-sm shadow-subtle flex items-start gap-3.5">
+          <div className="rounded-[10px] border border-line -surface-2 p-4 text-start backdrop-blur-sm shadow-subtle flex items-start gap-3.5">
             <div className="w-9 h-9 rounded-lg bg-accent/15 text-accent flex items-center justify-center shrink-0">
               <FileCheck className="w-5 h-5" />
             </div>
@@ -525,7 +525,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="rounded-[10px] border border-line bg-surface-2/90 p-4 text-start backdrop-blur-sm shadow-subtle flex items-start gap-3.5">
+          <div className="rounded-[10px] border border-line -surface-2 p-4 text-start backdrop-blur-sm shadow-subtle flex items-start gap-3.5">
             <div className="w-9 h-9 rounded-lg bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
               <Layers className="w-5 h-5" />
             </div>
@@ -539,7 +539,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="rounded-[10px] border border-line bg-surface-2/90 p-4 text-start backdrop-blur-sm shadow-subtle flex items-start gap-3.5">
+          <div className="rounded-[10px] border border-line -surface-2 p-4 text-start backdrop-blur-sm shadow-subtle flex items-start gap-3.5">
             <div className="w-9 h-9 rounded-lg bg-violet-500/15 text-violet-400 flex items-center justify-center shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>

@@ -5,7 +5,13 @@
     }
   },
   "functions": {
-    "app/api/**/*": {
+    "app/api/cover-letter/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/resume/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/jobs/search/route.ts": {
       "maxDuration": 60
     }
   }

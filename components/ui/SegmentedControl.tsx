@@ -31,7 +31,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className={`inline-flex items-center rounded-md border border-border bg-surface-2 p-1 gap-1 ${className}`}
+      className={`inline-flex items-center rounded-md border -line-strong bg-surface-2 p-1 gap-1 ${className}`}
     >
       {options.map((opt) => {
         const isSelected = value === opt.value;
@@ -47,8 +47,8 @@ export function SegmentedControl<T extends string>({
               size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3.5 py-1.5 text-sm'
             } ${
               isSelected
-                ? 'bg-surface text-text-primary shadow-subtle border border-border/60 font-semibold'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface/50 border border-transparent'
+                ? 'bg-surface -ink shadow-subtle border -line-strong/60 font-semibold'
+                : '-ink-2 -ink -surface-2 border border-transparent'
             } ${opt.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
           >
             <span>{opt.label}</span>

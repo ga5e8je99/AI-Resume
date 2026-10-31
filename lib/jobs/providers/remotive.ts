@@ -1,4 +1,6 @@
-import { Job, JobProvider, JobSearchParams } from '../types';
+import { Job, JobProvider, JobSearchParams, ProviderSearchResult } from '../types';
+
+const PROVIDER_TIMEOUT_MS = 8000;
 
 export class RemotiveProvider implements JobProvider {
   name = 'Remotive';
@@ -12,9 +14,12 @@ export class RemotiveProvider implements JobProvider {
     return true; // Open public API, zero authentication required
   }
 
-  async search(params: JobSearchParams): Promise<Job[]> {
+  async search(params: JobSearchParams): Promise<ProviderSearchResult> {
+    const startMs = Date.now();
     const query = (params.query || '').trim();
-    if (!query) return [];
+    if (!query) {
+      return { jobs: [], status: 'ok', tookMs: Date.now() - startMs };
+    }
 
     try {
       const url = `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=25`;
@@ -23,17 +28,22 @@ export class RemotiveProvider implements JobProvider {
           Accept: 'application/json',
           'User-Agent': 'JobMatchAI/1.0 (JobMatch Aggregator)',
         },
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       });
 
       if (!res.ok) {
-        return [];
+        return {
+          jobs: [],
+          status: 'failed',
+          error: `HTTP ${res.status}`,
+          tookMs: Date.now() - startMs,
+        };
       }
 
       const data = await res.json();
       const rawJobs = Array.isArray(data.jobs) ? data.jobs : [];
 
-      return rawJobs.slice(0, 20).map((item: any) => ({
+      const jobs: Job[] = rawJobs.slice(0, 20).map((item: any) => ({
         id: `remotive_${item.id || item.slug || Math.random().toString(36).slice(2)}`,
         title: item.title || 'Untitled Role',
         company: item.company_name || 'Hiring Company',
@@ -47,13 +57,29 @@ export class RemotiveProvider implements JobProvider {
         url: item.url || 'https://remotive.com',
         source: 'Remotive',
         sourceBadge: 'Remotive',
-        postedDate: item.publication_date ? new Date(item.publication_date).toISOString().split('T')[0] : undefined,
+        postedDate: item.publication_date
+          ? new Date(item.publication_date).toISOString().split('T')[0]
+          : undefined,
         salary: item.salary || undefined,
         tags: Array.isArray(item.tags) ? item.tags : [],
         jobType: item.job_type || 'Full-time',
       }));
-    } catch {
-      return [];
+
+      return {
+        jobs,
+        status: 'ok',
+        tookMs: Date.now() - startMs,
+      };
+    } catch (err: any) {
+      return {
+        jobs: [],
+        status: 'failed',
+        error:
+          err?.name === 'TimeoutError' || err?.name === 'AbortError'
+            ? 'Provider timed out after 8000ms'
+            : err?.message || 'Remotive fetch failed',
+        tookMs: Date.now() - startMs,
+      };
     }
   }
 }

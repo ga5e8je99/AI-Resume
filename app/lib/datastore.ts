@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import * as Sentry from '@sentry/nextjs';
 import mongoose from 'mongoose';
 import connectToDatabase from './db';
 import User, { IUser } from '../models/User';
@@ -7,9 +8,10 @@ import Resume, { IResume } from '../models/Resume';
 import Analysis, { IAnalysis } from '../models/Analysis';
 import CoverLetter, { ICoverLetter } from '../models/CoverLetter';
 import Payment, { IPayment } from '../models/Payment';
-import PaymentEvent, { IPaymentEvent } from '../models/PaymentEvent';
-import Order, { IOrder, OrderStatus, PaymentMethodType, CryptoNetwork } from '../models/Order';
+import PaymentEvent, { IPaymentEvent, PaymentEventStatus } from '../models/PaymentEvent';
+import Order, { IOrder, OrderStatus, PaymentMethodType, CryptoNetwork, OrderCurrency } from '../models/Order';
 import { CoverLetterService } from './coverLetterService';
+import { getPlanCredits, JOB_MATCH_FREE_QUOTA, JOB_MATCH_CREDIT_COST } from '@/lib/plans';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -27,9 +29,14 @@ export interface StoredUser {
   jobMatchFreeUsed?: number;
   billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
   planExpiresAt?: string | null;
+  proExpiresAt?: string | null;
   paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
   providerCustomerId?: string;
   providerSubscriptionId?: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionStatus?: 'active' | 'past_due' | 'canceled' | 'expired' | 'none';
+  paymentFailedAt?: string | null;
   resetPasswordToken?: string | null;
   resetPasswordExpires?: string | null;
   createdAt: string;
@@ -44,7 +51,7 @@ export interface StoredOrder {
   billingCycle: 'monthly' | 'annual' | 'once';
   baseAmount: number;
   amount: number;
-  currency: 'USDT';
+  currency: OrderCurrency;
   method: PaymentMethodType;
   network: CryptoNetwork;
   status: OrderStatus;
@@ -53,6 +60,7 @@ export interface StoredOrder {
   recipientAddress?: string;
   expiresAt: string;
   paidAt?: string | null;
+  proExpiresAt?: string | null;
   auditLog: {
     status: OrderStatus;
     timestamp: string;
@@ -375,10 +383,28 @@ export async function isMongoAvailable(): Promise<boolean> {
   }
 }
 
+// In-process async mutex queue to ensure atomic order completion & TXID uniqueness
+let orderLockQueue: Promise<any> = Promise.resolve();
+
+export async function withOrderLock<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = orderLockQueue;
+  let release!: () => void;
+  orderLockQueue = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
 export const DataStore = {
   // Local direct access
   readDb: readLocalDb,
   writeDb: writeLocalDb,
+  withOrderLock,
 
   // Stats
   async getAdminStats() {
@@ -419,7 +445,10 @@ export const DataStore = {
           recentActivity: { users: [], resumes: [], analyses: [] },
         };
       } catch (err) {
-        // Fall back to local
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'getAdminStats MongoDB query failed; falling back to local JSON datastore' },
+        });
       }
     }
 
@@ -513,7 +542,10 @@ export const DataStore = {
         );
         return usersWithCounts;
       } catch (err) {
-        // fallback
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'getUsers MongoDB query failed; falling back to local JSON datastore' },
+        });
       }
     }
 
@@ -546,7 +578,12 @@ export const DataStore = {
     if (mongoUp) {
       try {
         await User.findByIdAndUpdate(userId, { role: newRole });
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -573,7 +610,12 @@ export const DataStore = {
           Resume.deleteMany({ userId }),
           Analysis.deleteMany({ userId }),
         ]);
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -609,7 +651,12 @@ export const DataStore = {
           createdAt: r.createdAt,
           updatedAt: r.updatedAt,
         }));
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -655,7 +702,12 @@ export const DataStore = {
     if (mongoUp) {
       try {
         await Resume.findByIdAndDelete(resumeId);
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -684,7 +736,12 @@ export const DataStore = {
           subScores: a.subScores,
           createdAt: a.createdAt,
         }));
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -724,7 +781,12 @@ export const DataStore = {
     if (mongoUp) {
       try {
         await Analysis.findByIdAndDelete(analysisId);
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -748,7 +810,12 @@ export const DataStore = {
           createdAt: r.createdAt,
           updatedAt: r.updatedAt,
         }));
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -777,7 +844,12 @@ export const DataStore = {
           createdAt: newResume.createdAt,
           updatedAt: newResume.updatedAt,
         };
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -815,7 +887,12 @@ export const DataStore = {
             };
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -840,7 +917,12 @@ export const DataStore = {
             };
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -864,7 +946,12 @@ export const DataStore = {
         if (mongoose.Types.ObjectId.isValid(id)) {
           await Resume.findOneAndDelete({ _id: id, userId });
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -889,7 +976,12 @@ export const DataStore = {
           matchLabel: a.matchLabel,
           createdAt: a.createdAt,
         }));
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -904,7 +996,12 @@ export const DataStore = {
       try {
         const newAnalysis = await Analysis.create({ userId, ...data });
         return { id: newAnalysis._id.toString(), ...data };
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -934,7 +1031,12 @@ export const DataStore = {
         if (mongoose.Types.ObjectId.isValid(id)) {
           await Analysis.findOneAndDelete({ _id: id, userId });
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1009,7 +1111,12 @@ export const DataStore = {
           limit,
           totalPages: Math.ceil(total / limit) || 1,
         };
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1083,7 +1190,12 @@ export const DataStore = {
             };
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1152,7 +1264,12 @@ export const DataStore = {
           createdAt: created.createdAt,
           updatedAt: created.updatedAt,
         };
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1208,7 +1325,12 @@ export const DataStore = {
             };
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
       return null;
     }
 
@@ -1232,7 +1354,12 @@ export const DataStore = {
           const res = await CoverLetter.findOneAndDelete({ _id: id, userId });
           return !!res;
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
       return false;
     }
 
@@ -1254,50 +1381,100 @@ export const DataStore = {
       try {
         if (mongoose.Types.ObjectId.isValid(id)) {
           const u = await User.findById(id).select('-password').lean();
-          if (u) return {
-            id: (u as any)._id.toString(),
-            name: (u as any).name,
-            email: (u as any).email,
-            role: (u as any).role || 'user',
-            isDemo: Boolean((u as any).isDemo),
-            plan: (u as any).plan || 'free',
-            aiCredits: typeof (u as any).aiCredits === 'number' ? (u as any).aiCredits : 3,
-            aiResumeGenerationsCount: typeof (u as any).aiResumeGenerationsCount === 'number' ? (u as any).aiResumeGenerationsCount : 0,
-            jobMatchFreeUsed: typeof (u as any).jobMatchFreeUsed === 'number' ? (u as any).jobMatchFreeUsed : 0,
-            billingCycle: (u as any).billingCycle || 'none',
-            planExpiresAt: (u as any).planExpiresAt || null,
-            paymentProvider: (u as any).paymentProvider || 'none',
-            providerCustomerId: (u as any).providerCustomerId || '',
-            providerSubscriptionId: (u as any).providerSubscriptionId || '',
-            resetPasswordToken: (u as any).resetPasswordToken || null,
-            resetPasswordExpires: (u as any).resetPasswordExpires ? ((u as any).resetPasswordExpires instanceof Date ? (u as any).resetPasswordExpires.toISOString() : (u as any).resetPasswordExpires) : null,
-            createdAt: (u as any).createdAt,
-          };
+          if (u) {
+            const rawExpiry = (u as any).proExpiresAt || (u as any).planExpiresAt || null;
+            const isExpired =
+              rawExpiry && !isNaN(new Date(rawExpiry).getTime()) && new Date(rawExpiry).getTime() <= Date.now();
+            let currentPlan = (u as any).plan || 'free';
+            let currentBillingCycle = (u as any).billingCycle || 'none';
+            let currentSubStatus = (u as any).subscriptionStatus || 'none';
+
+            if (isExpired && currentPlan === 'pro') {
+              currentPlan = 'free';
+              currentBillingCycle = 'none';
+              currentSubStatus = 'expired';
+              await User.findByIdAndUpdate(id, {
+                $set: {
+                  plan: 'free',
+                  billingCycle: 'none',
+                  subscriptionStatus: 'expired',
+                },
+              }).catch(() => {});
+            }
+
+            return {
+              id: (u as any)._id.toString(),
+              name: (u as any).name,
+              email: (u as any).email,
+              role: (u as any).role || 'user',
+              isDemo: Boolean((u as any).isDemo),
+              plan: currentPlan,
+              aiCredits: typeof (u as any).aiCredits === 'number' ? (u as any).aiCredits : 3,
+              aiResumeGenerationsCount: typeof (u as any).aiResumeGenerationsCount === 'number' ? (u as any).aiResumeGenerationsCount : 0,
+              jobMatchFreeUsed: typeof (u as any).jobMatchFreeUsed === 'number' ? (u as any).jobMatchFreeUsed : 0,
+              billingCycle: currentBillingCycle,
+              planExpiresAt: rawExpiry,
+              proExpiresAt: rawExpiry,
+              paymentProvider: (u as any).paymentProvider || 'none',
+              providerCustomerId: (u as any).providerCustomerId || (u as any).stripeCustomerId || '',
+              providerSubscriptionId: (u as any).providerSubscriptionId || (u as any).stripeSubscriptionId || '',
+              stripeCustomerId: (u as any).stripeCustomerId || ((u as any).paymentProvider === 'stripe' ? (u as any).providerCustomerId : '') || '',
+              stripeSubscriptionId: (u as any).stripeSubscriptionId || ((u as any).paymentProvider === 'stripe' ? (u as any).providerSubscriptionId : '') || '',
+              subscriptionStatus: currentSubStatus,
+              paymentFailedAt: (u as any).paymentFailedAt || null,
+              resetPasswordToken: (u as any).resetPasswordToken || null,
+              resetPasswordExpires: (u as any).resetPasswordExpires ? ((u as any).resetPasswordExpires instanceof Date ? (u as any).resetPasswordExpires.toISOString() : (u as any).resetPasswordExpires) : null,
+              createdAt: (u as any).createdAt,
+            };
+          }
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
     const u = db.users.find((user) => user.id === id);
-    if (u) return {
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role || 'user',
-      isDemo: Boolean(u.isDemo),
-      plan: u.plan || 'free',
-      aiCredits: typeof u.aiCredits === 'number' ? u.aiCredits : 3,
-      aiResumeGenerationsCount: typeof u.aiResumeGenerationsCount === 'number' ? u.aiResumeGenerationsCount : 0,
-      jobMatchFreeUsed: typeof u.jobMatchFreeUsed === 'number' ? u.jobMatchFreeUsed : 0,
-      billingCycle: u.billingCycle || 'none',
-      planExpiresAt: u.planExpiresAt || null,
-      paymentProvider: u.paymentProvider || 'none',
-      providerCustomerId: u.providerCustomerId || '',
-      providerSubscriptionId: u.providerSubscriptionId || '',
-      resetPasswordToken: u.resetPasswordToken || null,
-      resetPasswordExpires: u.resetPasswordExpires || null,
-      createdAt: u.createdAt,
-    };
+    if (u) {
+      const rawExpiry = u.proExpiresAt || u.planExpiresAt || null;
+      const isExpired =
+        rawExpiry && !isNaN(new Date(rawExpiry).getTime()) && new Date(rawExpiry).getTime() <= Date.now();
+      if (isExpired && u.plan === 'pro') {
+        u.plan = 'free';
+        u.billingCycle = 'none';
+        u.subscriptionStatus = 'expired';
+        u.updatedAt = new Date().toISOString();
+        writeLocalDb(db);
+      }
+
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role || 'user',
+        isDemo: Boolean(u.isDemo),
+        plan: u.plan || 'free',
+        aiCredits: typeof u.aiCredits === 'number' ? u.aiCredits : 3,
+        aiResumeGenerationsCount: typeof u.aiResumeGenerationsCount === 'number' ? u.aiResumeGenerationsCount : 0,
+        jobMatchFreeUsed: typeof u.jobMatchFreeUsed === 'number' ? u.jobMatchFreeUsed : 0,
+        billingCycle: u.billingCycle || 'none',
+        planExpiresAt: rawExpiry,
+        proExpiresAt: rawExpiry,
+        paymentProvider: u.paymentProvider || 'none',
+        providerCustomerId: u.providerCustomerId || u.stripeCustomerId || '',
+        providerSubscriptionId: u.providerSubscriptionId || u.stripeSubscriptionId || '',
+        stripeCustomerId: u.stripeCustomerId || (u.paymentProvider === 'stripe' ? u.providerCustomerId : '') || '',
+        stripeSubscriptionId: u.stripeSubscriptionId || (u.paymentProvider === 'stripe' ? u.providerSubscriptionId : '') || '',
+        subscriptionStatus: u.subscriptionStatus || 'none',
+        paymentFailedAt: u.paymentFailedAt || null,
+        resetPasswordToken: u.resetPasswordToken || null,
+        resetPasswordExpires: u.resetPasswordExpires || null,
+        createdAt: u.createdAt,
+      };
+    }
     return null;
   },
 
@@ -1306,45 +1483,130 @@ export const DataStore = {
     if (mongoUp) {
       try {
         const u = await User.findOne({ email: email.toLowerCase().trim() }).select('+password').lean();
-        if (u) return {
-          id: (u as any)._id.toString(),
-          name: (u as any).name,
-          email: (u as any).email,
-          password: (u as any).password,
-          role: (u as any).role || 'user',
-          isDemo: Boolean((u as any).isDemo),
-          plan: (u as any).plan || 'free',
-          aiCredits: typeof (u as any).aiCredits === 'number' ? (u as any).aiCredits : 3,
-          billingCycle: (u as any).billingCycle || 'none',
-          planExpiresAt: (u as any).planExpiresAt || null,
-          paymentProvider: (u as any).paymentProvider || 'none',
-          providerCustomerId: (u as any).providerCustomerId || '',
-          providerSubscriptionId: (u as any).providerSubscriptionId || '',
-          resetPasswordToken: (u as any).resetPasswordToken || null,
-          resetPasswordExpires: (u as any).resetPasswordExpires ? ((u as any).resetPasswordExpires instanceof Date ? (u as any).resetPasswordExpires.toISOString() : (u as any).resetPasswordExpires) : null,
-        };
-      } catch (err) {}
+        if (u) {
+          const rawExpiry = (u as any).proExpiresAt || (u as any).planExpiresAt || null;
+          return {
+            id: (u as any)._id.toString(),
+            name: (u as any).name,
+            email: (u as any).email,
+            password: (u as any).password,
+            role: (u as any).role || 'user',
+            isDemo: Boolean((u as any).isDemo),
+            plan: (u as any).plan || 'free',
+            aiCredits: typeof (u as any).aiCredits === 'number' ? (u as any).aiCredits : 3,
+            billingCycle: (u as any).billingCycle || 'none',
+            planExpiresAt: rawExpiry,
+            proExpiresAt: rawExpiry,
+            paymentProvider: (u as any).paymentProvider || 'none',
+            providerCustomerId: (u as any).providerCustomerId || (u as any).stripeCustomerId || '',
+            providerSubscriptionId: (u as any).providerSubscriptionId || (u as any).stripeSubscriptionId || '',
+            stripeCustomerId: (u as any).stripeCustomerId || ((u as any).paymentProvider === 'stripe' ? (u as any).providerCustomerId : '') || '',
+            stripeSubscriptionId: (u as any).stripeSubscriptionId || ((u as any).paymentProvider === 'stripe' ? (u as any).providerSubscriptionId : '') || '',
+            subscriptionStatus: (u as any).subscriptionStatus || 'none',
+            paymentFailedAt: (u as any).paymentFailedAt || null,
+            resetPasswordToken: (u as any).resetPasswordToken || null,
+            resetPasswordExpires: (u as any).resetPasswordExpires ? ((u as any).resetPasswordExpires instanceof Date ? (u as any).resetPasswordExpires.toISOString() : (u as any).resetPasswordExpires) : null,
+          };
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
     const u = db.users.find((user) => user.email.toLowerCase() === email.toLowerCase().trim());
-    if (u) return {
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      password: u.password,
-      role: u.role || 'user',
-      isDemo: Boolean(u.isDemo),
-      plan: u.plan || 'free',
-      aiCredits: typeof u.aiCredits === 'number' ? u.aiCredits : 3,
-      billingCycle: u.billingCycle || 'none',
-      planExpiresAt: u.planExpiresAt || null,
-      paymentProvider: u.paymentProvider || 'none',
-      providerCustomerId: u.providerCustomerId || '',
-      providerSubscriptionId: u.providerSubscriptionId || '',
-      resetPasswordToken: u.resetPasswordToken || null,
-      resetPasswordExpires: u.resetPasswordExpires || null,
-    };
+    if (u) {
+      const rawExpiry = u.proExpiresAt || u.planExpiresAt || null;
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        password: u.password,
+        role: u.role || 'user',
+        isDemo: Boolean(u.isDemo),
+        plan: u.plan || 'free',
+        aiCredits: typeof u.aiCredits === 'number' ? u.aiCredits : 3,
+        billingCycle: u.billingCycle || 'none',
+        planExpiresAt: rawExpiry,
+        proExpiresAt: rawExpiry,
+        paymentProvider: u.paymentProvider || 'none',
+        providerCustomerId: u.providerCustomerId || u.stripeCustomerId || '',
+        providerSubscriptionId: u.providerSubscriptionId || u.stripeSubscriptionId || '',
+        stripeCustomerId: u.stripeCustomerId || (u.paymentProvider === 'stripe' ? u.providerCustomerId : '') || '',
+        stripeSubscriptionId: u.stripeSubscriptionId || (u.paymentProvider === 'stripe' ? u.providerSubscriptionId : '') || '',
+        subscriptionStatus: u.subscriptionStatus || 'none',
+        paymentFailedAt: u.paymentFailedAt || null,
+        resetPasswordToken: u.resetPasswordToken || null,
+        resetPasswordExpires: u.resetPasswordExpires || null,
+      };
+    }
+    return null;
+  },
+
+  async findUserByStripeCustomerId(customerId: string) {
+    if (!customerId) return null;
+    const cleanId = customerId.trim();
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const u = await User.findOne({
+          $or: [{ stripeCustomerId: cleanId }, { providerCustomerId: cleanId }],
+        })
+          .select('-password')
+          .lean();
+        if (u) {
+          return this.findUserById((u as any)._id.toString());
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const u = db.users.find(
+      (user) => user.stripeCustomerId === cleanId || user.providerCustomerId === cleanId
+    );
+    if (u) {
+      return this.findUserById(u.id);
+    }
+    return null;
+  },
+
+  async findUserByStripeSubscriptionId(subscriptionId: string) {
+    if (!subscriptionId) return null;
+    const cleanId = subscriptionId.trim();
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const u = await User.findOne({
+          $or: [{ stripeSubscriptionId: cleanId }, { providerSubscriptionId: cleanId }],
+        })
+          .select('-password')
+          .lean();
+        if (u) {
+          return this.findUserById((u as any)._id.toString());
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const u = db.users.find(
+      (user) => user.stripeSubscriptionId === cleanId || user.providerSubscriptionId === cleanId
+    );
+    if (u) {
+      return this.findUserById(u.id);
+    }
     return null;
   },
 
@@ -1358,10 +1620,23 @@ export const DataStore = {
     aiCredits?: number;
     billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
     planExpiresAt?: Date | string | null;
-    paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'none';
+    proExpiresAt?: Date | string | null;
+    paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
     providerCustomerId?: string;
     providerSubscriptionId?: string;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
   }) {
+    const expiryVal = userData.proExpiresAt ?? userData.planExpiresAt ?? null;
+    const stripeCust =
+      userData.stripeCustomerId ||
+      (userData.paymentProvider === 'stripe' ? userData.providerCustomerId : '') ||
+      '';
+    const stripeSub =
+      userData.stripeSubscriptionId ||
+      (userData.paymentProvider === 'stripe' ? userData.providerSubscriptionId : '') ||
+      '';
+
     const mongoUp = await isMongoAvailable();
     if (mongoUp) {
       try {
@@ -1374,10 +1649,13 @@ export const DataStore = {
           plan: userData.plan || 'free',
           aiCredits: typeof userData.aiCredits === 'number' ? userData.aiCredits : 3,
           billingCycle: userData.billingCycle || 'none',
-          planExpiresAt: userData.planExpiresAt || null,
+          planExpiresAt: expiryVal,
+          proExpiresAt: expiryVal,
           paymentProvider: userData.paymentProvider || 'none',
-          providerCustomerId: userData.providerCustomerId || '',
-          providerSubscriptionId: userData.providerSubscriptionId || '',
+          providerCustomerId: userData.providerCustomerId || stripeCust,
+          providerSubscriptionId: userData.providerSubscriptionId || stripeSub,
+          stripeCustomerId: stripeCust,
+          stripeSubscriptionId: stripeSub,
         });
         return {
           id: newUser._id.toString(),
@@ -1389,14 +1667,27 @@ export const DataStore = {
           aiCredits: newUser.aiCredits,
           billingCycle: newUser.billingCycle,
           planExpiresAt: newUser.planExpiresAt,
+          proExpiresAt: newUser.proExpiresAt,
           paymentProvider: newUser.paymentProvider,
           providerCustomerId: newUser.providerCustomerId,
           providerSubscriptionId: newUser.providerSubscriptionId,
+          stripeCustomerId: newUser.stripeCustomerId,
+          stripeSubscriptionId: newUser.stripeSubscriptionId,
         };
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
+    const expiryIso = expiryVal
+      ? typeof expiryVal === 'string'
+        ? expiryVal
+        : expiryVal.toISOString()
+      : null;
     const newUser: StoredUser = {
       id: 'usr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       name: userData.name.trim(),
@@ -1407,10 +1698,13 @@ export const DataStore = {
       plan: userData.plan || 'free',
       aiCredits: typeof userData.aiCredits === 'number' ? userData.aiCredits : 3,
       billingCycle: userData.billingCycle || 'none',
-      planExpiresAt: userData.planExpiresAt ? (typeof userData.planExpiresAt === 'string' ? userData.planExpiresAt : userData.planExpiresAt.toISOString()) : null,
+      planExpiresAt: expiryIso,
+      proExpiresAt: expiryIso,
       paymentProvider: userData.paymentProvider || 'none',
-      providerCustomerId: userData.providerCustomerId || '',
-      providerSubscriptionId: userData.providerSubscriptionId || '',
+      providerCustomerId: userData.providerCustomerId || stripeCust,
+      providerSubscriptionId: userData.providerSubscriptionId || stripeSub,
+      stripeCustomerId: stripeCust,
+      stripeSubscriptionId: stripeSub,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -1426,9 +1720,12 @@ export const DataStore = {
       aiCredits: newUser.aiCredits,
       billingCycle: newUser.billingCycle,
       planExpiresAt: newUser.planExpiresAt,
+      proExpiresAt: newUser.proExpiresAt,
       paymentProvider: newUser.paymentProvider,
       providerCustomerId: newUser.providerCustomerId,
       providerSubscriptionId: newUser.providerSubscriptionId,
+      stripeCustomerId: newUser.stripeCustomerId,
+      stripeSubscriptionId: newUser.stripeSubscriptionId,
     };
   },
 
@@ -1441,7 +1738,12 @@ export const DataStore = {
           Analysis.deleteMany({ userId }),
           CoverLetter.deleteMany({ userId }),
         ]);
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1480,7 +1782,12 @@ export const DataStore = {
           return { success: true, remaining: updated.aiCredits, deducted: true };
         }
         return { success: false, remaining: 0, deducted: false };
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1506,40 +1813,126 @@ export const DataStore = {
   async upgradeUserPlan(
     userId: string,
     planData: {
-      plan: 'pro' | 'enterprise';
+      plan: 'free' | 'pro' | 'enterprise';
       billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
       planExpiresAt?: Date | string | null;
+      proExpiresAt?: Date | string | null;
       paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
       providerCustomerId?: string;
       providerSubscriptionId?: string;
+      stripeCustomerId?: string;
+      stripeSubscriptionId?: string;
+      subscriptionStatus?: 'active' | 'past_due' | 'canceled' | 'expired' | 'none';
+      paymentFailedAt?: Date | string | null;
     }
   ): Promise<boolean> {
+    const expiryInput =
+      planData.proExpiresAt !== undefined ? planData.proExpiresAt : planData.planExpiresAt;
+    const expiryDate = expiryInput ? new Date(expiryInput) : null;
+    const expiryIso = expiryDate ? expiryDate.toISOString() : null;
+
+    const stripeCust =
+      planData.stripeCustomerId !== undefined
+        ? planData.stripeCustomerId
+        : planData.paymentProvider === 'stripe'
+        ? planData.providerCustomerId || ''
+        : undefined;
+    const stripeSub =
+      planData.stripeSubscriptionId !== undefined
+        ? planData.stripeSubscriptionId
+        : planData.paymentProvider === 'stripe'
+        ? planData.providerSubscriptionId || ''
+        : undefined;
+
     const mongoUp = await isMongoAvailable();
     if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
       try {
-        await User.findByIdAndUpdate(userId, {
-          $set: {
-            plan: planData.plan,
-            billingCycle: planData.billingCycle || 'monthly',
-            planExpiresAt: planData.planExpiresAt ? new Date(planData.planExpiresAt) : null,
-            paymentProvider: planData.paymentProvider || 'none',
-            providerCustomerId: planData.providerCustomerId || '',
-            providerSubscriptionId: planData.providerSubscriptionId || '',
-          },
-        });
+        const setFields: Record<string, any> = {
+          plan: planData.plan,
+          billingCycle: planData.billingCycle || (planData.plan === 'free' ? 'none' : 'monthly'),
+          planExpiresAt: expiryDate,
+          proExpiresAt: expiryDate,
+        };
+        if (planData.paymentProvider !== undefined) {
+          setFields.paymentProvider = planData.paymentProvider;
+        }
+        if (planData.providerCustomerId !== undefined) {
+          setFields.providerCustomerId = planData.providerCustomerId;
+        }
+        if (planData.providerSubscriptionId !== undefined) {
+          setFields.providerSubscriptionId = planData.providerSubscriptionId;
+        }
+        if (stripeCust !== undefined) {
+          setFields.stripeCustomerId = stripeCust;
+          if (!setFields.providerCustomerId && stripeCust) {
+            setFields.providerCustomerId = stripeCust;
+          }
+        }
+        if (stripeSub !== undefined) {
+          setFields.stripeSubscriptionId = stripeSub;
+          if (!setFields.providerSubscriptionId && stripeSub) {
+            setFields.providerSubscriptionId = stripeSub;
+          }
+        }
+        if (planData.subscriptionStatus !== undefined) {
+          setFields.subscriptionStatus = planData.subscriptionStatus;
+        } else if (planData.plan === 'pro') {
+          setFields.subscriptionStatus = 'active';
+        }
+        if (planData.paymentFailedAt !== undefined) {
+          setFields.paymentFailedAt = planData.paymentFailedAt
+            ? new Date(planData.paymentFailedAt)
+            : null;
+        }
+
+        await User.findByIdAndUpdate(userId, { $set: setFields });
         return true;
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
     const user = db.users.find((u) => u.id === userId);
     if (user) {
       user.plan = planData.plan;
-      user.billingCycle = planData.billingCycle || 'monthly';
-      user.planExpiresAt = planData.planExpiresAt ? new Date(planData.planExpiresAt).toISOString() : null;
-      user.paymentProvider = planData.paymentProvider || 'none';
-      user.providerCustomerId = planData.providerCustomerId || '';
-      user.providerSubscriptionId = planData.providerSubscriptionId || '';
+      user.billingCycle = planData.billingCycle || (planData.plan === 'free' ? 'none' : 'monthly');
+      user.planExpiresAt = expiryIso;
+      user.proExpiresAt = expiryIso;
+      if (planData.paymentProvider !== undefined) {
+        user.paymentProvider = planData.paymentProvider;
+      }
+      if (planData.providerCustomerId !== undefined) {
+        user.providerCustomerId = planData.providerCustomerId;
+      }
+      if (planData.providerSubscriptionId !== undefined) {
+        user.providerSubscriptionId = planData.providerSubscriptionId;
+      }
+      if (stripeCust !== undefined) {
+        user.stripeCustomerId = stripeCust;
+        if (!user.providerCustomerId && stripeCust) {
+          user.providerCustomerId = stripeCust;
+        }
+      }
+      if (stripeSub !== undefined) {
+        user.stripeSubscriptionId = stripeSub;
+        if (!user.providerSubscriptionId && stripeSub) {
+          user.providerSubscriptionId = stripeSub;
+        }
+      }
+      if (planData.subscriptionStatus !== undefined) {
+        user.subscriptionStatus = planData.subscriptionStatus;
+      } else if (planData.plan === 'pro') {
+        user.subscriptionStatus = 'active';
+      }
+      if (planData.paymentFailedAt !== undefined) {
+        user.paymentFailedAt = planData.paymentFailedAt
+          ? new Date(planData.paymentFailedAt).toISOString()
+          : null;
+      }
       user.updatedAt = new Date().toISOString();
       writeLocalDb(db);
       return true;
@@ -1559,7 +1952,12 @@ export const DataStore = {
         if (updated) {
           return updated.aiCredits;
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1578,44 +1976,95 @@ export const DataStore = {
     const mongoUp = await isMongoAvailable();
     if (mongoUp) {
       try {
-        const existing = await PaymentEvent.findOne({ eventId });
+        const existing = await PaymentEvent.findOne({
+          eventId,
+          status: { $ne: 'rejected' },
+        });
         if (existing) return true;
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
     db.paymentEvents = db.paymentEvents || [];
-    return db.paymentEvents.some((e: any) => e.eventId === eventId);
+    return db.paymentEvents.some(
+      (e: any) => e.eventId === eventId && e.status !== 'rejected'
+    );
+  },
+
+  async findPaymentEvent(eventId: string): Promise<any | null> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const existing = await PaymentEvent.findOne({ eventId }).lean();
+        if (existing) return existing;
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    db.paymentEvents = db.paymentEvents || [];
+    return db.paymentEvents.find((e: any) => e.eventId === eventId) || null;
   },
 
   async recordPaymentEvent(eventData: {
     eventId: string;
-    provider: 'stripe' | 'paymob' | 'test';
+    provider: 'stripe' | 'paymob' | 'binance_pay' | 'test';
     eventType: string;
+    status?: PaymentEventStatus;
     payload?: any;
   }): Promise<boolean> {
+    const eventStatus: PaymentEventStatus = eventData.status || 'processed';
     const mongoUp = await isMongoAvailable();
     if (mongoUp) {
       try {
-        await PaymentEvent.create({
-          eventId: eventData.eventId,
-          provider: eventData.provider,
-          eventType: eventData.eventType,
-          payload: eventData.payload || {},
-          processedAt: new Date(),
+        await PaymentEvent.findOneAndUpdate(
+          { eventId: eventData.eventId },
+          {
+            $set: {
+              provider: eventData.provider,
+              eventType: eventData.eventType,
+              status: eventStatus,
+              payload: eventData.payload || {},
+              processedAt: new Date(),
+            },
+          },
+          { upsert: true, new: true }
+        );
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
         });
-      } catch (err) {}
+      }
     }
 
     const db = readLocalDb();
     db.paymentEvents = db.paymentEvents || [];
-    if (!db.paymentEvents.some((e: any) => e.eventId === eventData.eventId)) {
+    const existingIdx = db.paymentEvents.findIndex((e: any) => e.eventId === eventData.eventId);
+    if (existingIdx === -1) {
       db.paymentEvents.push({
         ...eventData,
+        status: eventStatus,
         processedAt: new Date().toISOString(),
       });
-      writeLocalDb(db);
+    } else {
+      db.paymentEvents[existingIdx] = {
+        ...db.paymentEvents[existingIdx],
+        ...eventData,
+        status: eventStatus,
+        processedAt: new Date().toISOString(),
+      };
     }
+    writeLocalDb(db);
     return true;
   },
 
@@ -1638,7 +2087,12 @@ export const DataStore = {
           ...paymentData,
           status: paymentData.status || 'succeeded',
         });
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1670,7 +2124,12 @@ export const DataStore = {
           },
         });
         return true;
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1710,7 +2169,12 @@ export const DataStore = {
             updatedAt: user.updatedAt.toISOString(),
           };
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1734,7 +2198,12 @@ export const DataStore = {
           $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 },
         });
         return true;
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1752,50 +2221,229 @@ export const DataStore = {
 
   async consumeJobMatchCredit(
     userId: string
-  ): Promise<{ success: boolean; remaining: number; deducted: boolean; freeUsed: number }> {
+  ): Promise<{
+    success: boolean;
+    remaining: number;
+    deducted: boolean;
+    charged: boolean;
+    freeUsed: number;
+    freeRemaining: number;
+    creditsRemaining: number;
+    creditsDeducted?: number;
+    jobMatchFreeIncremented?: boolean;
+  }> {
+    return withOrderLock(async () => {
+      const mongoUp = await isMongoAvailable();
+      if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
+        try {
+          const objectId = new mongoose.Types.ObjectId(userId);
+
+          // 1. Atomic free-quota consumption when jobMatchFreeUsed < JOB_MATCH_FREE_QUOTA
+          const updatedFree = await User.findOneAndUpdate(
+            {
+              _id: objectId,
+              $or: [
+                { jobMatchFreeUsed: { $lt: JOB_MATCH_FREE_QUOTA } },
+                { jobMatchFreeUsed: { $exists: false } },
+                { jobMatchFreeUsed: null },
+              ],
+            },
+            {
+              $inc: { jobMatchFreeUsed: 1 },
+            },
+            { new: true }
+          );
+
+          if (updatedFree) {
+            const freeUsed = updatedFree.jobMatchFreeUsed ?? 1;
+            const creditsRemaining = updatedFree.aiCredits ?? 0;
+            return {
+              success: true,
+              remaining: creditsRemaining,
+              deducted: true,
+              charged: false,
+              freeUsed,
+              freeRemaining: Math.max(0, JOB_MATCH_FREE_QUOTA - freeUsed),
+              creditsRemaining,
+              creditsDeducted: 0,
+              jobMatchFreeIncremented: true,
+            };
+          }
+
+          // 2. Atomic paid-credit deduction when free quota is exhausted AND aiCredits >= JOB_MATCH_CREDIT_COST
+          const updatedPaid = await User.findOneAndUpdate(
+            {
+              _id: objectId,
+              jobMatchFreeUsed: { $gte: JOB_MATCH_FREE_QUOTA },
+              aiCredits: { $gte: JOB_MATCH_CREDIT_COST },
+            },
+            {
+              $inc: {
+                aiCredits: -JOB_MATCH_CREDIT_COST,
+                jobMatchFreeUsed: 1,
+              },
+            },
+            { new: true }
+          );
+
+          if (updatedPaid) {
+            const freeUsed = updatedPaid.jobMatchFreeUsed ?? JOB_MATCH_FREE_QUOTA + 1;
+            const creditsRemaining = updatedPaid.aiCredits ?? 0;
+            return {
+              success: true,
+              remaining: creditsRemaining,
+              deducted: true,
+              charged: true,
+              freeUsed,
+              freeRemaining: 0,
+              creditsRemaining,
+              creditsDeducted: JOB_MATCH_CREDIT_COST,
+              jobMatchFreeIncremented: true,
+            };
+          }
+
+          const currentUser = await User.findById(objectId).lean();
+          if (currentUser) {
+            const freeUsed =
+              typeof currentUser.jobMatchFreeUsed === 'number'
+                ? currentUser.jobMatchFreeUsed
+                : JOB_MATCH_FREE_QUOTA;
+            const creditsRemaining =
+              typeof currentUser.aiCredits === 'number' ? currentUser.aiCredits : 0;
+            return {
+              success: false,
+              remaining: creditsRemaining,
+              deducted: false,
+              charged: false,
+              freeUsed,
+              freeRemaining: Math.max(0, JOB_MATCH_FREE_QUOTA - freeUsed),
+              creditsRemaining,
+              creditsDeducted: 0,
+            };
+          }
+        } catch (err) {
+          console.error('[DataStore] consumeJobMatchCredit MongoDB error:', err);
+        }
+      }
+
+      // Atomic JSON fallback inside withOrderLock
+      const db = readLocalDb();
+      const user = db.users.find((u) => u.id === userId);
+      if (user) {
+        const freeUsed = typeof user.jobMatchFreeUsed === 'number' ? user.jobMatchFreeUsed : 0;
+        const credits = typeof user.aiCredits === 'number' ? user.aiCredits : 0;
+        if (freeUsed < JOB_MATCH_FREE_QUOTA) {
+          user.jobMatchFreeUsed = freeUsed + 1;
+          user.updatedAt = new Date().toISOString();
+          writeLocalDb(db);
+          return {
+            success: true,
+            remaining: credits,
+            deducted: true,
+            charged: false,
+            freeUsed: user.jobMatchFreeUsed,
+            freeRemaining: Math.max(0, JOB_MATCH_FREE_QUOTA - user.jobMatchFreeUsed),
+            creditsRemaining: credits,
+            creditsDeducted: 0,
+            jobMatchFreeIncremented: true,
+          };
+        }
+        if (credits >= JOB_MATCH_CREDIT_COST) {
+          user.aiCredits = credits - JOB_MATCH_CREDIT_COST;
+          user.jobMatchFreeUsed = freeUsed + 1;
+          user.updatedAt = new Date().toISOString();
+          writeLocalDb(db);
+          return {
+            success: true,
+            remaining: user.aiCredits,
+            deducted: true,
+            charged: true,
+            freeUsed: user.jobMatchFreeUsed,
+            freeRemaining: 0,
+            creditsRemaining: user.aiCredits,
+            creditsDeducted: JOB_MATCH_CREDIT_COST,
+            jobMatchFreeIncremented: true,
+          };
+        }
+        return {
+          success: false,
+          remaining: credits,
+          deducted: false,
+          charged: false,
+          freeUsed,
+          freeRemaining: 0,
+          creditsRemaining: credits,
+          creditsDeducted: 0,
+        };
+      }
+      return {
+        success: false,
+        remaining: 0,
+        deducted: false,
+        charged: false,
+        freeUsed: 0,
+        freeRemaining: 0,
+        creditsRemaining: 0,
+        creditsDeducted: 0,
+      };
+    });
+  },
+
+  async refundUserCredits(
+    userId: string,
+    options: {
+      amount?: number;
+      decrementResumeGen?: boolean;
+      decrementJobMatchFree?: boolean;
+    } = {}
+  ): Promise<{ success: boolean; remaining: number }> {
+    const amount = options.amount ?? 0;
     const mongoUp = await isMongoAvailable();
     if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
       try {
         const u = await User.findById(userId);
         if (u) {
-          const freeUsed = typeof u.jobMatchFreeUsed === 'number' ? u.jobMatchFreeUsed : 0;
-          if (freeUsed < 3) {
-            u.jobMatchFreeUsed = freeUsed + 1;
-            await u.save();
-            return { success: true, remaining: u.aiCredits, deducted: true, freeUsed: u.jobMatchFreeUsed };
+          if (amount > 0) {
+            u.aiCredits = (typeof u.aiCredits === 'number' ? u.aiCredits : 0) + amount;
           }
-          if (u.aiCredits >= 1) {
-            u.aiCredits -= 1;
-            u.jobMatchFreeUsed = freeUsed + 1;
-            await u.save();
-            return { success: true, remaining: u.aiCredits, deducted: true, freeUsed: u.jobMatchFreeUsed };
+          if (options.decrementResumeGen) {
+            u.aiResumeGenerationsCount = Math.max(
+              0,
+              (typeof u.aiResumeGenerationsCount === 'number' ? u.aiResumeGenerationsCount : 0) - 1
+            );
           }
-          return { success: false, remaining: u.aiCredits, deducted: false, freeUsed };
+          if (options.decrementJobMatchFree) {
+            u.jobMatchFreeUsed = Math.max(
+              0,
+              (typeof u.jobMatchFreeUsed === 'number' ? u.jobMatchFreeUsed : 0) - 1
+            );
+          }
+          await u.save();
+          return { success: true, remaining: u.aiCredits };
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error('[DataStore] refundUserCredits MongoDB error:', err);
+      }
     }
 
     const db = readLocalDb();
     const user = db.users.find((u) => u.id === userId);
     if (user) {
-      const freeUsed = typeof user.jobMatchFreeUsed === 'number' ? user.jobMatchFreeUsed : 0;
-      const credits = typeof user.aiCredits === 'number' ? user.aiCredits : 3;
-      if (freeUsed < 3) {
-        user.jobMatchFreeUsed = freeUsed + 1;
-        user.updatedAt = new Date().toISOString();
-        writeLocalDb(db);
-        return { success: true, remaining: credits, deducted: true, freeUsed: user.jobMatchFreeUsed };
+      const current = typeof user.aiCredits === 'number' ? user.aiCredits : 0;
+      if (amount > 0) {
+        user.aiCredits = current + amount;
       }
-      if (credits >= 1) {
-        user.aiCredits = credits - 1;
-        user.jobMatchFreeUsed = freeUsed + 1;
-        user.updatedAt = new Date().toISOString();
-        writeLocalDb(db);
-        return { success: true, remaining: user.aiCredits, deducted: true, freeUsed: user.jobMatchFreeUsed };
+      if (options.decrementResumeGen) {
+        user.aiResumeGenerationsCount = Math.max(0, (user.aiResumeGenerationsCount || 0) - 1);
       }
-      return { success: false, remaining: credits, deducted: false, freeUsed };
+      if (options.decrementJobMatchFree) {
+        user.jobMatchFreeUsed = Math.max(0, (user.jobMatchFreeUsed || 0) - 1);
+      }
+      user.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return { success: true, remaining: user.aiCredits ?? 0 };
     }
-    return { success: false, remaining: 0, deducted: false, freeUsed: 0 };
+    return { success: false, remaining: 0 };
   },
 
   async getJobCache(cacheKey: string): Promise<any | null> {
@@ -1831,7 +2479,7 @@ export const DataStore = {
     billingCycle: 'monthly' | 'annual' | 'once';
     baseAmount: number;
     amount: number;
-    currency?: 'USDT';
+    currency?: OrderCurrency;
     method: PaymentMethodType;
     network: CryptoNetwork;
     reference: string;
@@ -1843,6 +2491,7 @@ export const DataStore = {
       typeof orderData.expiresAt === 'string'
         ? orderData.expiresAt
         : orderData.expiresAt.toISOString();
+    const orderCurrency: OrderCurrency = orderData.currency || 'USDT';
 
     const orderRecord: StoredOrder = {
       id: `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -1852,7 +2501,7 @@ export const DataStore = {
       billingCycle: orderData.billingCycle,
       baseAmount: orderData.baseAmount,
       amount: orderData.amount,
-      currency: 'USDT',
+      currency: orderCurrency,
       method: orderData.method,
       network: orderData.network,
       status: 'awaiting_payment',
@@ -1864,7 +2513,7 @@ export const DataStore = {
         {
           status: 'awaiting_payment',
           timestamp: new Date().toISOString(),
-          note: `Order initialized for plan ${orderData.planId} (${orderData.amount} USDT on ${orderData.network})`,
+          note: `Order initialized for plan ${orderData.planId} (${orderData.amount} ${orderCurrency} on ${orderData.network})`,
           actor: 'system',
         },
       ],
@@ -1883,7 +2532,7 @@ export const DataStore = {
           billingCycle: orderRecord.billingCycle,
           baseAmount: orderRecord.baseAmount,
           amount: orderRecord.amount,
-          currency: 'USDT',
+          currency: orderCurrency,
           method: orderRecord.method,
           network: orderRecord.network,
           status: 'awaiting_payment',
@@ -1894,7 +2543,7 @@ export const DataStore = {
             {
               status: 'awaiting_payment',
               timestamp: new Date(),
-              note: `Order initialized for plan ${orderData.planId} (${orderData.amount} USDT on ${orderData.network})`,
+              note: `Order initialized for plan ${orderData.planId} (${orderData.amount} ${orderCurrency} on ${orderData.network})`,
               actor: 'system',
             },
           ],
@@ -1928,7 +2577,7 @@ export const DataStore = {
             billingCycle: order.billingCycle,
             baseAmount: order.baseAmount,
             amount: order.amount,
-            currency: 'USDT',
+            currency: (order.currency as OrderCurrency) || 'USDT',
             method: order.method,
             network: order.network,
             status: order.status,
@@ -1937,6 +2586,7 @@ export const DataStore = {
             recipientAddress: order.recipientAddress,
             expiresAt: order.expiresAt.toISOString(),
             paidAt: order.paidAt?.toISOString() || null,
+            proExpiresAt: order.proExpiresAt?.toISOString() || null,
             auditLog: (order.auditLog || []).map((l) => ({
               status: l.status,
               timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
@@ -1948,7 +2598,12 @@ export const DataStore = {
             updatedAt: order.updatedAt.toISOString(),
           };
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -1972,7 +2627,7 @@ export const DataStore = {
             billingCycle: order.billingCycle,
             baseAmount: order.baseAmount,
             amount: order.amount,
-            currency: 'USDT',
+            currency: (order.currency as OrderCurrency) || 'USDT',
             method: order.method,
             network: order.network,
             status: order.status,
@@ -1981,6 +2636,7 @@ export const DataStore = {
             recipientAddress: order.recipientAddress,
             expiresAt: order.expiresAt.toISOString(),
             paidAt: order.paidAt?.toISOString() || null,
+            proExpiresAt: order.proExpiresAt?.toISOString() || null,
             auditLog: (order.auditLog || []).map((l) => ({
               status: l.status,
               timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
@@ -1992,7 +2648,12 @@ export const DataStore = {
             updatedAt: order.updatedAt.toISOString(),
           };
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -2001,12 +2662,32 @@ export const DataStore = {
     return found || null;
   },
 
-  async findOrderByTxid(txid: string): Promise<StoredOrder | null> {
+  async findOrderByTxid(
+    txid: string,
+    network?: 'BEP20' | 'TRC20' | string
+  ): Promise<StoredOrder | null> {
+    if (!txid || typeof txid !== 'string') return null;
     const cleanTxid = txid.trim().toLowerCase();
+
+    // Requirement 4: Validate TXID format (0x + 64 hex for BEP20, 64 hex for TRC20) without RegExp from user input
+    const isValidBep20 = /^0x[0-9a-f]{64}$/.test(cleanTxid);
+    const isValidTrc20 = /^[0-9a-f]{64}$/.test(cleanTxid);
+
+    if (network === 'BEP20' && !isValidBep20) {
+      return null;
+    }
+    if (network === 'TRC20' && !isValidTrc20) {
+      return null;
+    }
+    if (!isValidBep20 && !isValidTrc20) {
+      return null;
+    }
+
     const mongoUp = await isMongoAvailable();
     if (mongoUp) {
       try {
-        const order = await Order.findOne({ txid: new RegExp(`^${cleanTxid}$`, 'i') });
+        // Direct equality lookup on normalized lowercase txid (never use new RegExp from user input)
+        const order = await Order.findOne({ txid: cleanTxid });
         if (order) {
           return {
             id: order._id.toString(),
@@ -2016,7 +2697,7 @@ export const DataStore = {
             billingCycle: order.billingCycle,
             baseAmount: order.baseAmount,
             amount: order.amount,
-            currency: 'USDT',
+            currency: (order.currency as OrderCurrency) || 'USDT',
             method: order.method,
             network: order.network,
             status: order.status,
@@ -2025,6 +2706,7 @@ export const DataStore = {
             recipientAddress: order.recipientAddress,
             expiresAt: order.expiresAt.toISOString(),
             paidAt: order.paidAt?.toISOString() || null,
+            proExpiresAt: order.proExpiresAt?.toISOString() || null,
             auditLog: (order.auditLog || []).map((l) => ({
               status: l.status,
               timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
@@ -2036,12 +2718,17 @@ export const DataStore = {
             updatedAt: order.updatedAt.toISOString(),
           };
         }
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
     if (!db.orders) return null;
-    const found = db.orders.find((o) => o.txid && o.txid.toLowerCase() === cleanTxid);
+    const found = db.orders.find((o) => o.txid && o.txid.trim().toLowerCase() === cleanTxid);
     return found || null;
   },
 
@@ -2070,7 +2757,7 @@ export const DataStore = {
           billingCycle: order.billingCycle,
           baseAmount: order.baseAmount,
           amount: order.amount,
-          currency: 'USDT',
+          currency: (order.currency as OrderCurrency) || 'USDT',
           method: order.method,
           network: order.network,
           status: order.status,
@@ -2079,6 +2766,7 @@ export const DataStore = {
           recipientAddress: order.recipientAddress,
           expiresAt: order.expiresAt.toISOString(),
           paidAt: order.paidAt?.toISOString() || null,
+          proExpiresAt: order.proExpiresAt?.toISOString() || null,
           auditLog: (order.auditLog || []).map((l) => ({
             status: l.status,
             timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
@@ -2089,7 +2777,12 @@ export const DataStore = {
           createdAt: order.createdAt.toISOString(),
           updatedAt: order.updatedAt.toISOString(),
         }));
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -2102,6 +2795,59 @@ export const DataStore = {
     }
     orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return orders.slice(0, limit);
+  },
+
+  async claimOrderTxid(
+    orderId: string,
+    txid: string
+  ): Promise<{ success: boolean; error?: 'TXID_ALREADY_USED' }> {
+    const cleanTxid = txid.trim().toLowerCase();
+    if (!cleanTxid) return { success: false };
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const conflicting = await Order.findOne({
+          txid: cleanTxid,
+          ...(mongoose.Types.ObjectId.isValid(orderId) ? { _id: { $ne: orderId } } : {}),
+        }).lean();
+        if (conflicting && conflicting._id.toString() !== orderId) {
+          return { success: false, error: 'TXID_ALREADY_USED' };
+        }
+        if (mongoose.Types.ObjectId.isValid(orderId)) {
+          await Order.findOneAndUpdate(
+            { _id: orderId, $or: [{ txid: { $exists: false } }, { txid: null }, { txid: cleanTxid }] },
+            { $set: { txid: cleanTxid, updatedAt: new Date() } }
+          );
+        }
+      } catch (err: any) {
+        if (err?.code === 11000 || String(err?.message || '').includes('E11000')) {
+          return { success: false, error: 'TXID_ALREADY_USED' };
+        }
+      }
+    }
+
+    const db = readLocalDb();
+    if (!db.orders) db.orders = [];
+    const duplicate = db.orders.find(
+      (o) =>
+        o.id !== orderId &&
+        (o as any)._id !== orderId &&
+        o.txid &&
+        o.txid.trim().toLowerCase() === cleanTxid
+    );
+    if (duplicate) {
+      return { success: false, error: 'TXID_ALREADY_USED' };
+    }
+
+    const order = db.orders.find((o) => o.id === orderId || (o as any)._id === orderId);
+    if (order) {
+      order.txid = cleanTxid;
+      order.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+    }
+
+    return { success: true };
   },
 
   async updateOrderStatus(
@@ -2117,6 +2863,7 @@ export const DataStore = {
     const timestamp = new Date().toISOString();
     const actor = options?.actor || 'system';
     const note = options?.note || `Status updated to ${status}`;
+    const normalizedTxid = options?.txid ? options.txid.trim().toLowerCase() : undefined;
 
     const mongoUp = await isMongoAvailable();
     if (mongoUp && mongoose.Types.ObjectId.isValid(orderId)) {
@@ -2135,14 +2882,25 @@ export const DataStore = {
             },
           },
         };
-        if (options?.txid) {
-          updateDoc.$set.txid = options.txid;
+        if (normalizedTxid) {
+          const conflicting = await Order.findOne({
+            txid: normalizedTxid,
+            _id: { $ne: orderId },
+          }).lean();
+          if (!conflicting) {
+            updateDoc.$set.txid = normalizedTxid;
+          }
         }
         if (options?.metadata) {
           updateDoc.$set.metadata = options.metadata;
         }
         await Order.findByIdAndUpdate(orderId, updateDoc);
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();
@@ -2152,8 +2910,17 @@ export const DataStore = {
 
     order.status = status;
     order.updatedAt = timestamp;
-    if (options?.txid) {
-      order.txid = options.txid;
+    if (normalizedTxid) {
+      const duplicate = db.orders.find(
+        (o) =>
+          o.id !== orderId &&
+          (o as any)._id !== orderId &&
+          o.txid &&
+          o.txid.trim().toLowerCase() === normalizedTxid
+      );
+      if (!duplicate) {
+        order.txid = normalizedTxid;
+      }
     }
     if (options?.metadata) {
       order.metadata = { ...order.metadata, ...options.metadata };
@@ -2177,121 +2944,218 @@ export const DataStore = {
       note?: string;
       actor?: string;
     }
-  ): Promise<{ success: boolean; alreadyPaid?: boolean; order: StoredOrder | null }> {
-    const existing = await this.findOrderById(orderId);
-    if (!existing) {
-      return { success: false, order: null };
-    }
-
-    // Idempotency: if already paid, do not re-process
-    if (existing.status === 'paid') {
-      return { success: true, alreadyPaid: true, order: existing };
-    }
-
-    const nowIso = new Date().toISOString();
-    const actor = options?.actor || 'system';
-    const note = options?.note || `Payment verified successfully on ${existing.network}`;
-    const txidToRecord = options?.txid || existing.txid;
-
-    // 1. Update Order in DB
-    const mongoUp = await isMongoAvailable();
-    if (mongoUp && mongoose.Types.ObjectId.isValid(orderId)) {
-      try {
-        const updateDoc: any = {
-          $set: {
-            status: 'paid',
-            paidAt: new Date(),
-            updatedAt: new Date(),
-          },
-          $push: {
-            auditLog: {
-              status: 'paid',
-              timestamp: new Date(),
-              note,
-              actor,
-            },
-          },
-        };
-        if (txidToRecord) {
-          updateDoc.$set.txid = txidToRecord;
-        }
-        await Order.findByIdAndUpdate(orderId, updateDoc);
-      } catch (err) {}
-    }
-
-    const db = readLocalDb();
-    if (!db.orders) db.orders = [];
-    let memoryOrder = db.orders.find((o) => o.id === orderId || (o as any)._id === orderId);
-    if (!memoryOrder) {
-      memoryOrder = { ...existing };
-      db.orders.push(memoryOrder);
-    }
-    memoryOrder.status = 'paid';
-    memoryOrder.paidAt = nowIso;
-    memoryOrder.updatedAt = nowIso;
-    if (txidToRecord) {
-      memoryOrder.txid = txidToRecord;
-    }
-    memoryOrder.auditLog = memoryOrder.auditLog || [];
-    memoryOrder.auditLog.push({
-      status: 'paid',
-      timestamp: nowIso,
-      note,
-      actor,
-    });
-    writeLocalDb(db);
-
-    // 2. Activate Entitlements
-    if (existing.planId === 'pro') {
-      // Calculate duration: annual (365 days) vs monthly (30 days)
-      const durationDays = existing.billingCycle === 'annual' ? 365 : 30;
-      const durationMs = durationDays * 24 * 3600 * 1000;
-
-      // Find user to check if existing plan is active
-      const user = await this.findUserById(existing.userId);
-      let newExpiresAt: Date;
-      if (user?.planExpiresAt && new Date(user.planExpiresAt).getTime() > Date.now()) {
-        // Extend existing subscription
-        newExpiresAt = new Date(new Date(user.planExpiresAt).getTime() + durationMs);
-      } else {
-        newExpiresAt = new Date(Date.now() + durationMs);
+  ): Promise<{
+    success: boolean;
+    alreadyPaid?: boolean;
+    error?: 'TXID_ALREADY_USED' | 'ORDER_NOT_FOUND' | string;
+    order: StoredOrder | null;
+  }> {
+    return withOrderLock(async () => {
+      const existing = await this.findOrderById(orderId);
+      if (!existing) {
+        return { success: false, error: 'ORDER_NOT_FOUND', order: null };
       }
 
-      await this.upgradeUserPlan(existing.userId, {
-        plan: 'pro',
-        billingCycle: existing.billingCycle === 'annual' ? 'annual' : 'monthly',
-        planExpiresAt: newExpiresAt,
-        paymentProvider: 'binance',
-        providerCustomerId: existing.userEmail,
-        providerSubscriptionId: existing.reference,
+      const rawTxid = options?.txid || existing.txid || undefined;
+      const txidToRecord = rawTxid ? String(rawTxid).trim().toLowerCase() : undefined;
+
+      // Requirement 3: Atomic TXID uniqueness check across both MongoDB and JSON fallback
+      if (txidToRecord) {
+        const mongoCheck = await isMongoAvailable();
+        if (mongoCheck) {
+          try {
+            const conflictingMongo = await Order.findOne({
+              txid: txidToRecord,
+              ...(mongoose.Types.ObjectId.isValid(orderId) ? { _id: { $ne: orderId } } : {}),
+            }).lean();
+            if (conflictingMongo && conflictingMongo._id.toString() !== orderId) {
+              return { success: false, error: 'TXID_ALREADY_USED', order: null };
+            }
+          } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
+        }
+
+        const dbPreCheck = readLocalDb();
+        const conflictingLocal = (dbPreCheck.orders || []).find(
+          (o) =>
+            o.id !== orderId &&
+            (o as any)._id !== orderId &&
+            o.txid &&
+            o.txid.trim().toLowerCase() === txidToRecord
+        );
+        if (conflictingLocal) {
+          return { success: false, error: 'TXID_ALREADY_USED', order: null };
+        }
+      }
+
+      // Idempotency: if already paid, do not re-process
+      if (existing.status === 'paid') {
+        return { success: true, alreadyPaid: true, order: existing };
+      }
+
+      const nowIso = new Date().toISOString();
+      const actor = options?.actor || 'system';
+      const note = options?.note || `Payment verified successfully on ${existing.network}`;
+
+      // Pre-compute proExpiresAt for Pro orders so it is stored on both Order and User
+      let computedProExpiresAt: Date | null = null;
+      if (existing.planId === 'pro') {
+        const durationDays = existing.billingCycle === 'annual' ? 365 : 30;
+        const durationMs = durationDays * 24 * 3600 * 1000;
+        const user = await this.findUserById(existing.userId);
+        const currentExp = user?.proExpiresAt || user?.planExpiresAt;
+        if (currentExp && new Date(currentExp).getTime() > Date.now()) {
+          computedProExpiresAt = new Date(new Date(currentExp).getTime() + durationMs);
+        } else {
+          computedProExpiresAt = new Date(Date.now() + durationMs);
+        }
+      }
+
+      // 1. Atomic Update Order in MongoDB using findOneAndUpdate with { _id: orderId, status: { $ne: 'paid' } }
+      const mongoUp = await isMongoAvailable();
+      if (mongoUp && mongoose.Types.ObjectId.isValid(orderId)) {
+        try {
+          const updateDoc: any = {
+            $set: {
+              status: 'paid',
+              paidAt: new Date(),
+              proExpiresAt: computedProExpiresAt,
+              updatedAt: new Date(),
+            },
+            $push: {
+              auditLog: {
+                status: 'paid',
+                timestamp: new Date(),
+                note,
+                actor,
+              },
+            },
+          };
+          if (txidToRecord) {
+            updateDoc.$set.txid = txidToRecord;
+          }
+
+          const updatedMongoOrder = await Order.findOneAndUpdate(
+            { _id: orderId, status: { $ne: 'paid' } },
+            updateDoc,
+            { new: true }
+          );
+
+          if (!updatedMongoOrder) {
+            const latestOrder = await this.findOrderById(orderId);
+            if (latestOrder && latestOrder.status === 'paid') {
+              return { success: true, alreadyPaid: true, order: latestOrder };
+            }
+            return { success: false, error: 'ORDER_NOT_FOUND', order: null };
+          }
+        } catch (err: any) {
+          if (err?.code === 11000 || String(err?.message || '').includes('E11000')) {
+            return { success: false, error: 'TXID_ALREADY_USED', order: null };
+          }
+          throw err;
+        }
+      }
+
+      // Atomic JSON fallback update inside the same lock/write critical section
+      const db = readLocalDb();
+      if (!db.orders) db.orders = [];
+
+      if (txidToRecord) {
+        const duplicateInDb = db.orders.find(
+          (o) =>
+            o.id !== orderId &&
+            (o as any)._id !== orderId &&
+            o.txid &&
+            o.txid.trim().toLowerCase() === txidToRecord
+        );
+        if (duplicateInDb) {
+          return { success: false, error: 'TXID_ALREADY_USED', order: null };
+        }
+      }
+
+      let memoryOrder = db.orders.find((o) => o.id === orderId || (o as any)._id === orderId);
+      if (!memoryOrder) {
+        memoryOrder = { ...existing };
+        db.orders.push(memoryOrder);
+      } else if (memoryOrder.status === 'paid') {
+        return { success: true, alreadyPaid: true, order: memoryOrder };
+      }
+
+      memoryOrder.status = 'paid';
+      memoryOrder.paidAt = nowIso;
+      memoryOrder.proExpiresAt = computedProExpiresAt ? computedProExpiresAt.toISOString() : null;
+      memoryOrder.updatedAt = nowIso;
+      if (txidToRecord) {
+        memoryOrder.txid = txidToRecord;
+      }
+      memoryOrder.auditLog = memoryOrder.auditLog || [];
+      memoryOrder.auditLog.push({
+        status: 'paid',
+        timestamp: nowIso,
+        note,
+        actor,
       });
-    } else if (existing.planId === 'payg') {
-      // Add 15 AI credits
-      await this.incrementUserCredits(existing.userId, 15);
-    }
+      writeLocalDb(db);
 
-    // 3. Record in unified Payment collection for accounting
-    await this.recordPayment({
-      userId: existing.userId,
-      userEmail: existing.userEmail,
-      amount: existing.amount,
-      currency: 'USDT',
-      provider: 'test',
-      providerPaymentId: txidToRecord || existing.reference,
-      planId: existing.planId,
-      billingCycle: existing.billingCycle === 'annual' ? 'annual' : existing.billingCycle === 'monthly' ? 'monthly' : 'none',
-      status: 'succeeded',
-      metadata: {
-        orderId: existing.id,
-        reference: existing.reference,
-        network: existing.network,
-        method: existing.method,
-        txid: txidToRecord,
-      },
+      // 2. Activate Entitlements using lib/plans.ts
+      const resolvedProvider: 'stripe' | 'paymob' | 'binance' =
+        existing.method === 'paymob'
+          ? 'paymob'
+          : existing.method === 'stripe'
+          ? 'stripe'
+          : 'binance';
+
+      if (existing.planId === 'pro' && computedProExpiresAt) {
+        await this.upgradeUserPlan(existing.userId, {
+          plan: 'pro',
+          billingCycle: existing.billingCycle === 'annual' ? 'annual' : 'monthly',
+          planExpiresAt: computedProExpiresAt,
+          proExpiresAt: computedProExpiresAt,
+          paymentProvider: resolvedProvider,
+          providerCustomerId: existing.userEmail,
+          providerSubscriptionId: existing.reference,
+          subscriptionStatus: 'active',
+          paymentFailedAt: null,
+        });
+      } else {
+        const planCredits = getPlanCredits(existing.planId);
+        if (typeof planCredits === 'number' && planCredits > 0) {
+          await this.incrementUserCredits(existing.userId, planCredits);
+        }
+      }
+
+      // 3. Record in unified Payment collection for accounting
+      await this.recordPayment({
+        userId: existing.userId,
+        userEmail: existing.userEmail,
+        amount: existing.amount,
+        currency: existing.currency || 'USDT',
+        provider:
+          existing.method === 'paymob'
+            ? 'paymob'
+            : existing.method === 'stripe'
+            ? 'stripe'
+            : 'test',
+        providerPaymentId: txidToRecord || existing.reference,
+        planId: existing.planId,
+        billingCycle: existing.billingCycle === 'annual' ? 'annual' : existing.billingCycle === 'monthly' ? 'monthly' : 'none',
+        status: 'succeeded',
+        metadata: {
+          orderId: existing.id,
+          reference: existing.reference,
+          network: existing.network,
+          method: existing.method,
+          txid: txidToRecord,
+        },
+      });
+
+      const updated = await this.findOrderById(orderId);
+      return { success: true, order: updated || memoryOrder };
     });
-
-    const updated = await this.findOrderById(orderId);
-    return { success: true, order: updated || memoryOrder };
   },
 
   async expirePendingOrders(): Promise<number> {
@@ -2319,7 +3183,12 @@ export const DataStore = {
           }
         );
         count = result.modifiedCount || 0;
-      } catch (err) {}
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
     }
 
     const db = readLocalDb();

@@ -4,9 +4,12 @@ import DataStore from '@/app/lib/datastore';
 import { ResumeService, GenerateResumeRequest } from '@/app/lib/resumeService';
 import { AIResumeClient } from '@/app/lib/aiResumeClient';
 import { CoverLetterService } from '@/app/lib/coverLetterService';
-import { applyRateLimit } from '@/app/lib/rateLimit';
+import { applyRateLimit, parseBoundedJsonBody } from '@/lib/rate-limit';
 import { requireCredits, consumeCredit } from '@/lib/credit-guard';
 import { RESUME_GENERATION_CREDIT_COST } from '@/lib/plans';
+
+export const maxDuration = 60;
+const MAX_RESUME_GENERATE_BODY_BYTES = 150 * 1024; // 150KB max request payload
 
 // POST /api/resume/generate - Generate structured ATS Resume or CV using AI with plans & credits enforcement
 export async function POST(req: NextRequest) {
@@ -42,25 +45,25 @@ export async function POST(req: NextRequest) {
       return creditCheck.errorResponse;
     }
 
-    // 3. Rate Limiting: 30 requests per minute per user
-    const rateLimit = applyRateLimit(
+    // 3. Rate Limiting: 30 requests per minute per user + per IP
+    const rateLimit = await applyRateLimit(
       req,
-      { limit: 30, windowMs: 60 * 1000, keyPrefix: 'res_gen' },
+      { limit: 30, ipLimit: 60, windowMs: 60 * 1000, keyPrefix: 'res_gen' },
       authUser.userId
     );
     if (!rateLimit.allowed && rateLimit.errorResponse) {
       return rateLimit.errorResponse;
     }
 
-    let body: GenerateResumeRequest;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { success: false, error: 'Invalid JSON request payload' },
-        { status: 400 }
-      );
+    // 4. Enforce maximum body size (150KB) and parse JSON safely
+    const parsed = await parseBoundedJsonBody<GenerateResumeRequest>(
+      req,
+      MAX_RESUME_GENERATE_BODY_BYTES
+    );
+    if (!parsed.ok) {
+      return parsed.errorResponse;
     }
+    const body = parsed.data;
 
     // 4. Contract Validation
     const validation = ResumeService.validateRequest(body);

@@ -51,7 +51,7 @@ export function Toast({
     <div
       role="status"
       aria-live="polite"
-      className={`fixed bottom-20 sm:bottom-6 end-4 start-4 sm:start-auto sm:end-6 z-toast flex items-center gap-3 p-3.5 sm:p-4 rounded-lg border ${borders[type]} bg-elevated text-text-primary text-sm shadow-elevated max-w-md animate-in fade-in duration-200`}
+      className={`fixed bottom-20 sm:bottom-6 end-4 start-4 sm:start-auto sm:end-6 z-toast flex items-center gap-3 p-3.5 sm:p-4 rounded-lg border ${borders[type]} bg-elevated text-ink text-sm shadow-elevated max-w-md animate-in fade-in duration-200`}
     >
       {icons[type]}
       <p className="flex-1 text-xs sm:text-sm font-medium leading-normal text-start">{message}</p>
@@ -68,7 +68,7 @@ export function Toast({
         type="button"
         onClick={onClose}
         aria-label="Dismiss notification"
-        className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg cursor-pointer"
+        className="btn p-1 rounded-md text-ink-2 hover:text-ink hover:bg-surface-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-paper cursor-pointer"
       >
         <X className="w-4 h-4" aria-hidden="true" />
       </button>

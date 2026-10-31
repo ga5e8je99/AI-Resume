@@ -98,28 +98,28 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const getToastIcon = (type: ToastType) => {
     switch (type) {
       case 'success':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" aria-hidden="true" />;
+        return <CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />;
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" aria-hidden="true" />;
+        return <AlertCircle className="w-4 h-4 text-danger shrink-0" aria-hidden="true" />;
       case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" aria-hidden="true" />;
+        return <AlertTriangle className="w-4 h-4 text-warning shrink-0" aria-hidden="true" />;
       case 'info':
       default:
-        return <Info className="w-4 h-4 text-sky-500 shrink-0" aria-hidden="true" />;
+        return <Info className="w-4 h-4 text-info shrink-0" aria-hidden="true" />;
     }
   };
 
   const getToastStyles = (type: ToastType) => {
     switch (type) {
       case 'success':
-        return 'border-emerald-500/30 bg-surface shadow-md ring-1 ring-emerald-500/10';
+        return 'border-success/30 bg-surface shadow-md ring-1 ring-success/10';
       case 'error':
-        return 'border-rose-500/30 bg-surface shadow-md ring-1 ring-rose-500/10';
+        return 'border-danger/30 bg-surface shadow-md ring-1 ring-danger/10';
       case 'warning':
-        return 'border-amber-500/30 bg-surface shadow-md ring-1 ring-amber-500/10';
+        return 'border-warning/30 bg-surface shadow-md ring-1 ring-warning/10';
       case 'info':
       default:
-        return 'border-sky-500/30 bg-surface shadow-md ring-1 ring-sky-500/10';
+        return 'border-info/30 bg-surface shadow-md ring-1 ring-info/10';
     }
   };
 

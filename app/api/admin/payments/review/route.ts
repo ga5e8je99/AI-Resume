@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdmin } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
 import { sendEmail, getPaymentReceiptEmailHtml } from '@/lib/email';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/admin/payments/review
  * Approves or rejects a manual payment order.
- * Protected by ADMIN_EMAILS allowlist.
+ * Protected by ADMIN_EMAILS allowlist and shared rate limiter.
  *
- * Body: { orderId: string, action: 'approve' | 'reject', reason?: string }
+ * Body: { orderId: string, action: 'approve' | 'reject', reason?: string, txid?: string }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -20,8 +21,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const rl = await applyRateLimit(req, {
+      prefix: 'admin_payment_review',
+      maxRequests: 60,
+      windowMs: 60 * 1000,
+      userId: auth.user?.userId,
+    });
+    if (!rl.allowed && rl.response) {
+      return rl.response;
+    }
+
     const body = await req.json().catch(() => ({}));
-    const { orderId, action, reason } = body;
+    const { orderId, action, reason, txid } = body;
 
     if (!orderId || !['approve', 'reject'].includes(action)) {
       return NextResponse.json(
@@ -39,13 +50,23 @@ export async function POST(req: NextRequest) {
 
     if (action === 'approve') {
       const result = await DataStore.completeOrder(orderId, {
+        txid: typeof txid === 'string' && txid.trim() ? txid.trim().toLowerCase() : undefined,
         actor: `admin (${adminEmail})`,
         note: reason || 'Approved manually by admin after reviewing transaction',
       });
 
       if (!result.success) {
+        if (result.error === 'TXID_ALREADY_USED') {
+          return NextResponse.json(
+            {
+              error: 'TXID_ALREADY_USED',
+              message: 'This transaction hash (txid) has already been used for another order.',
+            },
+            { status: 400 }
+          );
+        }
         return NextResponse.json(
-          { error: 'Failed to complete order.' },
+          { error: result.error || 'Failed to complete order.' },
           { status: 500 }
         );
       }

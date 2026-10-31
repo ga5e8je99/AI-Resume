@@ -121,7 +121,7 @@ export function Dropzone({
             ? 'border-danger/60 bg-danger-soft/40'
             : state === 'success'
             ? 'border-success/60 bg-success-soft/40'
-            : 'border-border hover:border-border-strong bg-surface'
+            : '-line-strong -line-strong bg-surface'
         }`}
       >
         <input
@@ -139,10 +139,10 @@ export function Dropzone({
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 text-brand animate-spin" />
             <div>
-              <p className="font-serif text-base font-semibold text-text-primary">
+              <p className="font-serif text-base font-semibold -ink">
                 {isArabic ? 'جارٍ فحص المستند محلياً...' : 'Analyzing document in browser...'}
               </p>
-              <p className="text-xs text-text-muted mt-1">
+              <p className="text-xs -ink-2 mt-1">
                 {fileName || (isArabic ? 'استخراج النصوص وفحص البنية' : 'Extracting text and verifying structure')}
               </p>
             </div>
@@ -152,10 +152,10 @@ export function Dropzone({
         {state === 'success' && (
           <div className="flex flex-col items-center gap-2">
             <CheckCircle2 className="w-8 h-8 text-success" />
-            <p className="font-serif text-base font-semibold text-text-primary">
+            <p className="font-serif text-base font-semibold -ink">
               {isArabic ? 'تم فحص المستند بنجاح' : 'Document analyzed successfully'}
             </p>
-            <p className="text-xs text-text-secondary font-mono">{fileName}</p>
+            <p className="text-xs -ink-2 font-mono">{fileName}</p>
             {onReset && (
               <Button
                 variant="outline"
@@ -178,7 +178,7 @@ export function Dropzone({
             <p className="font-serif text-base font-semibold text-danger">
               {isArabic ? 'تعذر فحص المستند' : 'Unable to parse document'}
             </p>
-            <p className="text-xs text-text-secondary max-w-md">{error}</p>
+            <p className="text-xs -ink-2 max-w-md">{error}</p>
             <Button
               variant="secondary"
               size="sm"
@@ -195,16 +195,16 @@ export function Dropzone({
 
         {(state === 'idle' || state === 'drag-over') && (
           <div className="flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-surface-2 border border-border flex items-center justify-center text-text-secondary">
+            <div className="w-12 h-12 rounded-lg bg-surface-2 border -line-strong flex items-center justify-center -ink-2">
               <Upload className="w-5 h-5 text-brand" />
             </div>
             <div>
-              <p className="font-serif text-base sm:text-lg font-semibold text-text-primary">
+              <p className="font-serif text-base sm:text-lg font-semibold -ink">
                 {isArabic
                   ? 'اسحب سيرتك الذاتية هنا أو اضغط للاختيار'
                   : 'Drop your resume here, or choose a file'}
               </p>
-              <p className="text-xs text-text-muted mt-1">
+              <p className="text-xs -ink-2 mt-1">
                 {isArabic
                   ? 'يدعم ملفات PDF و DOCX و TXT حتى 5 ميجابايت • المعالجة فورية وتتم في متصفحك'
                   : 'Supports PDF, DOCX, and TXT up to 5MB • Processed in your browser'}

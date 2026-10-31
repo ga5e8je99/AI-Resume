@@ -29,42 +29,41 @@ export function AppTopBar({
   className = '',
 }: AppTopBarProps) {
   const { user } = useAuth();
-  const { language } = useLanguage();
-  const isAr = language === 'ar';
+  const { t } = useLanguage();
 
   return (
     <header
-      className={`sticky top-0 z-sticky bg-surface/85 backdrop-blur-md border-b border-border shadow-subtle ${className}`}
+      className={`sticky top-0 z-sticky bg-surface backdrop-blur-md border-b border-line-strong shadow-subtle ${className}`}
     >
       {/* Skip to Content Keyboard Link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:start-4 z-modal px-3.5 py-1.5 bg-brand text-on-accent text-xs font-semibold rounded-md shadow-elevated focus:outline-none focus:ring-2 focus:ring-focus"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:start-4 z-modal px-3.5 py-2 min-h-[44px] inline-flex items-center bg-brand text-on-accent text-xs font-semibold rounded-md shadow-elevated focus:outline-none focus:ring-2 focus:ring-focus"
       >
-        {isAr ? 'الانتقال إلى المحتوى الأساسي' : 'Skip to main content'}
+        {t('shell_skip_content')}
       </a>
 
       <div className="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
-        {/* Mobile View: Hamburger + Logo */}
-        <div className="flex items-center gap-3 md:hidden min-w-0">
+        {/* Mobile & Tablet View (<lg / <1024px): Hamburger + Logo */}
+        <div className="flex items-center gap-3 lg:hidden min-w-0">
           <button
             type="button"
             onClick={onOpenMobileDrawer}
-            aria-label={isAr ? 'فتح قائمة التنقل' : 'Open navigation menu'}
-            className="p-2 rounded-md border border-border bg-surface hover:bg-surface-2 text-text-primary transition-colors cursor-pointer"
+            aria-label={t('shell_open_menu')}
+            className="min-h-[44px] min-w-[44px] p-2.5 flex items-center justify-center rounded-md border border-line-strong bg-surface hover:bg-surface-2 text-ink transition-colors cursor-pointer"
           >
             <Menu className="w-5 h-5" aria-hidden="true" />
           </button>
           <Logo size="sm" />
         </div>
 
-        {/* Desktop View: Breadcrumbs & Page Heading */}
-        <div className="hidden md:flex items-center min-w-0 flex-1">
+        {/* Desktop View (>=1024px / lg+): Breadcrumbs & Page Heading */}
+        <div className="hidden lg:flex items-center min-w-0 flex-1">
           {breadcrumbs.length > 0 || title ? (
             <Breadcrumbs items={breadcrumbs} title={title} description={description} />
           ) : (
-            <div className="text-xs text-text-muted font-medium">
-              {isAr ? 'لوحة التحكم والمستندات' : 'Workspace & Documents'}
+            <div className="text-xs text-ink-2 font-medium">
+              {t('shell_workspace_heading')}
             </div>
           )}
         </div>
@@ -76,24 +75,24 @@ export function AppTopBar({
           {/* Quick Create Resume CTA on desktop */}
           <Link
             href="/builder"
-            className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand text-on-accent hover:bg-brand-hover text-xs font-medium transition-colors shadow-subtle"
+            className="hidden xl:inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-md bg-brand text-on-accent hover:bg-brand-hover text-xs font-medium transition-colors shadow-subtle"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>{isAr ? 'سيرة جديدة' : 'New Resume'}</span>
+            <span>{t('dashboard_btn_new_resume')}</span>
           </Link>
 
           {/* AI Credits Pill */}
           {user && (
             <Link
               href="/pricing"
-              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-surface-2 border border-border text-text-secondary hover:text-text-primary hover:border-border-strong transition-colors"
-              title={isAr ? 'ترقية رصيد الذكاء الاصطناعي' : 'Upgrade AI Credits'}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-full text-xs font-medium bg-surface-2 border border-line-strong text-ink-2 hover:text-ink transition-colors"
+              title={t('credits_upgrade_title')}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <Sparkles className="w-3.5 h-3.5 text-warning" />
               <span>
                 {user.plan === 'pro'
-                  ? (isAr ? 'غير محدود' : 'Unlimited')
-                  : `${user.aiCredits ?? 3} ${isAr ? 'نقاط' : 'pts'}`}
+                  ? t('credits_unlimited')
+                  : `${user.aiCredits ?? 3} ${t('credits_label')}`}
               </span>
             </Link>
           )}

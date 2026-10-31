@@ -49,7 +49,7 @@ export function Skeleton({
 
 export function SkeletonCard({ className = '' }: { className?: string }) {
   return (
-    <div className={`p-5 rounded-xl border border-border bg-surface space-y-4 shadow-card ${className}`}>
+    <div className={`p-5 rounded-xl border border-line-strong bg-surface space-y-4 shadow-card ${className}`}>
       <div className="flex items-center gap-3">
         <Skeleton variant="circular" width={40} height={40} />
         <div className="space-y-2 flex-1">
@@ -68,7 +68,7 @@ export function SkeletonCard({ className = '' }: { className?: string }) {
 
 export function SkeletonMetric({ className = '' }: { className?: string }) {
   return (
-    <div className={`p-5 rounded-xl border border-border bg-surface space-y-2 ${className}`}>
+    <div className={`p-5 rounded-xl border border-line-strong bg-surface space-y-2 ${className}`}>
       <Skeleton variant="text" width="50%" height={12} />
       <Skeleton variant="text" width="70%" height={24} />
     </div>
@@ -79,7 +79,7 @@ export function SkeletonList({ rows = 4, className = '' }: { rows?: number; clas
   return (
     <div className={`space-y-3 ${className}`}>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 p-4 rounded-lg border border-border bg-surface">
+        <div key={i} className="flex items-center gap-4 p-4 rounded-lg border border-line-strong bg-surface">
           <Skeleton variant="circular" width={36} height={36} />
           <div className="flex-1 space-y-1.5">
             <Skeleton variant="text" width="45%" height={14} />

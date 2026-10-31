@@ -27,25 +27,25 @@ export function Badge({
       : variant;
 
   const variants = {
-    default: 'bg-surface-2 text-text-secondary border border-border',
+    default: 'bg-surface-2 -ink-2 border -line-strong',
     accent: 'bg-brand-soft text-brand border border-brand/20',
     highlight: 'bg-highlight-soft text-highlight border border-highlight/25',
     success: 'bg-success-soft text-success border border-success/20',
     warning: 'bg-warning-soft text-warning border border-warning/25',
     danger: 'bg-danger-soft text-danger border border-danger/25',
     info: 'bg-info-soft text-info border border-info/25',
-    outline: 'bg-transparent text-text-primary border border-border-strong',
+    outline: 'bg-transparent -ink border -line-strong',
   };
 
   const dotColors = {
-    default: 'bg-text-muted',
+    default: '-ink-2',
     accent: 'bg-brand',
     highlight: 'bg-highlight',
     success: 'bg-success',
     warning: 'bg-warning',
     danger: 'bg-danger',
     info: 'bg-info',
-    outline: 'bg-text-primary',
+    outline: '-ink',
   };
 
   const sizes = {

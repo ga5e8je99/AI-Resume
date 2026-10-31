@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import DataStore from '@/app/lib/datastore';
 import { verifyBinancePayWebhook } from '@/lib/payments/binance-pay';
 import { sendEmail, getPaymentReceiptEmailHtml } from '@/lib/email';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/webhooks/binance-pay
@@ -15,6 +16,16 @@ import { sendEmail, getPaymentReceiptEmailHtml } from '@/lib/email';
  */
 export async function POST(req: NextRequest) {
   try {
+    const rateLimit = await applyRateLimit(req, {
+      limit: 120,
+      ipLimit: 120,
+      windowMs: 60 * 1000,
+      keyPrefix: 'webhook_binance_pay',
+    });
+    if (!rateLimit.allowed && rateLimit.errorResponse) {
+      return rateLimit.errorResponse;
+    }
+
     const rawBody = await req.text();
 
     const headers = {
@@ -78,8 +89,10 @@ export async function POST(req: NextRequest) {
     const order = await DataStore.findOrderByReference(merchantTradeNo);
     if (!order) {
       console.warn(`[Binance Pay Webhook] Order not found for reference: ${merchantTradeNo}`);
-      // Acknowledge to Binance so it doesn't retry indefinitely
-      return NextResponse.json({ returnCode: 'SUCCESS', returnMessage: null });
+      return NextResponse.json(
+        { returnCode: 'FAIL', returnMessage: 'ORDER_NOT_FOUND', error: 'ORDER_NOT_FOUND' },
+        { status: 404 }
+      );
     }
 
     // Idempotency: if order is already paid, acknowledge immediately
@@ -87,29 +100,117 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ returnCode: 'SUCCESS', returnMessage: null });
     }
 
-    // Verify currency and amount
-    const paidCurrency = paymentData.currency || 'USDT';
-    const paidAmount = parseFloat(paymentData.totalFee || paymentData.orderAmount || '0');
+    // Requirement 1: Strict currency & amount verification
+    const expectedCurrency = (order.currency || 'USDT').toUpperCase();
+    const rawCurrency = paymentData.currency ?? payload.currency;
+    const paidCurrency =
+      typeof rawCurrency === 'string' ? rawCurrency.trim().toUpperCase() : '';
 
-    if (paidCurrency !== 'USDT') {
-      console.warn(`[Binance Pay Webhook] Unexpected currency: ${paidCurrency} for order ${order.id}`);
-    }
+    const rawAmount =
+      paymentData.totalFee ??
+      paymentData.orderAmount ??
+      payload.totalFee ??
+      payload.orderAmount;
+    const paidAmount =
+      rawAmount !== undefined && rawAmount !== null && rawAmount !== ''
+        ? Number(rawAmount)
+        : NaN;
 
-    // Verify amount with small floating-point tolerance
-    if (paidAmount > 0 && Math.abs(paidAmount - order.amount) > 0.01) {
+    const expectedAmount =
+      typeof order.amount === 'number' && order.amount > 0
+        ? order.amount
+        : order.baseAmount;
+
+    const isCurrencyMismatch = !paidCurrency || paidCurrency !== expectedCurrency;
+    // Small positive difference from cents-suffix is acceptable only if paidAmount >= expectedAmount
+    const isUnderpaid =
+      !Number.isFinite(paidAmount) || paidAmount < expectedAmount - 1e-6;
+
+    if (isCurrencyMismatch || isUnderpaid) {
+      const rejectReason = isCurrencyMismatch ? 'CURRENCY_MISMATCH' : 'AMOUNT_UNDERPAID';
       console.warn(
-        `[Binance Pay Webhook] Amount discrepancy: received ${paidAmount}, expected ${order.amount}`
+        `[Binance Pay Webhook] Rejected (${rejectReason}) for order ${order.id}: received ${paidAmount} ${paidCurrency}, expected >= ${expectedAmount} ${expectedCurrency}`
+      );
+
+      const rejectEventId = `binance_pay_reject_${order.reference}_${paymentData.transactionId || paymentData.prepayId || headers.nonce || Date.now()}`;
+      await DataStore.recordPaymentEvent({
+        eventId: rejectEventId,
+        provider: 'binance_pay',
+        eventType: bizStatus || 'PAY_SUCCESS',
+        status: 'rejected',
+        payload: {
+          reason: rejectReason,
+          orderId: order.id,
+          reference: order.reference,
+          expectedAmount,
+          paidAmount: Number.isFinite(paidAmount) ? paidAmount : null,
+          expectedCurrency,
+          paidCurrency,
+          raw: payload,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          returnCode: 'FAIL',
+          returnMessage: rejectReason,
+          error: rejectReason,
+        },
+        { status: 400 }
       );
     }
 
-    // Complete order and activate user subscription / credits
+    const txidCandidate = paymentData.transactionId || paymentData.prepayId || undefined;
+
+    // Complete order and activate user subscription / credits atomically
     const completeResult = await DataStore.completeOrder(order.id, {
       actor: 'binance_webhook',
-      note: `Binance Pay Webhook confirmed payment (prepayId: ${paymentData.prepayId || 'N/A'})`,
-      txid: paymentData.transactionId || paymentData.prepayId,
+      note: `Binance Pay Webhook confirmed payment (prepayId: ${paymentData.prepayId || 'N/A'}, amount: ${paidAmount} ${paidCurrency})`,
+      txid: txidCandidate,
     });
 
-    if (completeResult.success) {
+    if (!completeResult.success) {
+      const errCode = completeResult.error || 'ORDER_COMPLETION_FAILED';
+      const rejectEventId = `binance_pay_err_${order.reference}_${txidCandidate || Date.now()}`;
+      await DataStore.recordPaymentEvent({
+        eventId: rejectEventId,
+        provider: 'binance_pay',
+        eventType: bizStatus || 'PAY_SUCCESS',
+        status: 'rejected',
+        payload: {
+          reason: errCode,
+          orderId: order.id,
+          reference: order.reference,
+          txid: txidCandidate,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          returnCode: 'FAIL',
+          returnMessage: errCode,
+          error: errCode,
+        },
+        { status: 400 }
+      );
+    }
+
+    const processedEventId = `binance_pay_${order.reference}_${txidCandidate || headers.nonce || Date.now()}`;
+    await DataStore.recordPaymentEvent({
+      eventId: processedEventId,
+      provider: 'binance_pay',
+      eventType: bizStatus || 'PAY_SUCCESS',
+      status: 'processed',
+      payload: {
+        orderId: order.id,
+        reference: order.reference,
+        paidAmount,
+        paidCurrency,
+        txid: txidCandidate,
+      },
+    });
+
+    if (completeResult.success && !completeResult.alreadyPaid) {
       // Send confirmation receipt email
       const user = await DataStore.findUserById(order.userId);
       const emailHtml = getPaymentReceiptEmailHtml({
@@ -117,7 +218,7 @@ export async function POST(req: NextRequest) {
         amount: order.amount,
         currency: 'USDT',
         planId: order.planId,
-        transactionId: paymentData.transactionId || order.reference,
+        transactionId: txidCandidate || order.reference,
         date: new Date().toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'short',

@@ -1,13 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
 import { getReceivingWalletAddress } from '@/lib/payments/crypto-utils';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 /**
  * GET /api/payments/crypto/order?reference=ORD-XXXX
- * Retrieves public order status and payment details for the payment screen.
+ * Retrieves order status and payment details for the authenticated order owner.
  */
 export async function GET(req: NextRequest) {
   try {
+    const authUser = getAuthenticatedUser(req);
+    if (!authUser || !authUser.userId) {
+      return NextResponse.json(
+        { error: 'UNAUTHORIZED', message: 'Authentication required.' },
+        { status: 401 }
+      );
+    }
+
+    const rl = await applyRateLimit(req, {
+      prefix: 'crypto_order_status',
+      maxRequests: 60,
+      windowMs: 60 * 1000,
+      userId: authUser.userId,
+    });
+    if (!rl.allowed && rl.response) {
+      return rl.response;
+    }
+
     const searchParams = req.nextUrl.searchParams;
     const reference = searchParams.get('reference')?.trim();
     const orderId = searchParams.get('orderId')?.trim();
@@ -27,6 +47,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { error: 'Order not found or has expired' },
         { status: 404 }
+      );
+    }
+
+    if (String(order.userId) !== String(authUser.userId)) {
+      return NextResponse.json(
+        { error: 'FORBIDDEN', message: 'You do not have permission to access this order.' },
+        { status: 403 }
       );
     }
 

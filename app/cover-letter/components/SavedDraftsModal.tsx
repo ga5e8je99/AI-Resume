@@ -153,7 +153,7 @@ export function SavedDraftsModal({
           </div>
 
           {/* Search */}
-          <div className="p-3 border-b border-line bg-surface-2/40">
+          <div className="p-3 border-b border-line -surface-2">
             <div className="relative">
               <Search className="w-4 h-4 text-ink-3 absolute start-3 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
               <input

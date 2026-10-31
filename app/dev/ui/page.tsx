@@ -74,7 +74,7 @@ export default function DevUiPage() {
     <div
       data-theme={qaTheme}
       dir={isRtl ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-bg text-text-primary transition-colors duration-200 p-4 sm:p-8 lg:p-12 font-sans selection:bg-brand-soft selection:text-brand"
+      className="min-h-[100dvh] bg-paper text-ink transition-colors duration-200 p-4 sm:p-8 lg:p-12 font-sans selection:bg-brand-soft selection:text-brand"
     >
       {/* Toast Notification Container */}
       {toastItem && (
@@ -86,7 +86,7 @@ export default function DevUiPage() {
       )}
 
       {/* Floating QA Control Toolbar */}
-      <header className="sticky top-4 z-elevated max-w-6xl mx-auto mb-10 p-4 rounded-xl border border-border bg-surface/90 backdrop-blur-md shadow-elevated flex flex-wrap items-center justify-between gap-4">
+      <header className="sticky top-4 z-elevated max-w-6xl mx-auto mb-10 p-4 rounded-xl border border-line-strong bg-surface backdrop-blur-md shadow-elevated flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-brand-soft text-brand flex items-center justify-center font-bold">
             <Sparkles className="w-5 h-5" />
@@ -98,7 +98,7 @@ export default function DevUiPage() {
                 /dev/ui
               </Badge>
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs -ink-2">
               Design system QA playground • Live token & component inspection
             </p>
           </div>
@@ -144,38 +144,38 @@ export default function DevUiPage() {
         {/* 1. DESIGN TOKENS & COLOR PALETTE                                      */}
         {/* ===================================================================== */}
         <section className="space-y-6">
-          <div className="border-b border-border pb-3">
-            <h2 className="text-xl font-bold font-serif text-text-primary">
+          <div className="border-b -line-strong pb-3">
+            <h2 className="text-xl font-bold font-serif -ink">
               1. Design Tokens & Elevation Layers
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
+            <p className="text-xs -ink-2 mt-1">
               Background canvas, surfaces, elevated layers, and status palettes
             </p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 rounded-lg border border-border bg-bg text-start shadow-subtle space-y-2">
-              <span className="text-xs font-mono text-text-muted">bg / paper</span>
+            <div className="p-4 rounded-lg border -line-strong -paper text-start shadow-subtle space-y-2">
+              <span className="text-xs font-mono -ink-2">bg / paper</span>
               <p className="text-sm font-semibold">Canvas Layer</p>
-              <div className="text-[11px] text-text-secondary font-mono">var(--bg)</div>
+              <div className="text-[11px] -ink-2 font-mono">var(--bg)</div>
             </div>
 
-            <div className="p-4 rounded-lg border border-border bg-surface text-start shadow-subtle space-y-2">
-              <span className="text-xs font-mono text-text-muted">surface</span>
+            <div className="p-4 rounded-lg border -line-strong bg-surface text-start shadow-subtle space-y-2">
+              <span className="text-xs font-mono -ink-2">surface</span>
               <p className="text-sm font-semibold">Card Surface</p>
-              <div className="text-[11px] text-text-secondary font-mono">var(--surface)</div>
+              <div className="text-[11px] -ink-2 font-mono">var(--surface)</div>
             </div>
 
-            <div className="p-4 rounded-lg border border-border bg-surface-2 text-start shadow-subtle space-y-2">
-              <span className="text-xs font-mono text-text-muted">surface-2</span>
+            <div className="p-4 rounded-lg border -line-strong bg-surface-2 text-start shadow-subtle space-y-2">
+              <span className="text-xs font-mono -ink-2">surface-2</span>
               <p className="text-sm font-semibold">Subtle Fill</p>
-              <div className="text-[11px] text-text-secondary font-mono">var(--surface-2)</div>
+              <div className="text-[11px] -ink-2 font-mono">var(--surface-2)</div>
             </div>
 
-            <div className="p-4 rounded-lg border border-border-strong bg-elevated text-start shadow-elevated space-y-2">
-              <span className="text-xs font-mono text-text-muted">elevated</span>
+            <div className="p-4 rounded-lg border -line-strong bg-elevated text-start shadow-elevated space-y-2">
+              <span className="text-xs font-mono -ink-2">elevated</span>
               <p className="text-sm font-semibold">Floating Layer</p>
-              <div className="text-[11px] text-text-secondary font-mono">var(--elevated)</div>
+              <div className="text-[11px] -ink-2 font-mono">var(--elevated)</div>
             </div>
           </div>
 
@@ -220,24 +220,24 @@ export default function DevUiPage() {
             <div className="p-3 rounded-md bg-info-soft border border-info/20 text-info text-xs font-medium">
               Info / Notice
             </div>
-            <div className="p-3 rounded-md bg-surface border-2 border-focus text-text-primary text-xs font-medium">
+            <div className="p-3 rounded-md bg-surface border-2 border-focus -ink text-xs font-medium">
               Focus Ring (2px)
             </div>
           </div>
 
           {/* Radii & Elevation Scale */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-            <div className="p-4 rounded-md border border-border bg-surface shadow-subtle text-start space-y-1">
-              <span className="text-xs font-mono text-text-muted">radius-md (6px)</span>
-              <p className="text-xs font-semibold text-text-primary">shadow-subtle</p>
+            <div className="p-4 rounded-md border -line-strong bg-surface shadow-subtle text-start space-y-1">
+              <span className="text-xs font-mono -ink-2">radius-md (6px)</span>
+              <p className="text-xs font-semibold -ink">shadow-subtle</p>
             </div>
-            <div className="p-4 rounded-lg border border-border bg-surface shadow-card text-start space-y-1">
-              <span className="text-xs font-mono text-text-muted">radius-lg (10px)</span>
-              <p className="text-xs font-semibold text-text-primary">shadow-card</p>
+            <div className="p-4 rounded-lg border -line-strong bg-surface shadow-card text-start space-y-1">
+              <span className="text-xs font-mono -ink-2">radius-lg (10px)</span>
+              <p className="text-xs font-semibold -ink">shadow-card</p>
             </div>
-            <div className="p-4 rounded-xl border border-border bg-surface shadow-elevated text-start space-y-1">
-              <span className="text-xs font-mono text-text-muted">radius-xl (14px)</span>
-              <p className="text-xs font-semibold text-text-primary">shadow-elevated</p>
+            <div className="p-4 rounded-xl border -line-strong bg-surface shadow-elevated text-start space-y-1">
+              <span className="text-xs font-mono -ink-2">radius-xl (14px)</span>
+              <p className="text-xs font-semibold -ink">shadow-elevated</p>
             </div>
             <div className="p-4 rounded-2xl border border-brand/30 bg-surface shadow-glow text-start space-y-1">
               <span className="text-xs font-mono text-brand">radius-2xl (20px)</span>
@@ -250,47 +250,47 @@ export default function DevUiPage() {
         {/* 2. TYPOGRAPHY SCALE                                                   */}
         {/* ===================================================================== */}
         <section className="space-y-6">
-          <div className="border-b border-border pb-3">
-            <h2 className="text-xl font-bold font-serif text-text-primary">
+          <div className="border-b -line-strong pb-3">
+            <h2 className="text-xl font-bold font-serif -ink">
               2. Typography Hierarchy (Inter & IBM Plex Sans Arabic + Newsreader)
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
+            <p className="text-xs -ink-2 mt-1">
               Fluid clamps, proportional leading, and bidirectional support
             </p>
           </div>
 
-          <div className="p-6 rounded-lg border border-border bg-surface space-y-6 text-start">
+          <div className="p-6 rounded-lg border -line-strong bg-surface space-y-6 text-start">
             <div>
-              <span className="text-xs font-mono text-text-muted uppercase">.font-display</span>
-              <p className="font-display text-text-primary mt-1">
+              <span className="text-xs font-mono -ink-2 uppercase">.font-display</span>
+              <p className="font-display -ink mt-1">
                 {isRtl ? 'سيرة ذاتية متميزة تلفت الأنظار' : 'A resume that gets read.'}
               </p>
             </div>
 
             <div>
-              <span className="text-xs font-mono text-text-muted uppercase">h1 / .font-h1</span>
+              <span className="text-xs font-mono -ink-2 uppercase">h1 / .font-h1</span>
               <h1 className="mt-1">
                 {isRtl ? 'العنوان الرئيسي للصفحات والمستندات' : 'Headline Level 1: Primary Section'}
               </h1>
             </div>
 
             <div>
-              <span className="text-xs font-mono text-text-muted uppercase">h2 / .font-h2</span>
+              <span className="text-xs font-mono -ink-2 uppercase">h2 / .font-h2</span>
               <h2 className="mt-1">
                 {isRtl ? 'العنوان الثانوي للمجموعات' : 'Headline Level 2: Section Breakdown'}
               </h2>
             </div>
 
             <div>
-              <span className="text-xs font-mono text-text-muted uppercase">h3 / .font-h3</span>
+              <span className="text-xs font-mono -ink-2 uppercase">h3 / .font-h3</span>
               <h3 className="mt-1">
                 {isRtl ? 'العنوان الفرعي للبطاقات' : 'Headline Level 3: Card Subheading'}
               </h3>
             </div>
 
             <div>
-              <span className="text-xs font-mono text-text-muted uppercase">.font-body</span>
-              <p className="font-body text-text-secondary mt-1">
+              <span className="text-xs font-mono -ink-2 uppercase">.font-body</span>
+              <p className="font-body -ink-2 mt-1">
                 {isRtl
                   ? 'بنية المستند مصممة بدقة لتتوافق مع أنظمة التوظيف الآلية (ATS)، مع توفير محاذاة تلقائية واتصال سلس بين الأقسام دون تعقيد.'
                   : 'Document layouts are mathematically spaced for parsing accuracy across enterprise ATS parsers, providing legible margins and zero layout distortions.'}
@@ -298,24 +298,24 @@ export default function DevUiPage() {
             </div>
 
             <div>
-              <span className="text-xs font-mono text-text-muted uppercase">.font-caption</span>
-              <p className="font-caption text-text-muted mt-1">
+              <span className="text-xs font-mono -ink-2 uppercase">.font-caption</span>
+              <p className="font-caption -ink-2 mt-1">
                 {isRtl ? 'ملاحظة توضيحية: تدعم الأرقام التجدولية 2026-10-27' : 'Caption: Tabular figures enabled 2026-10-27 • 98.5% match score'}
               </p>
             </div>
 
             {/* JetBrains Mono ATS Numbers & Keywords Specimen */}
-            <div className="pt-4 border-t border-border">
+            <div className="pt-4 border-t -line-strong">
               <span className="text-xs font-mono text-brand uppercase">.font-mono / JetBrains Mono (ATS Numbers & Metrics)</span>
               <div className="flex flex-wrap items-center gap-4 mt-2 font-mono">
                 <span className="text-2xl font-bold text-success tabular-nums">96.8%</span>
-                <span className="text-sm px-2.5 py-1 rounded bg-surface-2 border border-border text-text-secondary">
+                <span className="text-sm px-2.5 py-1 rounded bg-surface-2 border -line-strong -ink-2">
                   ATS_SCORE: 94/100
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded bg-brand-soft text-brand font-medium">
                   KEYWORD_DENSITY: 14.2%
                 </span>
-                <span className="text-xs text-text-muted">
+                <span className="text-xs -ink-2">
                   ISO-8601: 2026-10-28T01:30:00Z
                 </span>
               </div>
@@ -327,19 +327,19 @@ export default function DevUiPage() {
         {/* 3. BUTTONS                                                            */}
         {/* ===================================================================== */}
         <section className="space-y-6">
-          <div className="border-b border-border pb-3">
-            <h2 className="text-xl font-bold font-serif text-text-primary">
+          <div className="border-b -line-strong pb-3">
+            <h2 className="text-xl font-bold font-serif -ink">
               3. Button Components & States
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
+            <p className="text-xs -ink-2 mt-1">
               Variants, sizes, loading spinners, disabled states, and icon alignment
             </p>
           </div>
 
-          <div className="space-y-6 p-6 rounded-lg border border-border bg-surface">
+          <div className="space-y-6 p-6 rounded-lg border -line-strong bg-surface">
             {/* Variants */}
             <div>
-              <h4 className="text-xs font-semibold text-text-muted uppercase mb-3">Variants</h4>
+              <h4 className="text-xs font-semibold -ink-2 uppercase mb-3">Variants</h4>
               <div className="flex flex-wrap items-center gap-3">
                 <Button variant="primary">{isRtl ? 'زر أساسي' : 'Primary Button'}</Button>
                 <Button variant="secondary">{isRtl ? 'زر ثانوي' : 'Secondary'}</Button>
@@ -352,7 +352,7 @@ export default function DevUiPage() {
 
             {/* Sizes */}
             <div>
-              <h4 className="text-xs font-semibold text-text-muted uppercase mb-3">Sizes</h4>
+              <h4 className="text-xs font-semibold -ink-2 uppercase mb-3">Sizes</h4>
               <div className="flex flex-wrap items-center gap-3">
                 <Button variant="primary" size="sm">
                   {isRtl ? 'صغير (32px)' : 'Small (32px)'}
@@ -368,7 +368,7 @@ export default function DevUiPage() {
 
             {/* States & Icons */}
             <div>
-              <h4 className="text-xs font-semibold text-text-muted uppercase mb-3">States & Icons</h4>
+              <h4 className="text-xs font-semibold -ink-2 uppercase mb-3">States & Icons</h4>
               <div className="flex flex-wrap items-center gap-3">
                 <Button variant="primary" isLoading>
                   {isRtl ? 'جاري التحميل...' : 'Loading State'}
@@ -397,16 +397,16 @@ export default function DevUiPage() {
         {/* 4. FORM CONTROLS                                                      */}
         {/* ===================================================================== */}
         <section className="space-y-6">
-          <div className="border-b border-border pb-3">
-            <h2 className="text-xl font-bold font-serif text-text-primary">
+          <div className="border-b -line-strong pb-3">
+            <h2 className="text-xl font-bold font-serif -ink">
               4. Form Controls (Input, Textarea, Select)
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
+            <p className="text-xs -ink-2 mt-1">
               Floating/clear labels, validation states, character counters, and logical addons
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-lg border border-border bg-surface">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-lg border -line-strong bg-surface">
             {/* Input Standard */}
             <Input
               label={isRtl ? 'البريد الإلكتروني' : 'Email Address'}
@@ -471,11 +471,11 @@ export default function DevUiPage() {
         {/* 5. CARDS & CONTAINERS                                                 */}
         {/* ===================================================================== */}
         <section className="space-y-6">
-          <div className="border-b border-border pb-3">
-            <h2 className="text-xl font-bold font-serif text-text-primary">
+          <div className="border-b -line-strong pb-3">
+            <h2 className="text-xl font-bold font-serif -ink">
               5. Card Containers
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
+            <p className="text-xs -ink-2 mt-1">
               Surface, elevated, subtle, outline variants with interactive hover transforms
             </p>
           </div>
@@ -488,14 +488,14 @@ export default function DevUiPage() {
                 action={<Badge variant="accent">Active</Badge>}
               />
               <CardBody>
-                <p className="text-xs text-text-secondary leading-relaxed">
+                <p className="text-xs -ink-2 leading-relaxed">
                   {isRtl
                     ? 'بطاقة تعتمد نمط surface الافتراضي مع إمكانية النقر والتفاعل.'
                     : 'Default surface card with hover translation and elevated shadow depth.'}
                 </p>
               </CardBody>
               <CardFooter>
-                <span className="text-xs font-mono text-text-muted">A4 Paper</span>
+                <span className="text-xs font-mono -ink-2">A4 Paper</span>
                 <span className="text-xs text-brand font-semibold">View details →</span>
               </CardFooter>
             </Card>
@@ -507,7 +507,7 @@ export default function DevUiPage() {
                 action={<Badge variant="success">Passed</Badge>}
               />
               <CardBody>
-                <p className="text-xs text-text-secondary leading-relaxed">
+                <p className="text-xs -ink-2 leading-relaxed">
                   {isRtl
                     ? 'مخصصة للنوافذ المنبثقة، والتقارير التشخيصية ذات الأهمية العالية.'
                     : 'Optimized for diagnostic modals, key metrics, and priority callouts.'}
@@ -527,14 +527,14 @@ export default function DevUiPage() {
                 subtitle={isRtl ? 'خلفية surface-2 هادئة' : 'Muted fill background'}
               />
               <CardBody>
-                <p className="text-xs text-text-secondary leading-relaxed">
+                <p className="text-xs -ink-2 leading-relaxed">
                   {isRtl
                     ? 'تُستخدم للقوائم الجانبية أو الجداول الإحصائية المجمعة.'
                     : 'Ideal for secondary sidebars, auxiliary stats, and metadata lists.'}
                 </p>
               </CardBody>
               <CardFooter>
-                <span className="text-xs text-text-muted font-mono">12 Sections</span>
+                <span className="text-xs -ink-2 font-mono">12 Sections</span>
                 <span className="text-xs text-brand font-semibold">Edit</span>
               </CardFooter>
             </Card>
@@ -545,16 +545,16 @@ export default function DevUiPage() {
         {/* 6. BADGES & STATUS PILLS                                              */}
         {/* ===================================================================== */}
         <section className="space-y-6">
-          <div className="border-b border-border pb-3">
-            <h2 className="text-xl font-bold font-serif text-text-primary">
+          <div className="border-b -line-strong pb-3">
+            <h2 className="text-xl font-bold font-serif -ink">
               6. Badges & Status Indicators
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
+            <p className="text-xs -ink-2 mt-1">
               Semantic status tags with optional pulse/dot indicators
             </p>
           </div>
 
-          <div className="p-6 rounded-lg border border-border bg-surface flex flex-wrap items-center gap-3">
+          <div className="p-6 rounded-lg border -line-strong bg-surface flex flex-wrap items-center gap-3">
             <Badge variant="default">{isRtl ? 'افتراضي' : 'Default'}</Badge>
             <Badge variant="brand" dot>
               {isRtl ? 'يشم زمردي' : 'Brand Pine'}
@@ -582,19 +582,19 @@ export default function DevUiPage() {
         {/* 7. NAVIGATION, TABS & STEPPERS                                        */}
         {/* ===================================================================== */}
         <section className="space-y-6">
-          <div className="border-b border-border pb-3">
-            <h2 className="text-xl font-bold font-serif text-text-primary">
+          <div className="border-b -line-strong pb-3">
+            <h2 className="text-xl font-bold font-serif -ink">
               7. Navigation, Tabs & Steppers
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
+            <p className="text-xs -ink-2 mt-1">
               Underline & pill tab strips with keyboard arrows, plus multi-step workflows
             </p>
           </div>
 
-          <div className="p-6 rounded-lg border border-border bg-surface space-y-8">
+          <div className="p-6 rounded-lg border -line-strong bg-surface space-y-8">
             {/* Underline Tabs */}
             <div>
-              <h4 className="text-xs font-semibold text-text-muted uppercase mb-3">Underline Tabs</h4>
+              <h4 className="text-xs font-semibold -ink-2 uppercase mb-3">Underline Tabs</h4>
               <Tabs
                 activeTab={activeTab}
                 onChange={setActiveTab}
@@ -608,7 +608,7 @@ export default function DevUiPage() {
 
             {/* Pill Tabs */}
             <div>
-              <h4 className="text-xs font-semibold text-text-muted uppercase mb-3">Pill Tabs</h4>
+              <h4 className="text-xs font-semibold -ink-2 uppercase mb-3">Pill Tabs</h4>
               <Tabs
                 variant="pills"
                 activeTab={activePillTab}
@@ -623,7 +623,7 @@ export default function DevUiPage() {
 
             {/* Segmented Control */}
             <div>
-              <h4 className="text-xs font-semibold text-text-muted uppercase mb-3">Segmented Control</h4>
+              <h4 className="text-xs font-semibold -ink-2 uppercase mb-3">Segmented Control</h4>
               <SegmentedControl
                 value={segmentedVal}
                 onChange={setSegmentedVal}
@@ -637,7 +637,7 @@ export default function DevUiPage() {
             {/* Stepper Component */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h4 className="text-xs font-semibold text-text-muted uppercase">Interactive Stepper</h4>
+                <h4 className="text-xs font-semibold -ink-2 uppercase">Interactive Stepper</h4>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -684,19 +684,19 @@ export default function DevUiPage() {
         {/* 8. PROGRESS, SKELETON & TOAST                                         */}
         {/* ===================================================================== */}
         <section className="space-y-6">
-          <div className="border-b border-border pb-3">
-            <h2 className="text-xl font-bold font-serif text-text-primary">
+          <div className="border-b -line-strong pb-3">
+            <h2 className="text-xl font-bold font-serif -ink">
               8. Progress, Skeletons & Toast Notifications
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
+            <p className="text-xs -ink-2 mt-1">
               Visual feedback, loading states, and accessible toasts
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-lg border border-border bg-surface">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-lg border -line-strong bg-surface">
             {/* Progress Bars */}
             <div className="space-y-4">
-              <h4 className="text-xs font-semibold text-text-muted uppercase">Progress Bars</h4>
+              <h4 className="text-xs font-semibold -ink-2 uppercase">Progress Bars</h4>
               <ProgressBar
                 value={88}
                 variant="brand"
@@ -731,13 +731,13 @@ export default function DevUiPage() {
 
             {/* Skeleton Loaders */}
             <div className="space-y-4">
-              <h4 className="text-xs font-semibold text-text-muted uppercase">Skeleton Shimmer</h4>
+              <h4 className="text-xs font-semibold -ink-2 uppercase">Skeleton Shimmer</h4>
               <SkeletonCard />
             </div>
 
             {/* Toast Triggers */}
-            <div className="md:col-span-2 pt-4 border-t border-border">
-              <h4 className="text-xs font-semibold text-text-muted uppercase mb-3">Live Toast Triggers</h4>
+            <div className="md:col-span-2 pt-4 border-t -line-strong">
+              <h4 className="text-xs font-semibold -ink-2 uppercase mb-3">Live Toast Triggers</h4>
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   variant="outline"
@@ -786,17 +786,17 @@ export default function DevUiPage() {
         {/* 9. MODALS, TOOLTIPS & EMPTY STATES                                    */}
         {/* ===================================================================== */}
         <section className="space-y-6">
-          <div className="border-b border-border pb-3">
-            <h2 className="text-xl font-bold font-serif text-text-primary">
+          <div className="border-b -line-strong pb-3">
+            <h2 className="text-xl font-bold font-serif -ink">
               9. Overlays & Empty States
             </h2>
-            <p className="text-xs text-text-secondary mt-1">
+            <p className="text-xs -ink-2 mt-1">
               Focus-trapped dialogs, directional tooltips, and zero-data states
             </p>
           </div>
 
           <div className="space-y-6">
-            <div className="p-6 rounded-lg border border-border bg-surface flex flex-wrap items-center gap-4">
+            <div className="p-6 rounded-lg border -line-strong bg-surface flex flex-wrap items-center gap-4">
               <Button variant="primary" onClick={() => setIsDialogOpen(true)}>
                 {isRtl ? 'فتح نافذة الحوار (Modal)' : 'Open Accessible Dialog'}
               </Button>
@@ -844,12 +844,12 @@ export default function DevUiPage() {
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-text-secondary">
+          <p className="text-sm -ink-2">
             {isRtl
               ? 'تأكد من مراجعة أرقام الهواتف وصيغة التواريخ قبل الإرسال لجهات العمل.'
               : 'Please ensure contact phone numbers, location, and dates are completely verified.'}
           </p>
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t -line-strong">
             <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
               {isRtl ? 'إلغاء' : 'Cancel'}
             </Button>

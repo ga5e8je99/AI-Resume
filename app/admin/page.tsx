@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
@@ -496,7 +496,7 @@ export default function AdminDashboardPage() {
   // Notifications
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const showNotice = (message: string, type: 'success' | 'error' = 'success') => {
+  const showNotice = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
     if (type === 'error') {
@@ -504,7 +504,7 @@ export default function AdminDashboardPage() {
     } else {
       toast.success(message);
     }
-  };
+  }, [toast]);
 
   // Load Roadmap from LocalStorage with smart merge of new default ideas
   useEffect(() => {
@@ -690,14 +690,7 @@ export default function AdminDashboardPage() {
     }
   }, [authLoading, user]);
 
-  // Load Admin Data when authorized
-  useEffect(() => {
-    if (isAdminAuthorized) {
-      loadAllAdminData();
-    }
-  }, [isAdminAuthorized]);
-
-  const loadAllAdminData = async () => {
+  const loadAllAdminData = useCallback(async () => {
     setIsLoadingData(true);
     try {
       const [statsRes, usersRes, resumesRes, analysesRes] = await Promise.all([
@@ -729,7 +722,14 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLoadingData(false);
     }
-  };
+  }, [showNotice]);
+
+  // Load Admin Data when authorized
+  useEffect(() => {
+    if (isAdminAuthorized) {
+      loadAllAdminData();
+    }
+  }, [isAdminAuthorized, loadAllAdminData]);
 
   const handleVerifyKey = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -956,7 +956,7 @@ export default function AdminDashboardPage() {
   // If Auth loading
   if (authLoading || isAdminAuthorized === null) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-300">
+      <div className="min-h-[100dvh] bg-slate-950 flex items-center justify-center text-slate-300">
         <div className="flex flex-col items-center gap-3">
           <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
           <p className="text-sm font-medium">جاري التحقق من صلاحيات المشرف...</p>
@@ -968,7 +968,7 @@ export default function AdminDashboardPage() {
   // If NOT authorized as admin, show Admin Authentication Access Gate
   if (!isAdminAuthorized) {
     return (
-      <div className="min-h-screen bg-paper flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-paper flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-8  shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 end-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
           <div className="absolute bottom-0 start-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
@@ -1079,7 +1079,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col">
       {/* Top Notification Toast */}
       {notification && (
         <div

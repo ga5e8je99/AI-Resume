@@ -11,7 +11,12 @@ export type PlanId = 'free' | 'pro' | 'payg';
 export const RESUME_GENERATION_CREDIT_COST = 2;
 
 /**
- * Number of credits consumed per Job Match search on Pay-As-You-Go (after 3 free searches)
+ * Number of free Job Match searches included on the Starter (Free) tier
+ */
+export const JOB_MATCH_FREE_QUOTA = 3;
+
+/**
+ * Number of credits consumed per Job Match search on Pay-As-You-Go (after JOB_MATCH_FREE_QUOTA free searches)
  */
 export const JOB_MATCH_CREDIT_COST = 1;
 
@@ -504,6 +509,67 @@ export const PLANS: PlanConfig[] = [
 
 export function getPlanById(id: string): PlanConfig | undefined {
   return PLANS.find((plan) => plan.id === id);
+}
+
+/**
+ * Resolves the canonical price for a plan from PLANS in lib/plans.ts.
+ * Throws if the plan or price is not defined (no hardcoded fallbacks).
+ */
+export function getPlanPrice(
+  planId: PlanId | string,
+  currency: 'USD' | 'EGP',
+  billingCycle: BillingCycle = 'monthly'
+): number {
+  const plan = getPlanById(planId);
+  if (!plan) {
+    throw new Error(`Invalid plan ID: ${planId}`);
+  }
+
+  if (plan.type === 'free') {
+    return 0;
+  }
+
+  const currencyPricing = plan.pricing[currency];
+  if (!currencyPricing) {
+    throw new Error(`Currency "${currency}" is not configured for plan "${plan.id}".`);
+  }
+
+  let price: number | undefined;
+  if (plan.type === 'one_time' || plan.id === 'payg') {
+    price = currencyPricing.oneTime;
+  } else {
+    price = billingCycle === 'annual' ? currencyPricing.annualTotal : currencyPricing.monthly;
+  }
+
+  if (typeof price !== 'number' || price <= 0) {
+    throw new Error(
+      `Price not configured in lib/plans.ts for plan "${plan.id}" (${currency}, ${billingCycle}).`
+    );
+  }
+
+  return price;
+}
+
+/**
+ * Resolves the canonical credit allocation for a plan from PLANS in lib/plans.ts.
+ */
+export function getPlanCredits(planId: PlanId | string): number | 'unlimited' {
+  const plan = getPlanById(planId);
+  if (!plan) {
+    throw new Error(`Invalid plan ID: ${planId}`);
+  }
+  return plan.credits;
+}
+
+/**
+ * Resolves the numeric credit bundle size for Pay-As-You-Go from lib/plans.ts.
+ */
+export function getPaygCredits(): number {
+  const credits = getPlanCredits('payg');
+  if (typeof credits !== 'number' || credits <= 0) {
+    throw new Error('PAYG credits are not validly configured in lib/plans.ts.');
+  }
+  return credits;
 }
 
 export function formatPrice(

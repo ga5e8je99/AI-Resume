@@ -12,7 +12,6 @@ const nextConfig: NextConfig = {
       'lucide-react',
       'clsx',
       'tailwind-merge',
-      'framer-motion',
     ],
   },
 

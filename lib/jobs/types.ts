@@ -36,11 +36,28 @@ export interface JobProviderAttribution {
   requiresBadge?: boolean;
 }
 
+export type ProviderStatusState = 'ok' | 'failed' | 'skipped';
+
+export interface ProviderSearchResult {
+  jobs: Job[];
+  status: ProviderStatusState;
+  error?: string;
+  tookMs: number;
+}
+
+export interface ProviderStatusEntry {
+  provider: string;
+  status: ProviderStatusState;
+  count: number;
+  error?: string;
+  tookMs: number;
+}
+
 export interface JobProvider {
   name: string;
   attribution: JobProviderAttribution;
   isEnabled(): boolean;
-  search(params: JobSearchParams): Promise<Job[]>;
+  search(params: JobSearchParams): Promise<ProviderSearchResult>;
 }
 
 export interface SmartLinkPlatform {

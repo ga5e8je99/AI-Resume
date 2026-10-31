@@ -134,13 +134,15 @@ export function BuilderForm({
 
   // Auto-open activeSection if set externally
   useEffect(() => {
-    if (activeSection) {
-      setOpenSections((prev) => ({ ...prev, [activeSection]: true }));
+    if (!activeSection) return;
+    const frame = requestAnimationFrame(() => {
+      setOpenSections((prev) => (prev[activeSection] ? prev : { ...prev, [activeSection]: true }));
       const el = document.getElementById(`section-${activeSection}`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
-    }
+    });
+    return () => cancelAnimationFrame(frame);
   }, [activeSection]);
 
   const toggleSection = (key: string) => {
@@ -470,7 +472,7 @@ export function BuilderForm({
     }
 
     const newLangItem: LanguageItem = {
-      id: Date.now().toString(),
+      id: `lang_${langName.toLowerCase().replace(/\s+/g, '_')}_${currentLangs.length + 1}`,
       name: langName,
       proficiency: proficiency || newLangProficiency || 'Fluent',
     };
@@ -548,7 +550,7 @@ export function BuilderForm({
       <button
         type="button"
         onClick={() => toggleSection('personal')}
-        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-4 bg-surface -surface-2 text-start transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -558,7 +560,7 @@ export function BuilderForm({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-text-primary text-sm">
+              <h3 className="font-semibold -ink text-sm">
                 {isRtl ? 'البيانات الشخصية ومعلومات الاتصال' : 'Personal Information'}
               </h3>
               {isPersonalComplete && (
@@ -568,22 +570,22 @@ export function BuilderForm({
                 </span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs -ink-2">
               {isRtl ? 'الاسم، المسمى الوظيفي، البريد، الروابط' : 'Full name, job title, email, phone & links'}
             </p>
           </div>
         </div>
         {openSections.personal ? (
-          <ChevronUp className="w-4 h-4 text-text-muted" />
+          <ChevronUp className="w-4 h-4 -ink-2" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-text-muted" />
+          <ChevronDown className="w-4 h-4 -ink-2" />
         )}
       </button>
 
       {openSections.personal && (
         <div className="p-4 pt-2 border-t border-line space-y-4">
           {/* Profile Photo Uploader */}
-          <div className="p-3.5 bg-surface-2/50 border border-line rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-3.5 -surface-2 border border-line rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-surface border border-line flex items-center justify-center shrink-0 shadow-xs">
                 {data.personalInfo.photoUrl ? (
@@ -594,11 +596,11 @@ export function BuilderForm({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <ImageIcon className="w-5 h-5 text-text-muted" strokeWidth={1.5} />
+                  <ImageIcon className="w-5 h-5 -ink-2" strokeWidth={1.5} />
                 )}
               </div>
               <div>
-                <div className="text-xs font-semibold text-text-primary">
+                <div className="text-xs font-semibold -ink">
                   {isRtl ? 'الصورة الشخصية (اختيارية)' : 'Profile Photograph (Optional)'}
                 </div>
                 <label className="inline-flex items-center gap-1.5 mt-1 cursor-pointer">
@@ -608,7 +610,7 @@ export function BuilderForm({
                     onChange={(e) => handleToggleShowPhoto(e.target.checked)}
                     className="w-3.5 h-3.5 rounded border-line text-brand focus:ring-brand"
                   />
-                  <span className="text-xs text-text-secondary">
+                  <span className="text-xs -ink-2">
                     {isRtl ? 'إظهار الصورة في السيرة الذاتية' : 'Show photo on printable resume'}
                   </span>
                 </label>
@@ -626,7 +628,7 @@ export function BuilderForm({
               <button
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
-                className="px-3 py-1.5 bg-surface hover:bg-surface-2 text-text-primary text-xs font-medium rounded-md border border-line transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="px-3 py-1.5 bg-surface hover:bg-surface-2 -ink text-xs font-medium rounded-md border border-line transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Camera className="w-3.5 h-3.5 text-brand" strokeWidth={1.5} />
                 <span>{data.personalInfo.photoUrl ? (isRtl ? 'تغيير' : 'Change') : (isRtl ? 'رفع صورة' : 'Upload photo')}</span>
@@ -635,7 +637,7 @@ export function BuilderForm({
                 <button
                   type="button"
                   onClick={handleRemovePhoto}
-                  className="p-1.5 text-text-muted hover:text-danger hover:bg-danger/10 rounded-md transition-colors cursor-pointer"
+                  className="p-1.5 -ink-2 hover:text-danger hover:bg-danger/10 rounded-md transition-colors cursor-pointer"
                   title="Remove photo"
                 >
                   <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -646,7 +648,7 @@ export function BuilderForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1">
+              <label className="block text-xs font-semibold -ink mb-1">
                 {isRtl ? 'الاسم الكامل *' : 'Full Name *'}
               </label>
               <input
@@ -654,12 +656,12 @@ export function BuilderForm({
                 value={data.personalInfo.fullName}
                 onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
                 placeholder={isRtl ? 'مثال: أحمد عبد الله' : 'e.g. Alex Morgan'}
-                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1">
+              <label className="block text-xs font-semibold -ink mb-1">
                 {isRtl ? 'المسمى الوظيفي المستهدف *' : 'Target Job Title *'}
               </label>
               <input
@@ -667,12 +669,12 @@ export function BuilderForm({
                 value={data.personalInfo.jobTitle}
                 onChange={(e) => updatePersonalInfo('jobTitle', e.target.value)}
                 placeholder={isRtl ? 'مثال: مهندس برمجيات أول' : 'e.g. Senior Full-Stack Engineer'}
-                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1">
+              <label className="block text-xs font-semibold -ink mb-1">
                 {isRtl ? 'البريد الإلكتروني *' : 'Email Address *'}
               </label>
               <input
@@ -680,12 +682,12 @@ export function BuilderForm({
                 value={data.personalInfo.email}
                 onChange={(e) => updatePersonalInfo('email', e.target.value)}
                 placeholder="alex.morgan@email.com"
-                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1">
+              <label className="block text-xs font-semibold -ink mb-1">
                 {isRtl ? 'رقم الهاتف' : 'Phone Number'}
               </label>
               <input
@@ -693,12 +695,12 @@ export function BuilderForm({
                 value={data.personalInfo.phone}
                 onChange={(e) => updatePersonalInfo('phone', e.target.value)}
                 placeholder="+1 (555) 349-2041"
-                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1">
+              <label className="block text-xs font-semibold -ink mb-1">
                 {isRtl ? 'الموقع الجغرافي (المدينة، الدولة)' : 'Location (City, Country)'}
               </label>
               <input
@@ -706,12 +708,12 @@ export function BuilderForm({
                 value={data.personalInfo.location}
                 onChange={(e) => updatePersonalInfo('location', e.target.value)}
                 placeholder={isRtl ? 'الرياض، المملكة العربية السعودية' : 'San Francisco, CA'}
-                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1">
+              <label className="block text-xs font-semibold -ink mb-1">
                 {isRtl ? 'الموقع الشخصي / المعرض' : 'Portfolio / Website'}
               </label>
               <input
@@ -719,12 +721,12 @@ export function BuilderForm({
                 value={data.personalInfo.website}
                 onChange={(e) => updatePersonalInfo('website', e.target.value)}
                 placeholder="https://alexmorgan.dev"
-                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1">
+              <label className="block text-xs font-semibold -ink mb-1">
                 {isRtl ? 'حساب لينكد إن (LinkedIn)' : 'LinkedIn Profile'}
               </label>
               <input
@@ -732,12 +734,12 @@ export function BuilderForm({
                 value={data.personalInfo.linkedin}
                 onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
                 placeholder="linkedin.com/in/alexmorgan"
-                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-text-primary mb-1">
+              <label className="block text-xs font-semibold -ink mb-1">
                 {isRtl ? 'حساب غيت هاب (GitHub)' : 'GitHub Profile'}
               </label>
               <input
@@ -745,7 +747,7 @@ export function BuilderForm({
                 value={data.personalInfo.github}
                 onChange={(e) => updatePersonalInfo('github', e.target.value)}
                 placeholder="github.com/alexmorgan"
-                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand transition-colors"
+                className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand transition-colors"
               />
             </div>
           </div>
@@ -763,7 +765,7 @@ export function BuilderForm({
       <button
         type="button"
         onClick={() => toggleSection('summary')}
-        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-4 bg-surface -surface-2 text-start transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -773,7 +775,7 @@ export function BuilderForm({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-text-primary text-sm">
+              <h3 className="font-semibold -ink text-sm">
                 {isRtl ? 'الملخص والنبذة المهنية' : 'Professional Summary'}
               </h3>
               {isSummaryComplete && (
@@ -783,15 +785,15 @@ export function BuilderForm({
                 </span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs -ink-2">
               {isRtl ? 'نظرة عامة موجزة من 2-4 جمل عن خبراتك' : 'A 2-4 sentence executive elevator pitch'}
             </p>
           </div>
         </div>
         {openSections.summary ? (
-          <ChevronUp className="w-4 h-4 text-text-muted" />
+          <ChevronUp className="w-4 h-4 -ink-2" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-text-muted" />
+          <ChevronDown className="w-4 h-4 -ink-2" />
         )}
       </button>
 
@@ -806,14 +808,14 @@ export function BuilderForm({
                 ? 'مهندس برمجيات ذو خبرة 5+ سنوات في تصميم وتطوير الأنظمة السحابية والواجهات التفاعلية...'
                 : 'Results-driven Software Engineer with 5+ years of experience designing scalable web applications and cloud architectures...'
             }
-            className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand leading-relaxed"
+            className="w-full px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand leading-relaxed"
           />
 
           {/* Character counter & inline helper */}
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
             <div className="flex items-center gap-2">
               <span className={`font-mono text-xs font-medium ${
-                isSummaryOptimal ? 'text-success' : summaryLength > 400 ? 'text-warning' : 'text-text-muted'
+                isSummaryOptimal ? 'text-success' : summaryLength > 400 ? 'text-warning' : '-ink-2'
               }`}>
                 {summaryLength} / 400 {isRtl ? 'حرف' : 'characters'}
               </span>
@@ -822,7 +824,7 @@ export function BuilderForm({
                   ? 'bg-success/10 text-success'
                   : summaryLength > 400
                   ? 'bg-warning/10 text-warning'
-                  : 'bg-surface-2 text-text-muted'
+                  : 'bg-surface-2 -ink-2'
               }`}>
                 {summaryLength === 0
                   ? isRtl ? 'فارغ' : 'Empty'
@@ -833,7 +835,7 @@ export function BuilderForm({
                   : isRtl ? 'طويل – اختصر لصفحة واحدة' : 'Consider condensing'}
               </span>
             </div>
-            <p className="text-[11px] text-text-muted">
+            <p className="text-[11px] -ink-2">
               {isRtl ? 'الموصى به لأنظمة ATS: من 200 إلى 400 حرف' : 'Recommended for ATS: 200–400 chars'}
             </p>
           </div>
@@ -851,7 +853,7 @@ export function BuilderForm({
       <button
         type="button"
         onClick={() => toggleSection('experience')}
-        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-4 bg-surface -surface-2 text-start transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -861,10 +863,10 @@ export function BuilderForm({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-text-primary text-sm">
+              <h3 className="font-semibold -ink text-sm">
                 {isRtl ? 'الخبرات المهنية وسجل العمل' : 'Work Experience'}
               </h3>
-              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 -ink-2 border border-line font-mono">
                 {data.experience.length}
               </span>
               {isExperienceComplete && (
@@ -874,23 +876,23 @@ export function BuilderForm({
                 </span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs -ink-2">
               {isRtl ? 'الأدوار السابقة، الإنجازات والأرقام القياسية' : 'Past roles, quantifiable impact & metrics'}
             </p>
           </div>
         </div>
         {openSections.experience ? (
-          <ChevronUp className="w-4 h-4 text-text-muted" />
+          <ChevronUp className="w-4 h-4 -ink-2" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-text-muted" />
+          <ChevronDown className="w-4 h-4 -ink-2" />
         )}
       </button>
 
       {openSections.experience && (
         <div className="p-4 pt-2 border-t border-line space-y-4">
           {/* Action Verbs Helper Bar */}
-          <div className="p-3 bg-surface-2/60 border border-line rounded-lg space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
+          <div className="p-3 -surface-2 border border-line rounded-lg space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium -ink-2">
               <Lightbulb className="w-3.5 h-3.5 text-brand shrink-0" />
               <span>
                 {isRtl
@@ -904,7 +906,7 @@ export function BuilderForm({
                   key={verb}
                   type="button"
                   onClick={() => insertActionVerb(verb)}
-                  className="px-2 py-0.5 rounded-md bg-surface border border-line hover:border-brand text-[11px] font-medium text-text-primary hover:text-brand transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-md bg-surface border border-line hover:border-brand text-[11px] font-medium -ink hover:text-brand transition-colors cursor-pointer"
                   title={isRtl ? `إدراج الفعل "${verb}"` : `Insert action verb "${verb}"`}
                 >
                   + {verb}
@@ -929,13 +931,13 @@ export function BuilderForm({
                 onChange({ ...data, experience: updated });
               }}
               onDragEnd={() => setDraggedExpIndex(null)}
-              className="p-4 bg-surface-2/30 border border-line hover:border-line-strong rounded-xl space-y-3.5 relative transition-all duration-200"
+              className="p-4 -surface-2 border border-line hover:border-line-strong rounded-xl space-y-3.5 relative transition-all duration-200"
             >
               {/* Header with Drag Handle, Order Controls & Delete */}
               <div className="flex items-center justify-between gap-2 pb-2 border-b border-line">
                 <div className="flex items-center gap-2">
                   <div
-                    className="p-1 text-text-muted hover:text-text-primary cursor-grab active:cursor-grabbing"
+                    className="p-1 -ink-2 -ink cursor-grab active:cursor-grabbing"
                     title={isRtl ? 'اسحب لإعادة الترتيب' : 'Drag to reorder'}
                   >
                     <GripVertical className="w-4 h-4" />
@@ -951,7 +953,7 @@ export function BuilderForm({
                     type="button"
                     onClick={() => moveExperience(expIdx, -1)}
                     disabled={expIdx === 0}
-                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded -ink-2 -ink hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title={isRtl ? 'تحريك للأعلى' : 'Move up'}
                   >
                     <ArrowUp className="w-3.5 h-3.5" />
@@ -960,7 +962,7 @@ export function BuilderForm({
                     type="button"
                     onClick={() => moveExperience(expIdx, 1)}
                     disabled={expIdx === data.experience.length - 1}
-                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded -ink-2 -ink hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title={isRtl ? 'تحريك للأسفل' : 'Move down'}
                   >
                     <ArrowDown className="w-3.5 h-3.5" />
@@ -971,7 +973,7 @@ export function BuilderForm({
                   <button
                     type="button"
                     onClick={() => removeExperience(expIdx)}
-                    className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
+                    className="p-1 -ink-2 hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
                     title={isRtl ? 'حذف هذه الوظيفة' : 'Delete role'}
                   >
                     <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -981,7 +983,7 @@ export function BuilderForm({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                  <label className="block text-xs font-semibold -ink mb-1">
                     {isRtl ? 'المسمى الوظيفي' : 'Job Title'}
                   </label>
                   <input
@@ -989,11 +991,11 @@ export function BuilderForm({
                     value={exp.position}
                     onChange={(e) => updateExperience(expIdx, 'position', e.target.value)}
                     placeholder={isRtl ? 'مهندس برمجيات أول' : 'Senior Full-Stack Engineer'}
-                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                  <label className="block text-xs font-semibold -ink mb-1">
                     {isRtl ? 'اسم الشركة أو المنظمة' : 'Company Name'}
                   </label>
                   <input
@@ -1001,11 +1003,11 @@ export function BuilderForm({
                     value={exp.company}
                     onChange={(e) => updateExperience(expIdx, 'company', e.target.value)}
                     placeholder="TechNova Solutions"
-                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                  <label className="block text-xs font-semibold -ink mb-1">
                     {isRtl ? 'موقع العمل (مدينة أو عن بعد)' : 'Location'}
                   </label>
                   <input
@@ -1013,12 +1015,12 @@ export function BuilderForm({
                     value={exp.location}
                     onChange={(e) => updateExperience(expIdx, 'location', e.target.value)}
                     placeholder={isRtl ? 'الرياض (أو عن بُعد)' : 'San Francisco, CA (or Remote)'}
-                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-semibold text-text-primary mb-1">
+                    <label className="block text-xs font-semibold -ink mb-1">
                       {isRtl ? 'تاريخ البدء' : 'Start Date'}
                     </label>
                     <input
@@ -1026,11 +1028,11 @@ export function BuilderForm({
                       value={exp.startDate}
                       onChange={(e) => updateExperience(expIdx, 'startDate', e.target.value)}
                       placeholder="2023-01"
-                      className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                      className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-text-primary mb-1">
+                    <label className="block text-xs font-semibold -ink mb-1">
                       {isRtl ? 'تاريخ الانتهاء' : 'End Date'}
                     </label>
                     <input
@@ -1039,7 +1041,7 @@ export function BuilderForm({
                       value={exp.current ? (isRtl ? 'حتى الآن' : 'Present') : exp.endDate}
                       onChange={(e) => updateExperience(expIdx, 'endDate', e.target.value)}
                       placeholder={isRtl ? 'حتى الآن' : 'Present'}
-                      className={`w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand ${
+                      className={`w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand ${
                         exp.current ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                     />
@@ -1047,7 +1049,7 @@ export function BuilderForm({
                 </div>
               </div>
 
-              <label className="inline-flex items-center gap-2 cursor-pointer text-xs text-text-secondary">
+              <label className="inline-flex items-center gap-2 cursor-pointer text-xs -ink-2">
                 <input
                   type="checkbox"
                   checked={exp.current}
@@ -1059,7 +1061,7 @@ export function BuilderForm({
 
               {/* Bullet Points with Action Verb Insertion */}
               <div className="space-y-2 pt-2 border-t border-line">
-                <label className="block text-xs font-semibold text-text-primary">
+                <label className="block text-xs font-semibold -ink">
                   {isRtl ? 'أبرز الإنجازات والمسؤوليات (نقاط نقطية)' : 'Key Achievements & Measurable Responsibilities'}
                 </label>
                 {exp.description.map((bullet, bIdx) => (
@@ -1075,13 +1077,13 @@ export function BuilderForm({
                           ? 'قاد فريقاً مكوناً من 6 مهندسين وطوّر منصة رقمية خفضت وقت التحميل بنسبة 35%...'
                           : 'Architected and deployed high-performance platforms, decreasing latency by 42%...'
                       }
-                      className="flex-1 px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand leading-relaxed"
+                      className="flex-1 px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand leading-relaxed"
                     />
                     <button
                       type="button"
                       onClick={() => removeExperienceBullet(expIdx, bIdx)}
                       disabled={exp.description.length <= 1}
-                      className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors mt-1 cursor-pointer"
+                      className="p-1 -ink-2 hover:text-danger hover:bg-danger/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors mt-1 cursor-pointer"
                       title={isRtl ? 'حذف النقطة' : 'Remove bullet'}
                     >
                       <X className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1104,7 +1106,7 @@ export function BuilderForm({
           <button
             type="button"
             onClick={addExperience}
-            className="w-full py-2.5 px-3 border border-dashed border-line hover:border-brand rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary flex items-center justify-center gap-2 hover:bg-surface-2 transition-colors cursor-pointer"
+            className="w-full py-2.5 px-3 border border-dashed border-line hover:border-brand rounded-lg text-xs font-medium -ink-2 -ink flex items-center justify-center gap-2 hover:bg-surface-2 transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4 text-brand" strokeWidth={1.75} />
             <span>{isRtl ? 'إضافة خبرة مهنية جديدة' : 'Add Work Experience'}</span>
@@ -1123,7 +1125,7 @@ export function BuilderForm({
       <button
         type="button"
         onClick={() => toggleSection('education')}
-        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-4 bg-surface -surface-2 text-start transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -1133,10 +1135,10 @@ export function BuilderForm({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-text-primary text-sm">
+              <h3 className="font-semibold -ink text-sm">
                 {isRtl ? 'التعليم والمؤهلات الأكاديمية' : 'Education'}
               </h3>
-              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 -ink-2 border border-line font-mono">
                 {data.education.length}
               </span>
               {isEducationComplete && (
@@ -1146,15 +1148,15 @@ export function BuilderForm({
                 </span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs -ink-2">
               {isRtl ? 'الدرجات العلمية، الجامعات، والتقدير' : 'Degrees, universities, dates & GPA'}
             </p>
           </div>
         </div>
         {openSections.education ? (
-          <ChevronUp className="w-4 h-4 text-text-muted" />
+          <ChevronUp className="w-4 h-4 -ink-2" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-text-muted" />
+          <ChevronDown className="w-4 h-4 -ink-2" />
         )}
       </button>
 
@@ -1175,12 +1177,12 @@ export function BuilderForm({
                 onChange({ ...data, education: updated });
               }}
               onDragEnd={() => setDraggedEduIndex(null)}
-              className="p-4 bg-surface-2/30 border border-line hover:border-line-strong rounded-xl space-y-3 relative transition-all duration-200"
+              className="p-4 -surface-2 border border-line hover:border-line-strong rounded-xl space-y-3 relative transition-all duration-200"
             >
               <div className="flex items-center justify-between gap-2 pb-2 border-b border-line">
                 <div className="flex items-center gap-2">
                   <div
-                    className="p-1 text-text-muted hover:text-text-primary cursor-grab active:cursor-grabbing"
+                    className="p-1 -ink-2 -ink cursor-grab active:cursor-grabbing"
                     title={isRtl ? 'اسحب لإعادة الترتيب' : 'Drag to reorder'}
                   >
                     <GripVertical className="w-4 h-4" />
@@ -1195,7 +1197,7 @@ export function BuilderForm({
                     type="button"
                     onClick={() => moveEducation(eduIdx, -1)}
                     disabled={eduIdx === 0}
-                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded -ink-2 -ink hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title={isRtl ? 'تحريك للأعلى' : 'Move up'}
                   >
                     <ArrowUp className="w-3.5 h-3.5" />
@@ -1204,7 +1206,7 @@ export function BuilderForm({
                     type="button"
                     onClick={() => moveEducation(eduIdx, 1)}
                     disabled={eduIdx === data.education.length - 1}
-                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded -ink-2 -ink hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title={isRtl ? 'تحريك للأسفل' : 'Move down'}
                   >
                     <ArrowDown className="w-3.5 h-3.5" />
@@ -1215,7 +1217,7 @@ export function BuilderForm({
                   <button
                     type="button"
                     onClick={() => removeEducation(eduIdx)}
-                    className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
+                    className="p-1 -ink-2 hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
                     title={isRtl ? 'حذف هذا المؤهل' : 'Delete education'}
                   >
                     <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1225,7 +1227,7 @@ export function BuilderForm({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                  <label className="block text-xs font-semibold -ink mb-1">
                     {isRtl ? 'الدرجة العلمية' : 'Degree'}
                   </label>
                   <input
@@ -1233,11 +1235,11 @@ export function BuilderForm({
                     value={edu.degree}
                     onChange={(e) => updateEducation(eduIdx, 'degree', e.target.value)}
                     placeholder={isRtl ? 'بكالوريوس' : 'Bachelor of Science'}
-                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                  <label className="block text-xs font-semibold -ink mb-1">
                     {isRtl ? 'التخصص الدراسي' : 'Field of Study'}
                   </label>
                   <input
@@ -1245,11 +1247,11 @@ export function BuilderForm({
                     value={edu.fieldOfStudy}
                     onChange={(e) => updateEducation(eduIdx, 'fieldOfStudy', e.target.value)}
                     placeholder={isRtl ? 'علوم الحاسب' : 'Computer Science'}
-                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                  <label className="block text-xs font-semibold -ink mb-1">
                     {isRtl ? 'الجامعة أو المعهد' : 'Institution / University'}
                   </label>
                   <input
@@ -1257,12 +1259,12 @@ export function BuilderForm({
                     value={edu.institution}
                     onChange={(e) => updateEducation(eduIdx, 'institution', e.target.value)}
                     placeholder="University of California, Berkeley"
-                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-semibold text-text-primary mb-1">
+                    <label className="block text-xs font-semibold -ink mb-1">
                       {isRtl ? 'سنة البدء' : 'Start Year'}
                     </label>
                     <input
@@ -1270,11 +1272,11 @@ export function BuilderForm({
                       value={edu.startDate}
                       onChange={(e) => updateEducation(eduIdx, 'startDate', e.target.value)}
                       placeholder="2017"
-                      className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                      className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-text-primary mb-1">
+                    <label className="block text-xs font-semibold -ink mb-1">
                       {isRtl ? 'سنة التخرج' : 'Grad Year'}
                     </label>
                     <input
@@ -1282,14 +1284,14 @@ export function BuilderForm({
                       value={edu.endDate}
                       onChange={(e) => updateEducation(eduIdx, 'endDate', e.target.value)}
                       placeholder="2021"
-                      className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                      className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-text-primary mb-1">
+                <label className="block text-xs font-semibold -ink mb-1">
                   {isRtl ? 'المعدل التراكمي / مرتبة الشرف (اختياري)' : 'GPA / Honors (Optional)'}
                 </label>
                 <input
@@ -1297,7 +1299,7 @@ export function BuilderForm({
                   value={edu.gpa || ''}
                   onChange={(e) => updateEducation(eduIdx, 'gpa', e.target.value)}
                   placeholder="3.85 / 4.0 • Magna Cum Laude"
-                  className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                  className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                 />
               </div>
             </div>
@@ -1306,7 +1308,7 @@ export function BuilderForm({
           <button
             type="button"
             onClick={addEducation}
-            className="w-full py-2.5 px-3 border border-dashed border-line hover:border-brand rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary flex items-center justify-center gap-2 hover:bg-surface-2 transition-colors cursor-pointer"
+            className="w-full py-2.5 px-3 border border-dashed border-line hover:border-brand rounded-lg text-xs font-medium -ink-2 -ink flex items-center justify-center gap-2 hover:bg-surface-2 transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4 text-brand" strokeWidth={1.75} />
             <span>{isRtl ? 'إضافة مؤهل دراسي جديد' : 'Add Education Entry'}</span>
@@ -1325,7 +1327,7 @@ export function BuilderForm({
       <button
         type="button"
         onClick={() => toggleSection('skills')}
-        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-4 bg-surface -surface-2 text-start transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -1335,10 +1337,10 @@ export function BuilderForm({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-text-primary text-sm">
+              <h3 className="font-semibold -ink text-sm">
                 {isRtl ? 'المهارات والتقنيات' : 'Skills & Proficiencies'}
               </h3>
-              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 -ink-2 border border-line font-mono">
                 {data.skills.length}
               </span>
               {isSkillsComplete && (
@@ -1348,15 +1350,15 @@ export function BuilderForm({
                 </span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs -ink-2">
               {isRtl ? 'لغات البرمجة، أطر العمل، والمهارات الصلبة' : 'Key hard skills and tools matching job posts'}
             </p>
           </div>
         </div>
         {openSections.skills ? (
-          <ChevronUp className="w-4 h-4 text-text-muted" />
+          <ChevronUp className="w-4 h-4 -ink-2" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-text-muted" />
+          <ChevronDown className="w-4 h-4 -ink-2" />
         )}
       </button>
 
@@ -1378,7 +1380,7 @@ export function BuilderForm({
                   ? 'أدخل مهارة أو افصل بينها بفاصلة (مثال: React, TypeScript, Python)'
                   : 'Type a skill or comma-separated list (e.g. React, TypeScript, Docker)'
               }
-              className="flex-1 px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+              className="flex-1 px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand"
             />
             <button
               type="button"
@@ -1394,13 +1396,13 @@ export function BuilderForm({
             {data.skills.map((skill, sIdx) => (
               <span
                 key={sIdx}
-                className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-2 border border-line rounded-md text-xs font-medium text-text-primary transition-all hover:border-brand/40"
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-2 border border-line rounded-md text-xs font-medium -ink transition-all hover:border-brand/40"
               >
                 <span>{skill}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveSkill(skill)}
-                  className="text-text-muted hover:text-danger transition-colors cursor-pointer"
+                  className="-ink-2 hover:text-danger transition-colors cursor-pointer"
                   aria-label={`Remove ${skill}`}
                 >
                   <X className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1408,7 +1410,7 @@ export function BuilderForm({
               </span>
             ))}
             {data.skills.length === 0 && (
-              <span className="text-xs text-text-muted italic">
+              <span className="text-xs -ink-2 italic">
                 {isRtl
                   ? 'لم تقم بإضافة أي مهارات بعد. أضف على الأقل 3-6 مهارات متوافقة مع إعلان الوظيفة.'
                   : 'No skills added yet. Add at least 3-6 hard skills to boost your ATS match score.'}
@@ -1429,7 +1431,7 @@ export function BuilderForm({
       <button
         type="button"
         onClick={() => toggleSection('projects')}
-        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-4 bg-surface -surface-2 text-start transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -1439,10 +1441,10 @@ export function BuilderForm({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-text-primary text-sm">
+              <h3 className="font-semibold -ink text-sm">
                 {isRtl ? 'المشاريع البارزة' : 'Key Projects'}
               </h3>
-              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 -ink-2 border border-line font-mono">
                 {data.projects.length}
               </span>
               {isProjectsComplete && (
@@ -1452,15 +1454,15 @@ export function BuilderForm({
                 </span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs -ink-2">
               {isRtl ? 'الأعمال المستقلة، المصادر المفتوحة، والمشاريع البرمجية' : 'Portfolio highlights, GitHub repos & live products'}
             </p>
           </div>
         </div>
         {openSections.projects ? (
-          <ChevronUp className="w-4 h-4 text-text-muted" />
+          <ChevronUp className="w-4 h-4 -ink-2" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-text-muted" />
+          <ChevronDown className="w-4 h-4 -ink-2" />
         )}
       </button>
 
@@ -1481,12 +1483,12 @@ export function BuilderForm({
                 onChange({ ...data, projects: updated });
               }}
               onDragEnd={() => setDraggedProjIndex(null)}
-              className="p-4 bg-surface-2/30 border border-line hover:border-line-strong rounded-xl space-y-3 relative transition-all duration-200"
+              className="p-4 -surface-2 border border-line hover:border-line-strong rounded-xl space-y-3 relative transition-all duration-200"
             >
               <div className="flex items-center justify-between gap-2 pb-2 border-b border-line">
                 <div className="flex items-center gap-2">
                   <div
-                    className="p-1 text-text-muted hover:text-text-primary cursor-grab active:cursor-grabbing"
+                    className="p-1 -ink-2 -ink cursor-grab active:cursor-grabbing"
                     title={isRtl ? 'اسحب لإعادة الترتيب' : 'Drag to reorder'}
                   >
                     <GripVertical className="w-4 h-4" />
@@ -1501,7 +1503,7 @@ export function BuilderForm({
                     type="button"
                     onClick={() => moveProject(projIdx, -1)}
                     disabled={projIdx === 0}
-                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded -ink-2 -ink hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title={isRtl ? 'تحريك للأعلى' : 'Move up'}
                   >
                     <ArrowUp className="w-3.5 h-3.5" />
@@ -1510,7 +1512,7 @@ export function BuilderForm({
                     type="button"
                     onClick={() => moveProject(projIdx, 1)}
                     disabled={projIdx === data.projects.length - 1}
-                    className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded -ink-2 -ink hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title={isRtl ? 'تحريك للأسفل' : 'Move down'}
                   >
                     <ArrowDown className="w-3.5 h-3.5" />
@@ -1521,7 +1523,7 @@ export function BuilderForm({
                   <button
                     type="button"
                     onClick={() => removeProject(projIdx)}
-                    className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
+                    className="p-1 -ink-2 hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
                     title={isRtl ? 'حذف المشروع' : 'Delete project'}
                   >
                     <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1531,7 +1533,7 @@ export function BuilderForm({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                  <label className="block text-xs font-semibold -ink mb-1">
                     {isRtl ? 'عنوان المشروع' : 'Project Title'}
                   </label>
                   <input
@@ -1539,11 +1541,11 @@ export function BuilderForm({
                     value={proj.title}
                     onChange={(e) => updateProject(projIdx, 'title', e.target.value)}
                     placeholder="ATS Resume & Career Platform"
-                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-text-primary mb-1">
+                  <label className="block text-xs font-semibold -ink mb-1">
                     {isRtl ? 'التقنيات المستخدمة' : 'Technologies Used'}
                   </label>
                   <input
@@ -1551,13 +1553,13 @@ export function BuilderForm({
                     value={proj.techStack}
                     onChange={(e) => updateProject(projIdx, 'techStack', e.target.value)}
                     placeholder="Next.js, TypeScript, Tailwind, Node.js"
-                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                    className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-text-primary mb-1">
+                <label className="block text-xs font-semibold -ink mb-1">
                   {isRtl ? 'رابط المشروع أو الكود (Live Demo / GitHub)' : 'Live Demo / GitHub URL'}
                 </label>
                 <input
@@ -1565,13 +1567,13 @@ export function BuilderForm({
                   value={proj.link}
                   onChange={(e) => updateProject(projIdx, 'link', e.target.value)}
                   placeholder="https://github.com/alexmorgan/project"
-                  className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+                  className="w-full px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand"
                 />
               </div>
 
               {/* Project Bullet Points */}
               <div className="space-y-2 pt-2 border-t border-line">
-                <label className="block text-xs font-semibold text-text-primary">
+                <label className="block text-xs font-semibold -ink">
                   {isRtl ? 'تفاصيل الإنجاز والنتائج التقنية' : 'Key Outcomes & Technical Features'}
                 </label>
                 {proj.description.map((bullet, bIdx) => (
@@ -1586,13 +1588,13 @@ export function BuilderForm({
                           ? 'بناء نظام محاكاة لتقييم السيرة الذاتية بدقة 99.4% مع دعم المعاينة المباشرة...'
                           : 'Developed an AI-assisted resume analyzer with automated ATS keyword matching and PDF generation...'
                       }
-                      className="flex-1 px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand leading-relaxed"
+                      className="flex-1 px-2.5 py-1.5 bg-surface border border-line rounded-md text-xs -ink -ink-2 focus:outline-none focus:border-brand leading-relaxed"
                     />
                     <button
                       type="button"
                       onClick={() => removeProjectBullet(projIdx, bIdx)}
                       disabled={proj.description.length <= 1}
-                      className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors mt-1 cursor-pointer"
+                      className="p-1 -ink-2 hover:text-danger hover:bg-danger/10 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors mt-1 cursor-pointer"
                       title={isRtl ? 'حذف النقطة' : 'Remove bullet'}
                     >
                       <X className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1615,7 +1617,7 @@ export function BuilderForm({
           <button
             type="button"
             onClick={addProject}
-            className="w-full py-2.5 px-3 border border-dashed border-line hover:border-brand rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary flex items-center justify-center gap-2 hover:bg-surface-2 transition-colors cursor-pointer"
+            className="w-full py-2.5 px-3 border border-dashed border-line hover:border-brand rounded-lg text-xs font-medium -ink-2 -ink flex items-center justify-center gap-2 hover:bg-surface-2 transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4 text-brand" strokeWidth={1.75} />
             <span>{isRtl ? 'إضافة مشروع جديد' : 'Add Project Entry'}</span>
@@ -1634,7 +1636,7 @@ export function BuilderForm({
       <button
         type="button"
         onClick={() => toggleSection('languages')}
-        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-4 bg-surface -surface-2 text-start transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -1644,10 +1646,10 @@ export function BuilderForm({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-text-primary text-sm">
+              <h3 className="font-semibold -ink text-sm">
                 {isRtl ? 'اللغات ومستوى الإتقان' : 'Languages & Fluency'}
               </h3>
-              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 -ink-2 border border-line font-mono">
                 {(data.languages || []).length}
               </span>
               {isLanguagesComplete && (
@@ -1657,15 +1659,15 @@ export function BuilderForm({
                 </span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs -ink-2">
               {isRtl ? 'اللغات المنطوقة ودرجات الإجادة' : 'Spoken languages & proficiency levels'}
             </p>
           </div>
         </div>
         {openSections.languages ? (
-          <ChevronUp className="w-4 h-4 text-text-muted" />
+          <ChevronUp className="w-4 h-4 -ink-2" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-text-muted" />
+          <ChevronDown className="w-4 h-4 -ink-2" />
         )}
       </button>
 
@@ -1673,7 +1675,7 @@ export function BuilderForm({
         <div className="p-4 pt-2 border-t border-line space-y-4">
           {/* Quick Language Suggestions */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-text-muted me-1">
+            <span className="text-xs -ink-2 me-1">
               {isRtl ? 'اقتراحات سريعة:' : 'Quick add:'}
             </span>
             {(isRtl ? COMMON_LANGUAGES_AR : COMMON_LANGUAGES_EN).map((lang) => (
@@ -1681,7 +1683,7 @@ export function BuilderForm({
                 key={lang}
                 type="button"
                 onClick={() => handleAddLanguage(lang, 'Fluent')}
-                className="px-2.5 py-0.5 rounded-full bg-surface border border-line hover:border-brand text-xs text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+                className="px-2.5 py-0.5 rounded-full bg-surface border border-line hover:border-brand text-xs -ink-2 -ink transition-colors cursor-pointer"
               >
                 + {lang}
               </button>
@@ -1701,14 +1703,14 @@ export function BuilderForm({
                 }
               }}
               placeholder={isRtl ? 'اسم اللغة (مثال: الفرنسية)' : 'Language name (e.g. Spanish)'}
-              className="flex-1 px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+              className="flex-1 px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand"
             />
 
             <select
               value={newLangProficiency}
               onChange={(e) => setNewLangProficiency(e.target.value)}
               aria-label={isRtl ? 'مستوى إتقان اللغة الجديدة' : 'Proficiency level for new language'}
-              className="px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary focus:outline-none focus:border-brand cursor-pointer"
+              className="px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink focus:outline-none focus:border-brand cursor-pointer"
             >
               {(isRtl ? PROFICIENCY_LEVELS_AR : PROFICIENCY_LEVELS_EN).map((lvl) => (
                 <option key={lvl.value} value={lvl.value}>
@@ -1732,17 +1734,17 @@ export function BuilderForm({
             {(data.languages || []).map((lang, lIdx) => (
               <div
                 key={lang.id || lIdx}
-                className="flex items-center justify-between gap-3 p-3 bg-surface-2/40 border border-line rounded-lg"
+                className="flex items-center justify-between gap-3 p-3 -surface-2 border border-line rounded-lg"
               >
                 <div className="flex items-center gap-2.5">
                   <div className="w-6 h-6 rounded-md bg-brand/10 text-brand flex items-center justify-center font-mono text-[11px] font-bold">
                     {lang.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-text-primary block">
+                    <span className="text-xs font-semibold -ink block">
                       {lang.name}
                     </span>
-                    <span className="text-[11px] text-text-muted">
+                    <span className="text-[11px] -ink-2">
                       {lang.proficiency}
                     </span>
                   </div>
@@ -1753,7 +1755,7 @@ export function BuilderForm({
                     value={lang.proficiency}
                     onChange={(e) => handleUpdateLanguage(lIdx, 'proficiency', e.target.value)}
                     aria-label={isRtl ? `مستوى إتقان ${lang.name}` : `Proficiency level for ${lang.name}`}
-                    className="px-2 py-1 bg-surface border border-line rounded text-xs text-text-primary focus:outline-none focus:border-brand cursor-pointer"
+                    className="px-2 py-1 bg-surface border border-line rounded text-xs -ink focus:outline-none focus:border-brand cursor-pointer"
                   >
                     {(isRtl ? PROFICIENCY_LEVELS_AR : PROFICIENCY_LEVELS_EN).map((lvl) => (
                       <option key={lvl.value} value={lvl.value}>
@@ -1766,7 +1768,7 @@ export function BuilderForm({
                     type="button"
                     onClick={() => moveLanguage(lIdx, -1)}
                     disabled={lIdx === 0}
-                    className="p-1 rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded -ink-2 -ink disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title={isRtl ? 'تحريك للأعلى' : 'Move up'}
                   >
                     <ArrowUp className="w-3 h-3" />
@@ -1775,7 +1777,7 @@ export function BuilderForm({
                     type="button"
                     onClick={() => moveLanguage(lIdx, 1)}
                     disabled={lIdx === (data.languages?.length || 0) - 1}
-                    className="p-1 rounded text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    className="p-1 rounded -ink-2 -ink disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     title={isRtl ? 'تحريك للأسفل' : 'Move down'}
                   >
                     <ArrowDown className="w-3 h-3" />
@@ -1784,7 +1786,7 @@ export function BuilderForm({
                   <button
                     type="button"
                     onClick={() => handleRemoveLanguage(lIdx)}
-                    className="p-1 text-text-muted hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
+                    className="p-1 -ink-2 hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
                     title={isRtl ? 'حذف اللغة' : 'Remove language'}
                   >
                     <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1794,7 +1796,7 @@ export function BuilderForm({
             ))}
 
             {(!data.languages || data.languages.length === 0) && (
-              <span className="text-xs text-text-muted italic block py-1">
+              <span className="text-xs -ink-2 italic block py-1">
                 {isRtl ? 'لم يتم إضافة لغات بعد. أضف لغاتك المحكية لتعزيز فرصك الدولية.' : 'No languages added yet. Add languages you speak for international roles.'}
               </span>
             )}
@@ -1813,7 +1815,7 @@ export function BuilderForm({
       <button
         type="button"
         onClick={() => toggleSection('certifications')}
-        className="w-full flex items-center justify-between p-4 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-4 bg-surface -surface-2 text-start transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
@@ -1823,10 +1825,10 @@ export function BuilderForm({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-text-primary text-sm">
+              <h3 className="font-semibold -ink text-sm">
                 {isRtl ? 'الشهادات المهنية والتراخيص' : 'Certifications & Honors'}
               </h3>
-              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 text-text-secondary border border-line font-mono">
+              <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-surface-2 -ink-2 border border-line font-mono">
                 {data.certifications.length}
               </span>
               {isCertificationsComplete && (
@@ -1836,15 +1838,15 @@ export function BuilderForm({
                 </span>
               )}
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs -ink-2">
               {isRtl ? 'الشهادات المعتمدة من AWS, Google, Meta وغيرها' : 'Professional credentials, AWS/Meta/Google certificates'}
             </p>
           </div>
         </div>
         {openSections.certifications ? (
-          <ChevronUp className="w-4 h-4 text-text-muted" />
+          <ChevronUp className="w-4 h-4 -ink-2" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-text-muted" />
+          <ChevronDown className="w-4 h-4 -ink-2" />
         )}
       </button>
 
@@ -1862,7 +1864,7 @@ export function BuilderForm({
                 }
               }}
               placeholder={isRtl ? 'مثال: AWS Certified Solutions Architect' : 'e.g. AWS Certified Solutions Architect – Associate'}
-              className="flex-1 px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand"
+              className="flex-1 px-3 py-2 bg-surface border border-line rounded-md text-xs sm:text-sm -ink -ink-2 focus:outline-none focus:border-brand"
             />
             <button
               type="button"
@@ -1878,7 +1880,7 @@ export function BuilderForm({
             {data.certifications.map((cert, cIdx) => (
               <div
                 key={cIdx}
-                className="flex items-center justify-between px-3 py-2 bg-surface-2/40 border border-line rounded-lg text-xs text-text-primary"
+                className="flex items-center justify-between px-3 py-2 -surface-2 border border-line rounded-lg text-xs -ink"
               >
                 <span className="flex items-center gap-2">
                   <Award className="w-4 h-4 text-brand shrink-0" strokeWidth={1.5} />
@@ -1887,7 +1889,7 @@ export function BuilderForm({
                 <button
                   type="button"
                   onClick={() => handleRemoveCert(cIdx)}
-                  className="text-text-muted hover:text-danger transition-colors p-1 cursor-pointer"
+                  className="-ink-2 hover:text-danger transition-colors p-1 cursor-pointer"
                   title={isRtl ? 'حذف الشهادة' : 'Remove certification'}
                 >
                   <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1895,7 +1897,7 @@ export function BuilderForm({
               </div>
             ))}
             {data.certifications.length === 0 && (
-              <span className="text-xs text-text-muted italic block py-1">
+              <span className="text-xs -ink-2 italic block py-1">
                 {isRtl ? 'لا توجد شهادات مضافة حالياً.' : 'No certifications added yet.'}
               </span>
             )}
@@ -1922,7 +1924,7 @@ export function BuilderForm({
       <div className="bg-surface border border-line rounded-xl p-4 shadow-xs">
         <div className="flex items-center justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-text-primary">
+            <span className="text-xs font-semibold -ink">
               {isRtl ? 'جاهزية السيرة لأنظمة ATS' : 'Resume ATS Strength'}
             </span>
             <span className="font-mono text-xs font-bold text-brand px-2 py-0.5 rounded-full bg-brand/10">
@@ -1930,7 +1932,7 @@ export function BuilderForm({
             </span>
           </div>
 
-          <span className="text-xs text-text-muted">
+          <span className="text-xs -ink-2">
             {isRtl
               ? `${completedSectionsCount} من ${coreSections.length} أقسام مكتملة`
               : `${completedSectionsCount} of ${coreSections.length} sections complete`}
@@ -1960,8 +1962,8 @@ export function BuilderForm({
                   isOpen
                     ? 'bg-brand/15 text-brand border border-brand/30 shadow-xs'
                     : isCompleted
-                    ? 'bg-surface hover:bg-surface-2 text-text-primary border border-line'
-                    : 'bg-surface-2/60 text-text-muted hover:text-text-primary border border-transparent'
+                    ? 'bg-surface hover:bg-surface-2 -ink border border-line'
+                    : '-surface-2 -ink-2 -ink border border-transparent'
                 }`}
               >
                 {isCompleted ? (
@@ -1981,25 +1983,25 @@ export function BuilderForm({
         <button
           type="button"
           onClick={() => setIsAtsTipsOpen((prev) => !prev)}
-          className="w-full flex items-center justify-between p-3.5 bg-surface hover:bg-surface-2/60 text-start transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between p-3.5 bg-surface -surface-2 text-start transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-md bg-accent-soft text-accent flex items-center justify-center">
               <Lightbulb className="w-3.5 h-3.5" strokeWidth={2} />
             </div>
-            <span className="text-xs font-semibold text-text-primary">
+            <span className="text-xs font-semibold -ink">
               {isRtl ? 'قائمة إرشادات توافق ATS (5 قواعد ذهبية)' : 'ATS Optimization Guidelines (5 Golden Rules)'}
             </span>
           </div>
           {isAtsTipsOpen ? (
-            <ChevronUp className="w-4 h-4 text-text-muted" />
+            <ChevronUp className="w-4 h-4 -ink-2" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-text-muted" />
+            <ChevronDown className="w-4 h-4 -ink-2" />
           )}
         </button>
 
         {isAtsTipsOpen && (
-          <div className="p-4 pt-1 border-t border-line text-xs text-text-secondary space-y-2 bg-surface-2/20 leading-relaxed">
+          <div className="p-4 pt-1 border-t border-line text-xs -ink-2 space-y-2 -surface-2 leading-relaxed">
             <div className="flex items-start gap-2">
               <Check className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
               <span>

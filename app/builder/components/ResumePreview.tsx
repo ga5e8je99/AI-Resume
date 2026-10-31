@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ResumeData, TemplateId, ThemeConfig } from '../types';
 import OsloTemplate from '../templates/OsloTemplate';
 import AmsterdamTemplate from '../templates/AmsterdamTemplate';
@@ -32,7 +32,7 @@ export const ResumePreview = React.memo(function ResumePreview({
   const [isAutoFit, setIsAutoFit] = useState<boolean>(true);
 
   // Auto-calculate best zoom scale based on container width
-  const calculateAutoFitZoom = () => {
+  const calculateAutoFitZoom = useCallback(() => {
     if (!containerRef.current) return;
     const containerWidth = containerRef.current.clientWidth;
     const standardWidth = paperSize === 'letter' ? 816 : 794;
@@ -43,12 +43,13 @@ export const ResumePreview = React.memo(function ResumePreview({
     } else {
       setZoom(0.85);
     }
-  };
+  }, [paperSize]);
 
   useEffect(() => {
-    calculateAutoFitZoom();
+    let animationFrameId = requestAnimationFrame(() => {
+      calculateAutoFitZoom();
+    });
 
-    let animationFrameId: number;
     const handleResize = () => {
       if (isAutoFit) {
         cancelAnimationFrame(animationFrameId);
@@ -63,7 +64,7 @@ export const ResumePreview = React.memo(function ResumePreview({
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isAutoFit, paperSize]);
+  }, [isAutoFit, calculateAutoFitZoom]);
 
   const zoomIn = () => {
     setIsAutoFit(false);
@@ -171,7 +172,7 @@ export const ResumePreview = React.memo(function ResumePreview({
       {/* Sheet Container */}
       <div
         ref={containerRef}
-        className="flex-1 bg-surface-2/40 p-3 sm:p-6 overflow-x-auto overflow-y-auto border-x border-b border-line rounded-b-[10px] flex justify-center items-start min-h-[500px]"
+        className="flex-1 bg-surface-2 p-3 sm:p-6 overflow-x-auto overflow-y-auto border-x border-b border-line-strong rounded-b-[10px] flex justify-center items-start min-h-[500px]"
       >
         <div
           style={{

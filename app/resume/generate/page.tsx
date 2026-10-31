@@ -3,13 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Navbar from '@/app/components/Navbar';
 import Footer from '@/app/components/Footer';
 import UpgradeModal from '@/app/components/UpgradeModal';
 import { ResumePreview } from '@/app/builder/components/ResumePreview';
 import { useAuth } from '@/app/context/AuthContext';
 import { useLanguage } from '@/app/context/LanguageContext';
-import { Button } from '@/app/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import BrandedLoader from '@/components/brand/BrandedLoader';
 import {
   DOCUMENT_LANGUAGE_OPTIONS,
@@ -99,7 +98,7 @@ const TEMPLATES: { id: TemplateId; name: string; tag: string }[] = [
 export default function ResumeGeneratePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { language, isRtl } = useLanguage();
+  const { language, isRtl, t } = useLanguage();
   const isAr = language === 'ar';
 
   // Output Language
@@ -363,12 +362,10 @@ export default function ResumeGeneratePage() {
 
   return (
     <div
-      className="min-h-screen bg-paper text-ink flex flex-col justify-between selection:bg-accent-soft selection:text-ink"
+      className="min-h-[100dvh] bg-paper text-ink flex flex-col justify-between selection:bg-accent-soft selection:text-ink overflow-x-clip"
       dir={isRtl ? 'rtl' : 'ltr'}
     >
-      <Navbar />
-
-      <main className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 sm:py-12 w-full flex-1">
+      <main id="main-content" className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 sm:py-12 w-full flex-1">
         {/* Header Section */}
         <div className="max-w-3xl mx-auto text-center mb-8 sm:mb-12 space-y-3">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-accent-soft text-accent border border-accent/20">
@@ -572,7 +569,7 @@ export default function ResumeGeneratePage() {
                         <h4 className="font-semibold text-ink">{isAr ? 'الخبرات السابقة' : 'Past Experience'}</h4>
                         <ul className="mt-1 space-y-2">
                           {(originalResumeData.experience || []).slice(0, 3).map((e, idx) => (
-                            <li key={idx} className="p-2 rounded bg-surface-2/50 border border-line/50">
+                            <li key={idx} className="p-2 rounded -surface-2 border border-line/50">
                               <span className="font-medium text-ink block">{e.position} - {e.company}</span>
                               <span className="text-[10px] text-ink-3 font-mono block">{e.startDate} - {e.current ? 'Present' : e.endDate}</span>
                               <p className="text-ink-3 mt-1 line-clamp-2">{(e.description || [])[0]}</p>
@@ -631,7 +628,7 @@ export default function ResumeGeneratePage() {
                         </h4>
                         <ul className="mt-1 space-y-2">
                           {generatedResume.experience.map((e, idx) => (
-                            <li key={idx} className="p-2.5 rounded-lg bg-surface-2/60 border border-line">
+                            <li key={idx} className="p-2.5 rounded-lg -surface-2 border border-line">
                               <span className="font-medium text-ink block">{e.position} — {e.company}</span>
                               <span className="text-[10px] text-ink-3 font-mono block">{e.startDate} — {e.endDate}</span>
                               <ul className="mt-1.5 space-y-1 list-disc list-inside text-ink-2">
@@ -663,7 +660,7 @@ export default function ResumeGeneratePage() {
                 </span>
               </div>
 
-              <div className="bg-surface-2/50 rounded-lg p-3 sm:p-6 flex justify-center overflow-x-auto min-h-[600px]">
+              <div className="-surface-2 rounded-lg p-3 sm:p-6 flex justify-center overflow-x-auto min-h-[600px]">
                 <ResumePreview
                   data={generatedResume}
                   template={templateChoice}
@@ -1095,8 +1092,15 @@ export default function ResumeGeneratePage() {
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto flex-1 font-semibold">
-                    <Sparkles className="w-4 h-4 me-2" />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    loading={isGenerating}
+                    loadingText={t('upload_submitting_btn')}
+                    leftIcon={<Sparkles className="w-4 h-4" />}
+                    className="w-full sm:w-auto flex-1 font-semibold"
+                  >
                     <span>
                       {documentType === 'cv'
                         ? isAr

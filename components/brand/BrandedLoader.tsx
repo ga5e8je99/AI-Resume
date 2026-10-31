@@ -173,18 +173,18 @@ export default function BrandedLoader({
         </div>
 
         {/* Logo Mark in Center */}
-        <div className="relative z-10 flex items-center justify-center p-2 rounded-full bg-surface shadow-subtle border border-border">
+        <div className="relative z-10 flex items-center justify-center p-2 rounded-full bg-surface shadow-subtle border -line-strong">
           <LogoMark size={configs.markSize} />
         </div>
       </div>
 
       {/* Status Typography (Translated into active language) */}
-      <h3 className={`font-serif tracking-tight text-text-primary ${configs.headingText}`}>
+      <h3 className={`font-serif tracking-tight -ink ${configs.headingText}`}>
         {resolvedStatus}
       </h3>
 
       {resolvedSubtext && (
-        <p className={`font-mono text-text-muted mt-1 ${configs.subtextText}`}>
+        <p className={`font-mono -ink-2 mt-1 ${configs.subtextText}`}>
           {resolvedSubtext}
         </p>
       )}
@@ -199,13 +199,13 @@ export default function BrandedLoader({
       {/* Optional Progress Bar */}
       {isDeterminate && (
         <div className="mt-4 w-48 sm:w-56 space-y-1">
-          <div className="h-1.5 w-full bg-surface-2 rounded-full overflow-hidden border border-border">
+          <div className="h-1.5 w-full bg-surface-2 rounded-full overflow-hidden border -line-strong">
             <div
               className="h-full bg-brand rounded-full transition-all duration-300 ease-out"
               style={{ width: `${validProgress}%` }}
             />
           </div>
-          <div className="flex justify-between text-[11px] font-mono text-text-muted px-0.5">
+          <div className="flex justify-between text-[11px] font-mono -ink-2 px-0.5">
             <span>Progress</span>
             <span className="font-semibold text-brand">{Math.round(validProgress)}%</span>
           </div>
@@ -219,7 +219,7 @@ export default function BrandedLoader({
             variant="outline"
             size="sm"
             onClick={onCancel}
-            className="text-xs text-text-secondary hover:text-danger hover:border-danger transition-colors"
+            className="text-xs -ink-2 hover:text-danger hover:border-danger transition-colors"
           >
             {resolvedCancelText}
           </Button>
@@ -230,7 +230,7 @@ export default function BrandedLoader({
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/90 backdrop-blur-md transition-opacity">
+      <div className="fixed inset-0 z-50 flex items-center justify-center -paper backdrop-blur-md transition-opacity">
         {content}
       </div>
     );

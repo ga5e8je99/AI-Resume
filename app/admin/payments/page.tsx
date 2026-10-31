@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import Navbar from '@/app/components/Navbar';
 import Footer from '@/app/components/Footer';
 import { useAuth } from '@/app/context/AuthContext';
 import { useToast } from '@/app/context/ToastContext';
+import { useLanguage } from '@/app/context/LanguageContext';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -54,6 +54,7 @@ interface OrderItem {
 export default function AdminPaymentsPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { t } = useLanguage();
 
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,7 +152,7 @@ export default function AdminPaymentsPage() {
   const copyTxid = (txid: string) => {
     navigator.clipboard.writeText(txid);
     setCopiedTxid(txid);
-    showToast('TXID copied to clipboard', 'success');
+    showToast(t('common_copied'), 'success');
     setTimeout(() => setCopiedTxid(null), 2000);
   };
 
@@ -169,8 +170,6 @@ export default function AdminPaymentsPage() {
 
   return (
     <div className="min-h-[100dvh] bg-paper text-ink flex flex-col justify-between">
-      <Navbar />
-
       <main className="flex-1 p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto w-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line pb-6">
@@ -238,13 +237,13 @@ export default function AdminPaymentsPage() {
           </div>
 
           <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-ink-4 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-ink-4 absolute start-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search reference, email, txid..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-surface border border-line text-xs text-ink placeholder:text-ink-4 focus:border-accent outline-none"
+              className="w-full ps-9 pe-3 py-1.5 rounded-lg bg-surface border border-line text-xs text-ink placeholder:text-ink-4 focus:border-accent outline-none"
             />
           </div>
         </div>
@@ -263,138 +262,243 @@ export default function AdminPaymentsPage() {
               <p className="text-xs text-ink-3 mt-1">Select another tab to inspect historical payments.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-surface-2 border-b border-line text-ink-3 uppercase font-mono text-[10px] tracking-wider">
-                  <tr>
-                    <th className="px-4 py-3">Order Ref</th>
-                    <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Plan</th>
-                    <th className="px-4 py-3">Amount (USDT)</th>
-                    <th className="px-4 py-3">Network</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">TXID / Explorer</th>
-                    <th className="px-4 py-3">Created</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {filteredOrders.map((ord) => {
-                    const isProcessing = processingId === ord.id;
-                    const explorerUrl = ord.txid
-                      ? getExplorerTxUrl(ord.network as any, ord.txid)
-                      : '';
+            <>
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-start text-xs min-w-[760px]">
+                  <thead className="bg-surface-2 border-b border-line text-ink-3 uppercase font-mono text-[10px] tracking-wider">
+                    <tr>
+                      <th className="px-4 py-3">Order Ref</th>
+                      <th className="px-4 py-3">Customer</th>
+                      <th className="px-4 py-3">Plan</th>
+                      <th className="px-4 py-3">Amount (USDT)</th>
+                      <th className="px-4 py-3">Network</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">TXID / Explorer</th>
+                      <th className="px-4 py-3">Created</th>
+                      <th className="px-4 py-3 text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {filteredOrders.map((ord) => {
+                      const isProcessing = processingId === ord.id;
+                      const explorerUrl = ord.txid
+                        ? getExplorerTxUrl(ord.network as any, ord.txid)
+                        : '';
 
-                    return (
-                      <tr key={ord.id} className="hover:bg-surface-2/50 transition-colors">
-                        <td className="px-4 py-3 font-mono font-semibold text-ink">
+                      return (
+                        <tr key={ord.id} className="hover:bg-surface-2 transition-colors">
+                          <td className="px-4 py-3 font-mono font-semibold text-ink">
+                            {ord.reference}
+                          </td>
+                          <td className="px-4 py-3 text-ink-2 max-w-[180px] truncate" title={ord.userEmail}>
+                            <span dir="ltr" className="[unicode-bidi:isolate]">{ord.userEmail}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="capitalize font-medium text-ink">
+                              {ord.planId === 'pro'
+                                ? `Pro (${ord.billingCycle})`
+                                : '15 Credits'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-mono font-bold text-accent">
+                            ${ord.amount.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-[11px]">
+                            <span className="px-2 py-0.5 rounded bg-surface-2 border border-line text-ink-2">
+                              {ord.network}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${
+                                ord.status === 'paid'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                  : ord.status === 'pending_review'
+                                  ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30 animate-pulse'
+                                  : ord.status === 'rejected'
+                                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                  : ord.status === 'expired'
+                                  ? 'bg-surface-3 text-ink-3 border border-line'
+                                  : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                              }`}
+                            >
+                              {ord.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {ord.txid ? (
+                              <div className="flex items-center gap-1.5 font-mono text-[11px] min-w-0">
+                                <a
+                                  href={explorerUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-accent underline hover:text-accent-hover flex items-center gap-0.5 truncate max-w-[140px]"
+                                  title={ord.txid}
+                                  dir="ltr"
+                                >
+                                  <span>
+                                    {ord.txid.slice(0, 8)}...{ord.txid.slice(-6)}
+                                  </span>
+                                  <ExternalLink className="w-3 h-3 shrink-0" />
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => copyTxid(ord.txid!)}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-2 border border-line hover:text-ink text-ink-2 transition-colors shrink-0"
+                                  title={copiedTxid === ord.txid ? t('common_copied') : t('common_copy')}
+                                >
+                                  {copiedTxid === ord.txid ? (
+                                    <>
+                                      <Check className="w-3 h-3 text-success" />
+                                      <span className="text-[10px] text-success">{t('common_copied')}</span>
+                                    </>
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-ink-4 italic">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-ink-3 font-mono text-[11px]">
+                            {new Date(ord.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 text-end">
+                            {ord.status !== 'paid' && ord.status !== 'rejected' ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleApprove(ord)}
+                                  disabled={isProcessing}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-xs transition-colors disabled:opacity-50"
+                                >
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRejectModalOrder(ord);
+                                    setRejectReason('');
+                                  }}
+                                  disabled={isProcessing}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface hover:bg-rose-500/10 text-rose-400 border border-line hover:border-rose-500/20 font-medium text-xs transition-colors disabled:opacity-50"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-ink-4 text-[11px]">Finalized</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Stacked Cards (< md) */}
+              <div className="md:hidden divide-y divide-line">
+                {filteredOrders.map((ord) => {
+                  const isProcessing = processingId === ord.id;
+                  const explorerUrl = ord.txid
+                    ? getExplorerTxUrl(ord.network as any, ord.txid)
+                    : '';
+
+                  return (
+                    <div key={`mob-${ord.id}`} className="p-4 space-y-2.5 min-w-0">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="font-mono font-semibold text-xs text-ink truncate" dir="ltr">
                           {ord.reference}
-                        </td>
-                        <td className="px-4 py-3 text-ink-2 max-w-[180px] truncate" title={ord.userEmail}>
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${
+                            ord.status === 'paid'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : ord.status === 'pending_review'
+                              ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                              : ord.status === 'rejected'
+                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              : 'bg-surface-2 text-ink-3 border border-line'
+                          }`}
+                        >
+                          {ord.status}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 text-xs min-w-0">
+                        <span className="text-ink-2 truncate min-w-0" dir="ltr" title={ord.userEmail}>
                           {ord.userEmail}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="capitalize font-medium text-ink">
-                            {ord.planId === 'pro'
-                              ? `Pro (${ord.billingCycle})`
-                              : '15 Credits'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-mono font-bold text-accent">
-                          ${ord.amount.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-[11px]">
-                          <span className="px-2 py-0.5 rounded bg-surface-2 border border-line text-ink-2">
-                            {ord.network}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${
-                              ord.status === 'paid'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : ord.status === 'pending_review'
-                                ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30 animate-pulse'
-                                : ord.status === 'rejected'
-                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                : ord.status === 'expired'
-                                ? 'bg-surface-3 text-ink-3 border border-line'
-                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                            }`}
+                        </span>
+                        <span className="font-mono font-bold text-accent shrink-0">
+                          ${ord.amount.toFixed(2)} ({ord.network})
+                        </span>
+                      </div>
+
+                      {ord.txid && (
+                        <div className="p-2 rounded-lg bg-surface-2 border border-line flex items-center justify-between gap-2 min-w-0">
+                          <a
+                            href={explorerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-mono text-[11px] text-accent underline break-all min-w-0 flex-1"
+                            dir="ltr"
                           >
-                            {ord.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {ord.txid ? (
-                            <div className="flex items-center gap-1 font-mono text-[11px]">
-                              <a
-                                href={explorerUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-accent underline hover:text-accent-hover flex items-center gap-0.5"
-                                title="View on explorer"
-                              >
-                                <span>
-                                  {ord.txid.slice(0, 8)}...{ord.txid.slice(-6)}
-                                </span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                              <button
-                                type="button"
-                                onClick={() => copyTxid(ord.txid!)}
-                                className="p-1 hover:text-ink text-ink-3 transition-colors"
-                                title="Copy TXID"
-                              >
-                                {copiedTxid === ord.txid ? (
-                                  <Check className="w-3 h-3 text-accent" />
-                                ) : (
-                                  <Copy className="w-3 h-3" />
-                                )}
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-ink-4 italic">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-ink-3 font-mono text-[11px]">
-                          {new Date(ord.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {ord.status !== 'paid' && ord.status !== 'rejected' ? (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleApprove(ord)}
-                                disabled={isProcessing}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-xs transition-colors disabled:opacity-50"
-                              >
-                                <CheckCircle2 className="w-3 h-3" />
-                                <span>Approve</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setRejectModalOrder(ord);
-                                  setRejectReason('');
-                                }}
-                                disabled={isProcessing}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface hover:bg-rose-500/10 text-rose-400 border border-line hover:border-rose-500/20 font-medium text-xs transition-colors disabled:opacity-50"
-                              >
-                                <XCircle className="w-3 h-3" />
-                                <span>Reject</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-ink-4 text-[11px]">Finalized</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            {ord.txid}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => copyTxid(ord.txid!)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface border border-line text-[11px] text-ink shrink-0"
+                          >
+                            {copiedTxid === ord.txid ? (
+                              <>
+                                <Check className="w-3 h-3 text-success" />
+                                <span className="text-success">{t('common_copied')}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>{t('common_copy')}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+
+                      {ord.status !== 'paid' && ord.status !== 'rejected' && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleApprove(ord)}
+                            disabled={isProcessing}
+                            className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-xs transition-colors disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRejectModalOrder(ord);
+                              setRejectReason('');
+                            }}
+                            disabled={isProcessing}
+                            className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-surface hover:bg-rose-500/10 text-rose-400 border border-line font-medium text-xs transition-colors disabled:opacity-50"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Reject</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </main>

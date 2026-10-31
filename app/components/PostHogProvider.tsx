@@ -2,14 +2,17 @@
 
 import React, { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { initPostHog, hasConsent } from '@/lib/analytics';
-import posthog from 'posthog-js';
+import { initPostHog, hasConsent, trackPageView } from '@/lib/analytics';
+import { initSentryLazy } from '@/lib/sentry';
 
 export default function PostHogProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // If user has already granted consent, initialize PostHog
+    // Lazily initialize Sentry after interactive so it never blocks LCP
+    initSentryLazy();
+
+    // If user has already granted consent, lazily initialize PostHog after interactive
     if (hasConsent()) {
       initPostHog();
     }
@@ -28,12 +31,10 @@ export default function PostHogProvider({ children }: { children: React.ReactNod
     };
   }, []);
 
-  // Track pageviews safely without any query parameters or PII
+  // Track pageviews safely without any query parameters or PII (deferred after interactive)
   useEffect(() => {
-    if (hasConsent() && posthog.__loaded && pathname) {
-      posthog.capture('$pageview', {
-        $current_url: pathname,
-      });
+    if (hasConsent() && pathname) {
+      trackPageView(pathname);
     }
   }, [pathname]);
 

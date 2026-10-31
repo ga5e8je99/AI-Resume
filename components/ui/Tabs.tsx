@@ -60,7 +60,7 @@ export function Tabs({
         ref={tablistRef}
         role="tablist"
         aria-label={ariaLabel}
-        className={`inline-flex items-center p-1 rounded-lg bg-surface-2 border border-border gap-1 overflow-x-auto ${className}`}
+        className={`inline-flex items-center p-1 rounded-lg bg-surface-2 border -line-strong gap-1 overflow-x-auto ${className}`}
       >
         {tabs.map((tab, idx) => {
           const isActive = activeTab === tab.id;
@@ -78,8 +78,8 @@ export function Tabs({
               onKeyDown={(e) => handleKeyDown(e, idx)}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150 whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
                 isActive
-                  ? 'bg-surface text-text-primary shadow-subtle font-semibold'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-surface/50'
+                  ? 'bg-surface -ink shadow-subtle font-semibold'
+                  : '-ink-2 -ink -surface-2'
               }`}
             >
               {tab.icon && <span className="shrink-0">{tab.icon}</span>}
@@ -87,7 +87,7 @@ export function Tabs({
               {typeof tab.count === 'number' && (
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono tabular-nums ${
-                    isActive ? 'bg-brand-soft text-brand' : 'bg-surface-2 text-text-muted'
+                    isActive ? 'bg-brand-soft text-brand' : 'bg-surface-2 -ink-2'
                   }`}
                 >
                   {tab.count}
@@ -106,7 +106,7 @@ export function Tabs({
       ref={tablistRef}
       role="tablist"
       aria-label={ariaLabel}
-      className={`flex items-center border-b border-border gap-4 sm:gap-6 overflow-x-auto ${className}`}
+      className={`flex items-center border-b -line-strong gap-4 sm:gap-6 overflow-x-auto ${className}`}
     >
       {tabs.map((tab, idx) => {
         const isActive = activeTab === tab.id;
@@ -125,7 +125,7 @@ export function Tabs({
             className={`flex items-center gap-2 pb-3 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg rounded-t-sm ${
               isActive
                 ? 'border-brand text-brand font-semibold'
-                : 'border-transparent text-text-secondary hover:text-text-primary hover:border-border-strong'
+                : 'border-transparent -ink-2 -ink -line-strong'
             }`}
           >
             {tab.icon && <span className="shrink-0">{tab.icon}</span>}
@@ -133,7 +133,7 @@ export function Tabs({
             {typeof tab.count === 'number' && (
               <span
                 className={`text-xs px-1.5 py-0.5 rounded font-mono tabular-nums ${
-                  isActive ? 'bg-brand-soft text-brand' : 'bg-surface-2 text-text-muted'
+                  isActive ? 'bg-brand-soft text-brand' : 'bg-surface-2 -ink-2'
                 }`}
               >
                 {tab.count}

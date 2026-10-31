@@ -67,7 +67,7 @@ export function CircularGauge({
     currentScore !== null ? circumference - (currentScore / 100) * circumference : circumference;
 
   const getColor = (s: number | null) => {
-    if (s === null) return 'text-text-muted stroke-current';
+    if (s === null) return '-ink-2 stroke-current';
     if (s >= 80) return 'text-emerald-400 stroke-current';
     if (s >= 65) return 'text-amber-400 stroke-current';
     return 'text-rose-400 stroke-current';
@@ -119,14 +119,14 @@ export function CircularGauge({
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center" dir="ltr">
           <span
             data-score
-            className={`font-serif font-extrabold text-text-primary leading-none tabular-nums ${
+            className={`font-serif font-extrabold -ink leading-none tabular-nums ${
               size >= 120 ? 'text-3xl sm:text-4xl' : size >= 90 ? 'text-2xl' : 'text-base'
             }`}
           >
             {currentScore !== null ? currentScore : '—'}
           </span>
           <span
-            className={`text-text-muted font-mono leading-none mt-1 tabular-nums ${
+            className={`-ink-2 font-mono leading-none mt-1 tabular-nums ${
               size >= 120 ? 'text-xs' : 'text-[9px]'
             }`}
           >

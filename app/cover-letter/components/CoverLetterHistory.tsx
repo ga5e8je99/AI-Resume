@@ -137,7 +137,7 @@ export function CoverLetterHistory({
           <span>{isAr ? 'جاري تحميل السجل...' : 'Loading history...'}</span>
         </div>
       ) : filteredLetters.length === 0 ? (
-        <div className="py-12 px-4 rounded-[10px] border border-dashed border-line text-center space-y-2 bg-surface-2/30">
+        <div className="py-12 px-4 rounded-[10px] border border-dashed border-line text-center space-y-2 -surface-2">
           <FileText className="w-8 h-8 text-ink-3 mx-auto" strokeWidth={1.5} />
           <p className="text-xs font-medium text-ink">
             {searchQuery
@@ -176,7 +176,7 @@ export function CoverLetterHistory({
                 } ${
                   isActive
                     ? 'bg-accent/5 border-accent shadow-xs ring-1 ring-accent'
-                    : 'bg-surface-2/40 hover:bg-surface border-line hover:border-line-strong hover:shadow-xs'
+                    : '-surface-2 hover:bg-surface border-line hover:border-line-strong hover:shadow-xs'
                 }`}
               >
                 {/* Top Info */}

@@ -46,10 +46,10 @@ export function ProgressBar({
   return (
     <div className={`w-full text-start ${className}`} {...props}>
       {(label || showValue) && (
-        <div className="flex items-center justify-between text-xs font-medium text-text-secondary mb-1.5">
+        <div className="flex items-center justify-between text-xs font-medium -ink-2 mb-1.5">
           {label && <span>{label}</span>}
           {showValue && (
-            <span className="font-mono tabular-nums text-text-primary font-semibold" dir="ltr">
+            <span className="font-mono tabular-nums -ink font-semibold" dir="ltr">
               {percentage}%
             </span>
           )}
@@ -62,7 +62,7 @@ export function ProgressBar({
         aria-valuemin={0}
         aria-valuemax={max}
         aria-label={label || 'Progress'}
-        className={`w-full bg-surface-2 rounded-full overflow-hidden border border-border/50 ${heights[size]}`}
+        className={`w-full bg-surface-2 rounded-full overflow-hidden border -line-strong/50 ${heights[size]}`}
       >
         <div
           className={`h-full rounded-full transition-all duration-300 ease-out ${

@@ -274,7 +274,7 @@ export default function BuilderSidebar({
   return (
     <aside className="w-full lg:w-[280px] shrink-0 bg-surface border border-line rounded-[10px] flex flex-col shadow-xs overflow-hidden">
       {/* Rail Header with Tabs & Collapse */}
-      <div className="p-3 border-b border-line flex items-center justify-between bg-surface-2/40">
+      <div className="p-3 border-b border-line flex items-center justify-between -surface-2">
         <div className="flex items-center gap-1 bg-surface border border-line p-0.5 rounded-[6px] text-xs">
           <button
             type="button"
@@ -354,7 +354,7 @@ export default function BuilderSidebar({
                       ? 'opacity-40 border-dashed border-accent bg-accent-soft'
                       : isSelected
                       ? 'bg-accent-soft border-accent text-ink'
-                      : 'bg-surface hover:bg-surface-2/60 border-line text-ink-2'
+                      : 'bg-surface -surface-2 border-line text-ink-2'
                   }`}
                 >
                   <button
@@ -468,7 +468,7 @@ export default function BuilderSidebar({
                 className={`w-full p-2.5 rounded-[6px] border text-start transition-colors cursor-pointer flex flex-col justify-between ${
                   isSelected
                     ? 'bg-surface border-accent shadow-xs text-ink ring-1 ring-accent'
-                    : 'bg-surface-2/40 border-line hover:bg-surface text-ink-2'
+                    : '-surface-2 border-line hover:bg-surface text-ink-2'
                 }`}
               >
                 <div className="flex items-center justify-between w-full">

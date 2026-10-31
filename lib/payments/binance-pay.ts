@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getPlanById } from '../plans';
+import { isUnconfiguredEnvValue } from './stripe';
 
 export interface BinancePayConfig {
   apiKey: string; // Certificate SN / API Key
@@ -14,14 +14,14 @@ export function getBinancePayConfig(): BinancePayConfig | null {
   const merchantId = (process.env.BINANCE_PAY_MERCHANT_ID || '').trim();
   const baseUrl = (process.env.BINANCE_PAY_BASE_URL || 'https://bpay.binanceapi.com').trim();
 
-  if (!apiKey || !secretKey) {
+  if (isUnconfiguredEnvValue(apiKey) || isUnconfiguredEnvValue(secretKey)) {
     return null;
   }
 
   return {
     apiKey,
     secretKey,
-    merchantId,
+    merchantId: isUnconfiguredEnvValue(merchantId) ? undefined : merchantId,
     baseUrl,
   };
 }
@@ -243,23 +243,37 @@ export async function verifyBinancePayWebhook(
 ): Promise<boolean> {
   const { timestamp, nonce, certificateSn, signature } = headers;
 
+  // Signature and all BinancePay-* headers are mandatory in all environments (especially production)
   if (!timestamp || !nonce || !certificateSn || !signature) {
     return false;
   }
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   // Retrieve public key for the certificate serial number
   const publicKey = await getBinanceCertificate(certificateSn);
   if (!publicKey) {
-    console.warn(`Binance Pay certificate ${certificateSn} could not be resolved.`);
-    // Fallback: If in non-production development with mock webhook, verify via HMAC secret
-    if (process.env.NODE_ENV !== 'production' && process.env.BINANCE_PAY_SECRET) {
+    if (isProduction) {
+      console.error(
+        `[Binance Pay] Production webhook rejected: public certificate "${certificateSn}" could not be resolved.`
+      );
+      return false;
+    }
+
+    // Non-production test fallback: verify HMAC-SHA512 signature when BINANCE_PAY_SECRET is set
+    if (process.env.BINANCE_PAY_SECRET) {
       const expectedHmac = signBinancePayRequest(
         timestamp,
         nonce,
         rawBody,
         process.env.BINANCE_PAY_SECRET
       );
-      if (signature.toUpperCase() === expectedHmac) {
+      const actualBuf = Buffer.from(signature.trim().toUpperCase(), 'utf8');
+      const expectedBuf = Buffer.from(expectedHmac, 'utf8');
+      if (
+        actualBuf.length === expectedBuf.length &&
+        crypto.timingSafeEqual(actualBuf, expectedBuf)
+      ) {
         return true;
       }
     }

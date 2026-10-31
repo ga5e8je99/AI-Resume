@@ -140,7 +140,7 @@ export function CvPreview({ data, template, theme }: CvPreviewProps) {
       {/* Sheet Container with responsive auto-fit wrapper */}
       <div
         ref={containerRef}
-        className="flex-1 bg-surface-2/40 p-3 sm:p-6 overflow-x-auto overflow-y-auto border-x border-b border-line rounded-b-[10px] flex justify-center items-start min-h-[500px]"
+        className="flex-1 -surface-2 p-3 sm:p-6 overflow-x-auto overflow-y-auto border-x border-b border-line rounded-b-[10px] flex justify-center items-start min-h-[500px]"
       >
         <div
           style={{

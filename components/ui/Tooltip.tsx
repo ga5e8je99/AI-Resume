@@ -70,7 +70,7 @@ export function Tooltip({
         <div
           id={tooltipId}
           role="tooltip"
-          className={`absolute ${positionClasses[position]} z-tooltip px-2.5 py-1 text-xs font-medium text-on-accent bg-text-primary rounded-md shadow-elevated whitespace-nowrap pointer-events-none animate-in fade-in duration-150 ${className}`}
+          className={`absolute ${positionClasses[position]} z-tooltip px-2.5 py-1 text-xs font-medium text-on-accent -ink rounded-md shadow-elevated whitespace-nowrap pointer-events-none animate-in fade-in duration-150 ${className}`}
         >
           {content}
         </div>

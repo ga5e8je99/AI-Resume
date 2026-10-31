@@ -121,7 +121,7 @@ export default function LoginPage() {
       className="min-h-[100dvh] bg-paper text-ink flex flex-col lg:grid lg:grid-cols-12 selection:bg-accent-soft selection:text-ink relative"
     >
       {/* LEFT / FORM PANEL (Cols 1-12 on mobile, 5 or 6 on desktop) */}
-      <main id="main-content" className="lg:col-span-7 xl:col-span-6 flex flex-col justify-between p-6 sm:p-10 lg:p-12 min-h-screen">
+      <main id="main-content" className="lg:col-span-7 xl:col-span-6 flex flex-col justify-between p-6 sm:p-10 lg:p-12 min-h-[100dvh]">
         {/* Top Navbar: Brand & Controls */}
         <header className="flex items-center justify-between gap-4">
           <Logo size="md" />
@@ -361,7 +361,7 @@ export default function LoginPage() {
 
         {/* Top Tagline */}
         <div className="relative z-10 text-start">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-line bg-surface-2/80 text-xs font-medium text-ink-2 mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-line -surface-2 text-xs font-medium text-ink-2 mb-4">
             <ShieldCheck className="w-3.5 h-3.5 text-accent" />
             <span>{t('footer_client_privacy')}</span>
           </div>
@@ -372,7 +372,7 @@ export default function LoginPage() {
 
         {/* Center Mockup Card: ATS Preview */}
         <div className="relative z-10 my-8 max-w-[460px] w-full mx-auto">
-          <div className="rounded-[12px] border border-line bg-surface-2/90 p-5 shadow-card space-y-4 backdrop-blur-sm">
+          <div className="rounded-[12px] border border-line -surface-2 p-5 shadow-card space-y-4 backdrop-blur-sm">
             {/* Header of Mock Card */}
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2.5">

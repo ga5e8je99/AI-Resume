@@ -87,7 +87,7 @@ export function GeneratingStepper({
                   isCurrent
                     ? 'bg-surface border-accent text-ink font-medium shadow-sm ring-1 ring-accent/30'
                     : isPassed
-                    ? 'bg-surface-2/60 border-line text-ink-2'
+                    ? '-surface-2 border-line text-ink-2'
                     : 'bg-transparent border-transparent text-ink-3/70'
                 }`}
               >

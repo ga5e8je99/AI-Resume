@@ -252,7 +252,9 @@ export default function BuilderPage() {
               sectionOrder,
             })
           );
-        } catch {}
+        } catch {
+          // Intentionally ignored: localStorage may be full or disabled in private browsing; cloud save proceeds below
+        }
 
         // 2. Cloud save if logged in
         if (user) {
@@ -470,12 +472,12 @@ export default function BuilderPage() {
     <div
       dir={isRtl ? 'rtl' : 'ltr'}
       suppressHydrationWarning
-      className="min-h-screen w-full max-w-full overflow-x-hidden bg-bg text-text-primary flex flex-col selection:bg-brand/20 selection:text-brand"
+      className="min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-paper text-ink flex flex-col selection:bg-brand/20 selection:text-brand"
     >
       {/* 1. Top Builder Header & Comprehensive Action Toolbar */}
       <header
         suppressHydrationWarning
-        className="print:hidden sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-line shadow-xs w-full"
+        className="print:hidden sticky top-0 z-40 bg-surface backdrop-blur-md border-b border-line-strong shadow-xs w-full"
       >
         <div className="max-w-[1720px] w-full mx-auto px-2 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-1.5 sm:gap-3 min-w-0">
           {/* Left: Brand Return & Resume Title & Autosave Badge */}
@@ -484,7 +486,7 @@ export default function BuilderPage() {
               href="/dashboard"
               suppressHydrationWarning
               aria-label={isRtl ? 'العودة إلى لوحة التحكم' : 'Return to Dashboard'}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-2 p-1.5 rounded-md min-h-[36px] min-w-[36px] justify-center transition-colors shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-2 hover:text-ink hover:bg-surface-2 p-1.5 rounded-md min-h-[44px] min-w-[44px] justify-center transition-colors shrink-0"
               title={isRtl ? 'العودة إلى لوحة التحكم' : 'Return to Dashboard'}
             >
               <ArrowLeft className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`} strokeWidth={1.75} />
@@ -493,7 +495,7 @@ export default function BuilderPage() {
               </span>
             </Link>
 
-            <div className="h-4 w-px bg-line shrink-0" />
+            <div className="h-4 w-px bg-line-strong shrink-0" />
 
             <div className="flex items-center gap-2 min-w-0">
               <input
@@ -501,7 +503,7 @@ export default function BuilderPage() {
                 value={resumeTitle}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 aria-label={isRtl ? 'عنوان السيرة الذاتية' : 'Resume title'}
-                className="bg-transparent border-b border-transparent hover:border-line focus:border-brand text-xs sm:text-sm font-semibold text-text-primary px-1 py-0.5 truncate focus:outline-none max-w-[70px] xs:max-w-[140px] sm:max-w-[240px] md:max-w-[280px]"
+                className="bg-transparent border-b border-transparent hover:border-line-strong focus:border-brand text-xs sm:text-sm font-semibold text-ink px-1 py-0.5 truncate focus:outline-none max-w-[70px] xs:max-w-[140px] sm:max-w-[240px] md:max-w-[280px]"
                 title={isRtl ? 'انقر لتعديل عنوان السيرة الذاتية' : 'Click to rename resume'}
               />
 
@@ -632,7 +634,7 @@ export default function BuilderPage() {
               isLoading={isExportingWord}
               onClick={handleDownloadWord}
               className="hidden lg:inline-flex"
-              leftIcon={<FileText className="w-3.5 h-3.5 text-text-secondary" strokeWidth={1.75} />}
+              leftIcon={<FileText className="w-3.5 h-3.5 -ink-2" strokeWidth={1.75} />}
               title={isRtl ? 'تحميل بصيغة مايكروسوفت وورد (.docx)' : 'Download editable Microsoft Word document'}
             >
               <span>Word</span>
@@ -644,7 +646,7 @@ export default function BuilderPage() {
               size="sm"
               onClick={handlePrint}
               className="hidden xl:inline-flex"
-              leftIcon={<Printer className="w-3.5 h-3.5 text-text-secondary" strokeWidth={1.75} />}
+              leftIcon={<Printer className="w-3.5 h-3.5 -ink-2" strokeWidth={1.75} />}
               title={isRtl ? 'طباعة مباشرة عبر المتصفح' : 'Print via browser dialog'}
             >
               <span>{isRtl ? 'طباعة' : 'Print'}</span>
@@ -675,18 +677,18 @@ export default function BuilderPage() {
 
         {/* Expandable Template Switcher Bar */}
         {isTemplateDrawerOpen && (
-          <div className="border-t border-line bg-surface-2/60 backdrop-blur-md p-4 sm:p-5 max-w-[1720px] mx-auto animate-in slide-in-from-top-2 duration-200">
+          <div className="border-t border-line-strong bg-surface-2 backdrop-blur-md p-4 sm:p-5 max-w-[1720px] mx-auto animate-in slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
                 <Layout className="w-4 h-4 text-brand" />
-                <h3 className="text-xs font-semibold text-text-primary">
+                <h3 className="text-xs font-semibold text-ink">
                   {isRtl ? 'اختر قالب السيرة الذاتية (معاينة فورية)' : 'Choose Template (Instant Live Preview)'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsTemplateDrawerOpen(false)}
-                className="text-xs text-text-muted hover:text-text-primary p-1 rounded-md"
+                className="text-xs text-ink-2 hover:text-ink p-1 rounded-md"
               >
                 ✕ {isRtl ? 'إغلاق' : 'Close'}
               </button>
@@ -705,14 +707,14 @@ export default function BuilderPage() {
       {/* 2. Main Workspace Split Layout */}
       <main id="main-content" className="max-w-[1720px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 lg:pb-6 flex-1 flex flex-col min-w-0 overflow-x-hidden">
         {/* Mobile Tab Switcher (<1024px): "Edit | Preview" */}
-        <div className="lg:hidden flex items-center justify-between mb-4 bg-surface-2 p-1 rounded-xl border border-line">
+        <div className="lg:hidden flex items-center justify-between mb-4 bg-surface-2 p-1 rounded-xl border border-line-strong">
           <button
             type="button"
             onClick={() => setMobileTab('editor')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 min-h-[44px] py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mobileTab === 'editor'
-                ? 'bg-surface text-text-primary shadow-xs'
-                : 'text-text-secondary hover:text-text-primary'
+                ? 'bg-surface text-ink shadow-xs'
+                : 'text-ink-2 hover:text-ink'
             }`}
           >
             ✏️ {isRtl ? 'تعديل البيانات' : 'Edit Resume'}
@@ -720,10 +722,10 @@ export default function BuilderPage() {
           <button
             type="button"
             onClick={() => setMobileTab('preview')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 min-h-[44px] py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mobileTab === 'preview'
-                ? 'bg-surface text-text-primary shadow-xs'
-                : 'text-text-secondary hover:text-text-primary'
+                ? 'bg-surface text-ink shadow-xs'
+                : 'text-ink-2 hover:text-ink'
             }`}
           >
             👁️ {isRtl ? 'المعاينة الحية' : 'Live Preview'}
@@ -739,11 +741,11 @@ export default function BuilderPage() {
             }`}
           >
             {/* Quick Template Switcher Card for Desktop */}
-            <div className="hidden lg:flex items-center justify-between gap-3 p-3 bg-surface border border-line rounded-xl shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-medium text-text-secondary">
+            <div className="hidden lg:flex items-center justify-between gap-3 p-3 bg-surface border border-line-strong rounded-xl shadow-xs">
+              <div className="flex items-center gap-2 text-xs font-medium text-ink-2">
                 <Layout className="w-4 h-4 text-brand" />
                 <span>{isRtl ? 'القالب النشط:' : 'Active Template:'}</span>
-                <span className="font-semibold text-text-primary capitalize">{selectedTemplate}</span>
+                <span className="font-semibold text-ink capitalize">{selectedTemplate}</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -804,9 +806,9 @@ export default function BuilderPage() {
       </main>
 
       {/* 3. Mobile Sticky Bottom Action Bar (<1024px) */}
-      <div className="print:hidden lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur-md border-t border-line py-2 px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between shadow-card">
+      <div className="print:hidden lg:hidden fixed bottom-0 inset-x-0 z-40 bg-surface backdrop-blur-md border-t border-line-strong py-2 px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between shadow-card">
         {/* Autosave Mini Indicator */}
-        <div className="flex items-center gap-1.5 text-[11px] font-mono text-text-muted">
+        <div className="flex items-center gap-1.5 text-[11px] font-mono text-ink-2">
           {autosaveStatus === 'saving' ? (
             <RefreshCw className="w-3 h-3 text-brand animate-spin" />
           ) : (

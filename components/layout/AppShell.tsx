@@ -1,12 +1,70 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useSyncExternalStore } from 'react';
 import { useLanguage } from '@/app/context/LanguageContext';
 import { AppSidebar } from './AppSidebar';
 import { AppTopBar } from './AppTopBar';
 import { AppMobileNav } from './AppMobileNav';
 import { AppMobileDrawer } from './AppMobileDrawer';
 import { BreadcrumbItem } from './Breadcrumbs';
+
+const SIDEBAR_STORAGE_KEY = 'jobmatch_sidebar_collapsed';
+const sidebarStoreListeners = new Set<() => void>();
+
+function subscribeSidebarStore(listener: () => void): () => void {
+  sidebarStoreListeners.add(listener);
+  if (typeof window === 'undefined') {
+    return () => {
+      sidebarStoreListeners.delete(listener);
+    };
+  }
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === SIDEBAR_STORAGE_KEY) {
+      listener();
+    }
+  };
+  window.addEventListener('storage', handleStorage);
+  return () => {
+    sidebarStoreListeners.delete(listener);
+    window.removeEventListener('storage', handleStorage);
+  };
+}
+
+function getSidebarSnapshotForDefault(): boolean {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (stored !== null) {
+        return stored === 'true';
+      }
+    } catch {
+      // Intentionally ignored: localStorage may be unavailable in private browsing mode
+    }
+  }
+  return false;
+}
+
+function getSidebarSnapshotForCanvas(): boolean {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (stored !== null) {
+        return stored === 'true';
+      }
+    } catch {
+      // Intentionally ignored: localStorage may be unavailable in private browsing mode
+    }
+  }
+  return true;
+}
+
+function getSidebarServerSnapshotDefault(): boolean {
+  return false;
+}
+
+function getSidebarServerSnapshotCanvas(): boolean {
+  return true;
+}
 
 export interface AppShellProps {
   children: React.ReactNode;
@@ -28,43 +86,41 @@ export function AppShell({
   className = '',
 }: AppShellProps) {
   const { isRtl } = useLanguage();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(variant === 'canvas');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('jobmatch_sidebar_collapsed');
-      if (stored !== null) {
-        setSidebarCollapsed(stored === 'true');
-      }
-    }
-  }, []);
+  const isCanvas = variant === 'canvas';
+  const sidebarCollapsed = useSyncExternalStore(
+    subscribeSidebarStore,
+    isCanvas ? getSidebarSnapshotForCanvas : getSidebarSnapshotForDefault,
+    isCanvas ? getSidebarServerSnapshotCanvas : getSidebarServerSnapshotDefault
+  );
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   // Sync collapse state with localStorage
-  const handleToggleCollapse = () => {
-    setSidebarCollapsed((prev) => {
-      const next = !prev;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('jobmatch_sidebar_collapsed', String(next));
+  const handleToggleCollapse = useCallback(() => {
+    const next = !sidebarCollapsed;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+      } catch {
+        // Intentionally ignored: localStorage write may fail in private browsing; in-memory listeners still update UI
       }
-      return next;
-    });
-  };
+    }
+    sidebarStoreListeners.forEach((listener) => listener());
+  }, [sidebarCollapsed]);
 
   return (
     <div
       dir={isRtl ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-bg text-text-primary flex selection:bg-brand-soft selection:text-brand relative w-full max-w-full overflow-x-hidden"
+      className="min-h-[100dvh] bg-paper text-ink flex selection:bg-brand-soft selection:text-brand relative w-full max-w-full overflow-x-hidden"
     >
-      {/* Desktop Collapsible Sidebar */}
+      {/* Desktop Collapsible Sidebar (>=1024px / lg+) */}
       <AppSidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={handleToggleCollapse}
       />
 
       {/* Main Column */}
-      <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-hidden pb-16 lg:pb-0">
         {/* Top Bar with Breadcrumbs & User Menu */}
         <AppTopBar
           onOpenMobileDrawer={() => setMobileDrawerOpen(true)}
@@ -86,10 +142,10 @@ export function AppShell({
         </main>
       </div>
 
-      {/* Mobile Fixed Bottom Navigation Bar (<768px) */}
+      {/* Mobile & Tablet Fixed Bottom Navigation Bar (<1024px / <lg) */}
       <AppMobileNav onOpenDrawer={() => setMobileDrawerOpen(true)} />
 
-      {/* Mobile Slide-Over Drawer (<768px) */}
+      {/* Mobile & Tablet Slide-Over Drawer (<1024px / <lg) */}
       <AppMobileDrawer
         isOpen={mobileDrawerOpen}
         onClose={() => setMobileDrawerOpen(false)}

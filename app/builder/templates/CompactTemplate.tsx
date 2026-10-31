@@ -91,6 +91,7 @@ export default function CompactTemplate({ data, theme }: TemplateProps) {
 
           {/* Optional Photo */}
           {personalInfo.showPhoto && personalInfo.photoUrl && (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={personalInfo.photoUrl}
               alt={personalInfo.fullName}

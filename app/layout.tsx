@@ -1,57 +1,62 @@
 import type { Metadata, Viewport } from 'next';
 import { Newsreader, Inter, JetBrains_Mono } from 'next/font/google';
 import localFont from 'next/font/local';
-import Script from 'next/script';
 import ClientProviders from './components/ClientProviders';
 import './globals.css';
 
 const newsreader = Newsreader({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '500', '700'],
   style: ['normal', 'italic'],
   variable: '--font-serif',
   display: 'swap',
+  preload: false,
 });
 
 const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '500', '700'],
   variable: '--font-sans',
   display: 'swap',
+  preload: true,
 });
 
 const ibmPlexArabic = localFont({
   src: [
     {
-      path: '../public/fonts/ibm-plex-sans-arabic/IBMPlexSansArabic-Regular.ttf',
+      path: '../public/fonts/ibm-plex-sans-arabic/IBMPlexSansArabic-Regular.woff2',
       weight: '400',
       style: 'normal',
     },
     {
-      path: '../public/fonts/ibm-plex-sans-arabic/IBMPlexSansArabic-Medium.ttf',
+      path: '../public/fonts/ibm-plex-sans-arabic/IBMPlexSansArabic-Medium.woff2',
       weight: '500',
       style: 'normal',
     },
     {
-      path: '../public/fonts/ibm-plex-sans-arabic/IBMPlexSansArabic-SemiBold.ttf',
-      weight: '600',
-      style: 'normal',
-    },
-    {
-      path: '../public/fonts/ibm-plex-sans-arabic/IBMPlexSansArabic-Bold.ttf',
+      path: '../public/fonts/ibm-plex-sans-arabic/IBMPlexSansArabic-Bold.woff2',
       weight: '700',
       style: 'normal',
     },
   ],
   variable: '--font-arabic',
   display: 'swap',
+  preload: false,
+  declarations: [
+    {
+      prop: 'unicode-range',
+      value:
+        'U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD',
+    },
+  ],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '500', '700'],
   variable: '--font-mono',
   display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -62,18 +67,6 @@ export const metadata: Metadata = {
   },
   description:
     'Build cleanly formatted, ATS-compliant resumes, comprehensive CVs, and targeted cover letters. In-browser scanning and honest keyword diagnostics.',
-  alternates: {
-    canonical: '/',
-    languages: {
-      'en': '/?lang=en',
-      'ar': '/?lang=ar',
-      'fr': '/?lang=fr',
-      'de': '/?lang=de',
-      'es': '/?lang=es',
-      'tr': '/?lang=tr',
-      'x-default': '/',
-    },
-  },
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },
@@ -128,7 +121,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="bg-paper text-ink">
       <head>
-        <link rel="dns-prefetch" href="https://js.puter.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <script
@@ -176,17 +168,13 @@ export default function RootLayout({
                   root.setAttribute('dir', 'ltr');
                   root.classList.remove('rtl');
                 }
-              } catch (e) {}
+              } catch (e) { /* Ignore storage access errors in restricted browser environments */ }
             })();`,
           }}
         />
-        <Script
-          src="https://js.puter.com/v2/"
-          strategy="afterInteractive"
-        />
       </head>
       <body
-        className={`${newsreader.variable} ${inter.variable} ${ibmPlexArabic.variable} ${jetbrainsMono.variable} antialiased bg-paper text-ink min-h-[100dvh] selection:bg-brand-soft selection:text-ink font-sans`}
+        className={`${newsreader.variable} ${inter.variable} ${ibmPlexArabic.variable} ${jetbrainsMono.variable} antialiased bg-paper text-ink min-h-[100dvh] flex flex-col selection:bg-brand-soft selection:text-ink font-sans`}
         suppressHydrationWarning
       >
         <a

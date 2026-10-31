@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
-import { getPlanById, CurrencyCode, BillingCycle } from '@/lib/plans';
-import { createCheckout } from '@/lib/payments';
+import { getPlanById, BillingCycle } from '@/lib/plans';
+import { createCheckout, ProviderNotConfiguredError } from '@/lib/payments';
+import { applyRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/checkout
@@ -21,6 +22,15 @@ export async function POST(req: NextRequest) {
         },
         { status: 401 }
       );
+    }
+
+    const rateLimit = await applyRateLimit(
+      req,
+      { limit: 20, ipLimit: 40, windowMs: 60 * 1000, keyPrefix: 'checkout' },
+      authUser.userId
+    );
+    if (!rateLimit.allowed && rateLimit.errorResponse) {
+      return rateLimit.errorResponse;
     }
 
     const user = await DataStore.findUserById(authUser.userId);
@@ -93,6 +103,7 @@ export async function POST(req: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
+        stripeCustomerId: (user as any).stripeCustomerId || '',
       },
       planId: plan.id,
       currency,
@@ -112,6 +123,20 @@ export async function POST(req: NextRequest) {
       network: checkoutResult.network,
     });
   } catch (error: any) {
+    if (
+      error instanceof ProviderNotConfiguredError ||
+      error?.name === 'ProviderNotConfiguredError' ||
+      error?.code === 'PROVIDER_NOT_CONFIGURED'
+    ) {
+      return NextResponse.json(
+        {
+          error: 'PROVIDER_NOT_CONFIGURED',
+          message: error?.message || 'Payment provider is not configured.',
+        },
+        { status: 503 }
+      );
+    }
+
     console.error('Checkout creation error:', error);
     return NextResponse.json(
       {

@@ -63,6 +63,42 @@ export class ResumeService {
       return { valid: false, error: 'Target job title is required (minimum 2 characters)' };
     }
 
+    if (body.targetJobTitle.trim().length > 120) {
+      return { valid: false, error: 'Target job title cannot exceed 120 characters' };
+    }
+
+    if (body.jobDescription !== undefined && body.jobDescription !== null) {
+      if (typeof body.jobDescription !== 'string' || body.jobDescription.length > 35000) {
+        return { valid: false, error: 'Job description cannot exceed 35,000 characters' };
+      }
+    }
+
+    if (body.originalResumeText !== undefined && body.originalResumeText !== null) {
+      if (typeof body.originalResumeText !== 'string' || body.originalResumeText.length > 50000) {
+        return { valid: false, error: 'Original resume text cannot exceed 50,000 characters' };
+      }
+    }
+
+    if (typeof body.workHistory === 'string' && body.workHistory.length > 25000) {
+      return { valid: false, error: 'Work history text cannot exceed 25,000 characters' };
+    }
+
+    if (Array.isArray(body.workHistory) && body.workHistory.length > 30) {
+      return { valid: false, error: 'Work history cannot exceed 30 entries' };
+    }
+
+    if (typeof body.education === 'string' && body.education.length > 10000) {
+      return { valid: false, error: 'Education text cannot exceed 10,000 characters' };
+    }
+
+    if (typeof body.keySkills === 'string' && body.keySkills.length > 2000) {
+      return { valid: false, error: 'Key skills cannot exceed 2,000 characters' };
+    }
+
+    if (Array.isArray(body.keySkills) && body.keySkills.length > 60) {
+      return { valid: false, error: 'Key skills cannot exceed 60 items' };
+    }
+
     if (body.outputLanguage && !isDocumentLanguage(body.outputLanguage)) {
       return { valid: false, error: 'Unsupported output language' };
     }

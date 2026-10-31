@@ -1,4 +1,6 @@
-import { Job, JobProvider, JobSearchParams } from '../types';
+import { Job, JobProvider, JobSearchParams, ProviderSearchResult } from '../types';
+
+const PROVIDER_TIMEOUT_MS = 8000;
 
 export class TheMuseProvider implements JobProvider {
   name = 'The Muse';
@@ -12,9 +14,12 @@ export class TheMuseProvider implements JobProvider {
     return true; // Open public API
   }
 
-  async search(params: JobSearchParams): Promise<Job[]> {
+  async search(params: JobSearchParams): Promise<ProviderSearchResult> {
+    const startMs = Date.now();
     const query = (params.query || '').toLowerCase().trim();
-    if (!query) return [];
+    if (!query) {
+      return { jobs: [], status: 'ok', tookMs: Date.now() - startMs };
+    }
 
     try {
       const page = params.page || 1;
@@ -25,11 +30,16 @@ export class TheMuseProvider implements JobProvider {
           Accept: 'application/json',
           'User-Agent': 'JobMatchAI/1.0',
         },
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       });
 
       if (!res.ok) {
-        return [];
+        return {
+          jobs: [],
+          status: 'failed',
+          error: `HTTP ${res.status}`,
+          tookMs: Date.now() - startMs,
+        };
       }
 
       const data = await res.json();
@@ -39,15 +49,21 @@ export class TheMuseProvider implements JobProvider {
       const queryTokens = query.split(/\s+/).filter((t) => t.length > 2);
       const filtered = results.filter((item: any) => {
         const title = (item.name || '').toLowerCase();
-        const cats = Array.isArray(item.categories) ? item.categories.map((c: any) => (c.name || '').toLowerCase()).join(' ') : '';
+        const cats = Array.isArray(item.categories)
+          ? item.categories.map((c: any) => (c.name || '').toLowerCase()).join(' ')
+          : '';
         return queryTokens.some((t) => title.includes(t) || cats.includes(t)) || title.includes(query);
       });
 
       const listToMap = filtered.length > 0 ? filtered : results.slice(0, 5);
 
-      return listToMap.slice(0, 15).map((item: any) => {
-        const locations = Array.isArray(item.locations) ? item.locations.map((l: any) => l.name).join(', ') : 'Flexible';
-        const isRemote = locations.toLowerCase().includes('flexible') || locations.toLowerCase().includes('remote');
+      const jobs: Job[] = listToMap.slice(0, 15).map((item: any) => {
+        const locations = Array.isArray(item.locations)
+          ? item.locations.map((l: any) => l.name).join(', ')
+          : 'Flexible';
+        const isRemote =
+          locations.toLowerCase().includes('flexible') ||
+          locations.toLowerCase().includes('remote');
 
         return {
           id: `themuse_${item.id || Math.random().toString(36).slice(2)}`,
@@ -63,13 +79,32 @@ export class TheMuseProvider implements JobProvider {
           url: item.refs?.landing_page || 'https://www.themuse.com',
           source: 'The Muse',
           sourceBadge: 'The Muse',
-          postedDate: item.publication_date ? new Date(item.publication_date).toISOString().split('T')[0] : undefined,
+          postedDate: item.publication_date
+            ? new Date(item.publication_date).toISOString().split('T')[0]
+            : undefined,
           tags: Array.isArray(item.categories) ? item.categories.map((c: any) => c.name) : [],
-          jobType: Array.isArray(item.levels) && item.levels.length > 0 ? item.levels[0].name : 'Full-time',
+          jobType:
+            Array.isArray(item.levels) && item.levels.length > 0
+              ? item.levels[0].name
+              : 'Full-time',
         };
       });
-    } catch {
-      return [];
+
+      return {
+        jobs,
+        status: 'ok',
+        tookMs: Date.now() - startMs,
+      };
+    } catch (err: any) {
+      return {
+        jobs: [],
+        status: 'failed',
+        error:
+          err?.name === 'TimeoutError' || err?.name === 'AbortError'
+            ? 'Provider timed out after 8000ms'
+            : err?.message || 'The Muse fetch failed',
+        tookMs: Date.now() - startMs,
+      };
     }
   }
 }

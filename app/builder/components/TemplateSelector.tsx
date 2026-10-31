@@ -3,6 +3,7 @@
 import React from 'react';
 import { TemplateId } from '../types';
 import { Check } from 'lucide-react';
+import { Stagger } from '@/app/components/landing/ScrollReveal';
 
 interface Props {
   selectedTemplate: TemplateId;
@@ -113,7 +114,11 @@ export default function TemplateSelector({
 }: Props) {
   return (
     <div className="w-full">
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      <Stagger
+        className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3"
+        itemClassName="h-full"
+        direction="up"
+      >
         {TEMPLATES.map((tpl) => {
           const isSelected = selectedTemplate === tpl.id;
           return (
@@ -121,10 +126,10 @@ export default function TemplateSelector({
               key={tpl.id}
               type="button"
               onClick={() => onSelect(tpl.id)}
-              className={`group relative text-start p-2.5 rounded-xl border transition-all duration-200 flex flex-col justify-between cursor-pointer focus-visible:outline-2 outline-offset-2 outline-[var(--focus)] ${
+              className={`card-interactive h-full w-full group relative text-start p-2.5 rounded-xl border flex flex-col justify-between cursor-pointer focus-visible:outline-2 outline-offset-2 outline-[var(--focus)] ${
                 isSelected
                   ? 'border-brand bg-brand/10 ring-2 ring-brand/40 shadow-sm'
-                  : 'border-line bg-surface hover:border-line-strong hover:bg-surface-2'
+                  : 'border-line-strong bg-surface hover:border-line-strong hover:bg-surface-2'
               }`}
             >
               {/* Thumbnail Miniature Wireframe */}
@@ -148,14 +153,14 @@ export default function TemplateSelector({
               {/* Title & Tag */}
               <div>
                 <div className="flex items-center justify-between gap-1 mb-0.5">
-                  <h4 className="text-xs font-semibold text-text-primary truncate">
+                  <h4 className="text-xs font-semibold text-ink truncate">
                     {isRtl ? tpl.nameAr : tpl.nameEn}
                   </h4>
                 </div>
                 <span className="text-[10px] font-medium text-brand block truncate">
                   {isRtl ? tpl.tagAr : tpl.tagEn}
                 </span>
-                <p className="text-[10px] text-text-muted line-clamp-2 mt-0.5 leading-snug">
+                <p className="text-[10px] text-ink-2 line-clamp-2 mt-0.5 leading-snug">
                   {isRtl ? tpl.descAr : tpl.descEn}
                 </p>
               </div>
@@ -169,7 +174,7 @@ export default function TemplateSelector({
             </button>
           );
         })}
-      </div>
+      </Stagger>
     </div>
   );
 }

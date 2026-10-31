@@ -4,15 +4,15 @@ import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react
 import { usePathname, useSearchParams } from 'next/navigation';
 
 export interface RouteProgressBarProps {
-  /** Anti-flicker delay in milliseconds (defaults to 150ms) */
+  /** Anti-flicker delay in milliseconds (defaults to 0ms so every route transition shows progress) */
   delay?: number;
-  /** Minimum visible time in milliseconds once shown (defaults to 300ms) */
+  /** Minimum visible time in milliseconds once shown (defaults to 220ms) */
   minVisibleTime?: number;
 }
 
 function RouteProgressBarInner({
-  delay = 150,
-  minVisibleTime = 300,
+  delay = 0,
+  minVisibleTime = 220,
 }: RouteProgressBarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -20,7 +20,7 @@ function RouteProgressBarInner({
   const [isVisible, setIsVisible] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [isRtl, setIsRtl] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const flickerTimerRef = useRef<NodeJS.Timeout | null>(null);
   const trickleTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -28,23 +28,13 @@ function RouteProgressBarInner({
   const visibleStartTimeRef = useRef<number | null>(null);
   const isPendingRef = useRef(false);
 
-  // Check RTL document direction
   useEffect(() => {
-    const updateDir = () => {
-      const dir =
-        document.documentElement.getAttribute('dir') ||
-        document.body.getAttribute('dir') ||
-        (document.documentElement.classList.contains('rtl') ? 'rtl' : 'ltr');
-      setIsRtl(dir === 'rtl');
-    };
-    updateDir();
-
-    const observer = new MutationObserver(updateDir);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['dir', 'class'],
-    });
-    return () => observer.disconnect();
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = () => setPrefersReducedMotion(mq.matches);
+    handleChange();
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
   }, []);
 
   const clearAllTimers = useCallback(() => {
@@ -72,22 +62,26 @@ function RouteProgressBarInner({
 
     clearAllTimers();
 
-    // Anti-flicker rule: Only display if navigation exceeds the delay threshold (150ms)
-    flickerTimerRef.current = setTimeout(() => {
+    const activateBar = () => {
       visibleStartTimeRef.current = Date.now();
       setIsVisible(true);
-      setProgress(24);
+      setProgress(28);
 
-      // Smooth trickle toward ~85%
       trickleTimerRef.current = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 85) return prev;
           const remaining = 85 - prev;
-          const step = Math.max(1, remaining * 0.15);
+          const step = Math.max(1.5, remaining * 0.18);
           return Math.min(85, prev + step);
         });
-      }, 200);
-    }, delay);
+      }, 160);
+    };
+
+    if (delay <= 0) {
+      activateBar();
+    } else {
+      flickerTimerRef.current = setTimeout(activateBar, delay);
+    }
 
     // Safeguard: auto-cancel after 8s if navigation is abandoned or stuck
     safeguardTimerRef.current = setTimeout(() => {
@@ -98,8 +92,7 @@ function RouteProgressBarInner({
   const completeTransition = useCallback(() => {
     isPendingRef.current = false;
 
-    // If navigation completed under anti-flicker threshold (150ms), abort cleanly without rendering
-    if (!isVisible) {
+    if (!isVisible && visibleStartTimeRef.current === null) {
       clearAllTimers();
       setProgress(0);
       return;
@@ -107,7 +100,6 @@ function RouteProgressBarInner({
 
     clearAllTimers();
 
-    // Anti-flicker rule: Once shown, keep visible for at least minVisibleTime (300ms)
     const elapsed = visibleStartTimeRef.current
       ? Date.now() - visibleStartTimeRef.current
       : minVisibleTime;
@@ -117,16 +109,15 @@ function RouteProgressBarInner({
       setIsCompleting(true);
       setProgress(100);
 
-      // Fade out and reset state cleanly
       setTimeout(() => {
         setIsVisible(false);
         setProgress(0);
         setIsCompleting(false);
         visibleStartTimeRef.current = null;
-      }, 220);
+      }, 180);
     }, remainingHold);
 
-    // Accessibility focus management: shift focus to page's primary heading or main content
+    // Accessibility focus management: shift focus to page's primary heading or main content without scrolling
     setTimeout(() => {
       const target = document.querySelector(
         'main h1, h1, [role="main"] h1, main, [role="main"]'
@@ -137,10 +128,10 @@ function RouteProgressBarInner({
         }
         target.focus({ preventScroll: true });
       }
-    }, remainingHold + 60);
+    }, remainingHold + 50);
   }, [isVisible, minVisibleTime, clearAllTimers]);
 
-  // Route change completion
+  // Complete progress bar when route pathname or searchParams update
   useEffect(() => {
     completeTransition();
   }, [pathname, searchParams, completeTransition]);
@@ -148,7 +139,6 @@ function RouteProgressBarInner({
   // Intercept anchor clicks, router.push (via history pushState/replaceState), popstate, and Escape
   useEffect(() => {
     const handleAnchorClick = (event: MouseEvent) => {
-      // Must be standard left-click without modifier keys
       if (
         event.button !== 0 ||
         event.ctrlKey ||
@@ -166,7 +156,6 @@ function RouteProgressBarInner({
       const href = anchor.getAttribute('href');
       if (!href) return;
 
-      // Ignore downloads, external targets, hash anchors, mailto, tel, javascript
       if (anchor.target && anchor.target !== '_self') return;
       if (anchor.hasAttribute('download')) return;
       if (
@@ -180,21 +169,16 @@ function RouteProgressBarInner({
 
       try {
         const targetUrl = new URL(anchor.href, window.location.href);
-
-        // Ignore external domains
         if (targetUrl.origin !== window.location.origin) return;
-
-        // Ignore same-URL navigations (including same path with hash-only changes)
         if (
           targetUrl.pathname === window.location.pathname &&
           targetUrl.search === window.location.search
         ) {
           return;
         }
-
         startTransition();
       } catch {
-        // Fallback for relative or malformed URLs
+        // Ignore malformed URLs
       }
     };
 
@@ -208,7 +192,6 @@ function RouteProgressBarInner({
       }
     };
 
-    // Monkey-patch history.pushState and history.replaceState to capture programmatic router.push
     const origPushState = window.history.pushState;
     const origReplaceState = window.history.replaceState;
 
@@ -224,7 +207,9 @@ function RouteProgressBarInner({
           ) {
             startTransition();
           }
-        } catch {}
+        } catch {
+          // Intentionally ignored: malformed URL passed to history.pushState should not break native history API
+        }
       }
       return origPushState.apply(this, args);
     };
@@ -241,12 +226,13 @@ function RouteProgressBarInner({
           ) {
             startTransition();
           }
-        } catch {}
+        } catch {
+          // Intentionally ignored: malformed URL passed to history.replaceState should not break native history API
+        }
       }
       return origReplaceState.apply(this, args);
     };
 
-    // Custom navigation events listeners for explicit app triggers
     const handleCustomStart = () => startTransition();
     const handleCustomComplete = () => completeTransition();
     const handleCustomCancel = () => cancelTransition();
@@ -276,22 +262,15 @@ function RouteProgressBarInner({
   return (
     <div
       aria-hidden="true"
+      className="fixed top-0 start-0 h-[3px] bg-accent z-[9999] pointer-events-none"
       style={{
-        position: 'fixed',
-        top: 0,
-        insetInlineStart: 0,
-        [isRtl ? 'right' : 'left']: 0,
-        height: '3px',
         width: `${progress}%`,
-        backgroundColor: 'var(--brand, #0F5C4D)',
-        boxShadow:
-          'var(--shadow-glow, 0 0 10px rgba(15, 92, 77, 0.45)), 0 0 4px var(--brand, #0F5C4D)',
         opacity: isVisible ? 1 : 0,
-        transition: isCompleting
-          ? 'width 180ms ease-out, opacity 200ms ease-in 60ms'
-          : 'width 250ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease-in',
-        zIndex: 9999,
-        pointerEvents: 'none',
+        transition: prefersReducedMotion
+          ? 'none'
+          : isCompleting
+          ? 'width 160ms ease-out, opacity 180ms ease-in 50ms'
+          : 'width 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 120ms ease-in',
       }}
     />
   );

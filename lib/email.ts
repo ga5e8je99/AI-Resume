@@ -465,4 +465,110 @@ export function getPaymentReceiptEmailHtml({
   return emailWrapper(content, (language as any) || 'en', emailTitle);
 }
 
+export interface SubscriptionAlertEmailProps extends TemplateBaseProps {
+  type: 'payment_failed' | 'subscription_ended' | 'expiring_soon';
+  daysLeft?: number;
+}
+
+export function getSubscriptionAlertEmailHtml({
+  name = 'Valued Customer',
+  type,
+  daysLeft = 3,
+  language = 'en',
+}: SubscriptionAlertEmailProps): string {
+  const isAr = language === 'ar';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+  if (type === 'payment_failed') {
+    const content = isAr
+      ? `
+        <h1 style="color: #9A5B00; font-size: 22px; font-weight: 700; margin: 0 0 16px 0;">تنبيه: تعذر تجديد اشتراك JobMatch Pro ⚠️</h1>
+        <p style="margin: 0 0 20px 0; color: #4A5160;">
+          مرحباً ${name}، تعذر خصم رسوم تجديد اشتراك باقة Pro الخاصة بك. يرجى تحديث وسيلة الدفع من خلال بوابة إدارة الاشتراك لتجنب توقف المزايا الاحترافية.
+        </p>
+        <div style="text-align: center; margin: 28px 0 12px 0;">
+          <a href="${appUrl}/dashboard?tab=settings" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 6px;">
+            إدارة الاشتراك وتحديث الدفع ←
+          </a>
+        </div>
+      `
+      : `
+        <h1 style="color: #9A5B00; font-size: 22px; font-weight: 700; margin: 0 0 16px 0;">Action Required: Subscription Payment Failed ⚠️</h1>
+        <p style="margin: 0 0 20px 0; color: #4A5160;">
+          Hi ${name}, we were unable to process the renewal payment for your JobMatch Pro subscription. Please update your payment method in the Billing Portal to keep your Pro features active.
+        </p>
+        <div style="text-align: center; margin: 28px 0 12px 0;">
+          <a href="${appUrl}/dashboard?tab=settings" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 6px;">
+            Manage Subscription →
+          </a>
+        </div>
+      `;
+    return emailWrapper(
+      content,
+      (language as any) || 'en',
+      isAr ? 'تنبيه دفع اشتراك JobMatch AI' : 'Subscription Payment Failed - JobMatch AI'
+    );
+  }
+
+  if (type === 'expiring_soon') {
+    const content = isAr
+      ? `
+        <h1 style="color: #9A5B00; font-size: 22px; font-weight: 700; margin: 0 0 16px 0;">تنبيه: اشتراك JobMatch Pro ينتهي خلال ${daysLeft} أيام ⏳</h1>
+        <p style="margin: 0 0 20px 0; color: #4A5160;">
+          مرحباً ${name}، نود تذكيرك بأن صلاحية باقة JobMatch Pro الخاصة بك ستنتهي خلال ${daysLeft} أيام. يمكنك تجديد اشتراكك في أي وقت للحفاظ على التوليد غير المحدود وجميع القوالب.
+        </p>
+        <div style="text-align: center; margin: 28px 0 12px 0;">
+          <a href="${appUrl}/pricing" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 6px;">
+            تجديد الاشتراك الآن ←
+          </a>
+        </div>
+      `
+      : `
+        <h1 style="color: #9A5B00; font-size: 22px; font-weight: 700; margin: 0 0 16px 0;">Reminder: Your Pro Plan Expires in ${daysLeft} Days ⏳</h1>
+        <p style="margin: 0 0 20px 0; color: #4A5160;">
+          Hi ${name}, your JobMatch Pro access is scheduled to expire in ${daysLeft} days. Renew anytime to keep unlimited AI generations and all templates unlocked.
+        </p>
+        <div style="text-align: center; margin: 28px 0 12px 0;">
+          <a href="${appUrl}/pricing" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 6px;">
+            Renew Pro Plan →
+          </a>
+        </div>
+      `;
+    return emailWrapper(
+      content,
+      (language as any) || 'en',
+      isAr ? 'تذكير بقرب انتهاء اشتراك JobMatch Pro' : 'Pro Plan Expiring Soon - JobMatch AI'
+    );
+  }
+
+  const content = isAr
+    ? `
+      <h1 style="color: #14181F; font-size: 22px; font-weight: 700; margin: 0 0 16px 0;">تم إنهاء اشتراك JobMatch Pro</h1>
+      <p style="margin: 0 0 20px 0; color: #4A5160;">
+        مرحباً ${name}، تم إنهاء اشتراكك في باقة JobMatch Pro وتحويل حسابك إلى الباقة المجانية (Free). يمكنك إعادة الاشتراك في أي وقت من صفحة الأسعار.
+      </p>
+      <div style="text-align: center; margin: 28px 0 12px 0;">
+        <a href="${appUrl}/pricing" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 6px;">
+          عرض الباقات ←
+        </a>
+      </div>
+    `
+    : `
+      <h1 style="color: #14181F; font-size: 22px; font-weight: 700; margin: 0 0 16px 0;">Your JobMatch Pro Subscription Has Ended</h1>
+      <p style="margin: 0 0 20px 0; color: #4A5160;">
+        Hi ${name}, your JobMatch Pro subscription has ended and your account has been moved to the Free plan. You can upgrade again at any time.
+      </p>
+      <div style="text-align: center; margin: 28px 0 12px 0;">
+        <a href="${appUrl}/pricing" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 6px;">
+          View Plans →
+        </a>
+      </div>
+    `;
+  return emailWrapper(
+    content,
+    (language as any) || 'en',
+    isAr ? 'انتهاء اشتراك JobMatch Pro' : 'Subscription Ended - JobMatch AI'
+  );
+}
+
 export default sendEmail;

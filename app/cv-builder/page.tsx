@@ -104,7 +104,9 @@ export default function CvBuilderPage() {
         );
         setLastSavedTimestamp(Date.now());
         setAutosaveText(t('common_saved_just_now'));
-      } catch {}
+      } catch {
+        // Intentionally ignored: localStorage autosave is best-effort and may fail in private browsing
+      }
     }, 600);
 
     return () => clearTimeout(timer);
@@ -294,14 +296,14 @@ export default function CvBuilderPage() {
 
   if (isLoadingDocument) {
     return (
-      <div className="min-h-screen bg-paper flex flex-col items-center justify-center text-ink">
+      <div className="min-h-[100dvh] bg-paper flex flex-col items-center justify-center text-ink">
         <LogoLoader text={t('cv_loading')} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-paper text-ink flex flex-col selection:bg-accent-soft selection:text-accent">
+    <div className="min-h-[100dvh] bg-paper text-ink flex flex-col selection:bg-accent-soft selection:text-accent overflow-x-clip">
       {/* Top Header Bar */}
       <header className="print:hidden sticky top-0 z-40 bg-surface border-b border-line px-4 py-2.5 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">

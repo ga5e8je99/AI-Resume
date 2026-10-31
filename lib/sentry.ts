@@ -1,4 +1,37 @@
-import * as Sentry from '@sentry/nextjs';
+import type * as SentryTypes from '@sentry/nextjs';
+
+let sentryModulePromise: Promise<typeof SentryTypes | null> | null = null;
+let sentryInitialized = false;
+
+function scheduleSentryAfterInteractive(callback: () => void): void {
+  if (typeof window === 'undefined') {
+    callback();
+    return;
+  }
+  const run = () => {
+    if (typeof (window as any).requestIdleCallback === 'function') {
+      (window as any).requestIdleCallback(callback, { timeout: 2500 });
+    } else {
+      setTimeout(callback, 200);
+    }
+  };
+  if (typeof document !== 'undefined' && document.readyState !== 'complete') {
+    window.addEventListener('load', run, { once: true });
+  } else {
+    run();
+  }
+}
+
+function loadSentryLazy(): Promise<typeof SentryTypes | null> {
+  if (!sentryModulePromise) {
+    sentryModulePromise = import('@sentry/nextjs').catch((err) => {
+      sentryModulePromise = null;
+      console.error('[Sentry Lazy Load Error]', err);
+      return null;
+    });
+  }
+  return sentryModulePromise;
+}
 
 /**
  * PII Sanitization Patterns
@@ -83,7 +116,7 @@ export function scrubPii<T = any>(input: T): T {
 /**
  * Sentry beforeSend hook to guarantee zero PII leakage
  */
-export function scrubPiiEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
+export function scrubPiiEvent(event: SentryTypes.ErrorEvent): SentryTypes.ErrorEvent | null {
   try {
     // 1. Scrub User data: keep only anonymous ID, strip email, ip, username
     if (event.user) {
@@ -149,22 +182,57 @@ export function isSentryEnabled(): boolean {
 }
 
 /**
- * Captures an exception safely with PII scrubbing and graceful fallback
+ * Lazily initializes Sentry client after interactive so it never blocks LCP.
+ */
+export function initSentryLazy(): void {
+  if (sentryInitialized || !isSentryEnabled()) return;
+  sentryInitialized = true;
+  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
+  if (!dsn) return;
+
+  scheduleSentryAfterInteractive(() => {
+    loadSentryLazy().then((sentryMod) => {
+      if (!sentryMod) return;
+      try {
+        sentryMod.init({
+          dsn,
+          tracesSampleRate: 0.1,
+          replaysSessionSampleRate: 0,
+          replaysOnErrorSampleRate: 0,
+          beforeSend(event) {
+            return scrubPiiEvent(event);
+          },
+        });
+      } catch (err) {
+        console.error('[Sentry Lazy Init Failed]', err);
+      }
+    });
+  });
+}
+
+/**
+ * Captures an exception safely with PII scrubbing and graceful lazy fallback
  */
 export function captureException(error: any, context?: Record<string, any>): string {
   const safeContext = context ? scrubPii(context) : undefined;
+  const eventId = `err_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-  // In production with Sentry configured
+  // In production with Sentry configured, send lazily after interactive
   if (isSentryEnabled()) {
-    try {
-      return Sentry.captureException(error, { extra: safeContext });
-    } catch (err) {
-      console.error('[Sentry captureException Failed]', err);
-    }
+    scheduleSentryAfterInteractive(() => {
+      loadSentryLazy().then((sentryMod) => {
+        if (!sentryMod) return;
+        try {
+          sentryMod.captureException(error, { extra: safeContext });
+        } catch (err) {
+          console.error('[Sentry captureException Failed]', err);
+        }
+      });
+    });
+    return eventId;
   }
 
   // Development/Test fallback logging
-  const eventId = `err_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   if (process.env.NODE_ENV !== 'production') {
     console.warn(`[Sentry Monitor] [${eventId}] Captured:`, error?.message || error, safeContext || '');
   }
@@ -172,25 +240,39 @@ export function captureException(error: any, context?: Record<string, any>): str
 }
 
 /**
- * Captures a message safely
+ * Captures a message safely with lazy loading
  */
-export function captureMessage(message: string, level: Sentry.SeverityLevel = 'info'): string {
+export function captureMessage(message: string, level: SentryTypes.SeverityLevel = 'info'): string {
   const safeMessage = scrubPii(message);
-  if (isSentryEnabled()) {
-    try {
-      return Sentry.captureMessage(safeMessage, level);
-    } catch (err) {
-      console.error('[Sentry captureMessage Failed]', err);
-    }
-  }
   const eventId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+  if (isSentryEnabled()) {
+    scheduleSentryAfterInteractive(() => {
+      loadSentryLazy().then((sentryMod) => {
+        if (!sentryMod) return;
+        try {
+          sentryMod.captureMessage(safeMessage, level);
+        } catch (err) {
+          console.error('[Sentry captureMessage Failed]', err);
+        }
+      });
+    });
+  }
   return eventId;
 }
+
+export const Sentry = {
+  captureException,
+  captureMessage,
+  init: initSentryLazy,
+};
 
 export default {
   scrubPii,
   scrubPiiEvent,
   isSentryEnabled,
+  initSentryLazy,
   captureException,
   captureMessage,
+  Sentry,
 };

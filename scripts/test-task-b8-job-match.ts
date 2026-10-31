@@ -1,11 +1,17 @@
 import assert from 'assert';
+import { NextRequest } from 'next/server';
 import DataStore from '../app/lib/datastore';
+import { signToken } from '../app/lib/auth';
 import { requireCredits, consumeCredit } from '../lib/credit-guard';
+import { JOB_MATCH_FREE_QUOTA } from '../lib/plans';
 import { generateSmartLinks } from '../lib/jobs/smart-links';
-import { getEnabledProviders, searchAllProviders } from '../lib/jobs/providers';
+import { getEnabledProviders, searchAllProviders, ALL_PROVIDERS } from '../lib/jobs/providers';
+import { adzunaProvider } from '../lib/jobs/providers/adzuna';
+import { joobleProvider } from '../lib/jobs/providers/jooble';
 import { scoreJob, deduplicateJobs, rankJobs } from '../lib/jobs/matcher';
 import { buildCacheKey, getCachedJobResults, setCachedJobResults } from '../lib/jobs/cache';
 import { extractProfileFromResumeData, extractProfileFromText } from '../lib/jobs/extractor';
+import { POST as jobSearchPOST } from '../app/api/jobs/search/route';
 import { Job, JobSearchParams } from '../lib/jobs/types';
 
 async function runTests() {
@@ -371,6 +377,321 @@ async function runTests() {
   await DataStore.deleteUser(testFreeUserId);
   await DataStore.deleteUser(testProUserId);
   await DataStore.deleteUser(testPaygUserId);
+
+  // ---------------------------------------------------------------
+  // TEST 11: Raw Cache Isolation & Different Match Scores for Users with Different Skills
+  // ---------------------------------------------------------------
+  console.log('Test 11: Raw Cache Isolation & Per-User Match Scoring on Same Query...');
+  assert.strictEqual(JOB_MATCH_FREE_QUOTA, 3, 'JOB_MATCH_FREE_QUOTA constant must be 3');
+
+  const sharedQueryParams = {
+    query: 'Senior Full Stack Developer CacheTest',
+    location: 'Cairo, Egypt',
+    remote: true,
+    country: 'eg',
+  };
+
+  // Seed cache with a job that intentionally includes fake user match properties to verify stripping
+  const pollutedJob: Job = {
+    id: 'raw_cache_job_1',
+    title: 'Senior Full Stack Developer',
+    company: 'NileCloud Tech',
+    location: 'Cairo, Egypt',
+    remote: true,
+    description:
+      'Seeking a Senior Full Stack Developer with strong expertise in React, TypeScript, Node.js, and PostgreSQL.',
+    url: 'https://example.com/jobs/nilecloud-1',
+    source: 'Remotive',
+    tags: ['React', 'TypeScript', 'Node.js', 'PostgreSQL'],
+    matchScore: 99,
+    matchedSkills: ['SHOULD_BE_STRIPPED'],
+    missingSkills: ['SHOULD_BE_STRIPPED'],
+    matchReasons: ['SHOULD_BE_STRIPPED'],
+  };
+
+  await setCachedJobResults(sharedQueryParams, {
+    jobs: [pollutedJob],
+    totalFound: 1,
+    attributions: [],
+    sourcesQueried: ['Remotive'],
+  });
+
+  const rawFromCache = await getCachedJobResults(sharedQueryParams);
+  assert.ok(rawFromCache && rawFromCache.jobs.length === 1, 'Cache must return seeded job');
+  assert.strictEqual(
+    rawFromCache.jobs[0].matchScore,
+    undefined,
+    'Raw cache must strip matchScore (no user-specific data in cache)'
+  );
+  assert.strictEqual(
+    rawFromCache.jobs[0].matchedSkills,
+    undefined,
+    'Raw cache must strip matchedSkills'
+  );
+
+  // Create two users who will search the exact same query with different skills & seniority
+  const userReact = await DataStore.createUserAccount({
+    name: 'React Senior Dev',
+    email: `react_dev_${Date.now()}@example.com`,
+    password: 'password123',
+    plan: 'free',
+    aiCredits: 3,
+  });
+  const userPhp = await DataStore.createUserAccount({
+    name: 'PHP Junior Dev',
+    email: `php_dev_${Date.now()}@example.com`,
+    password: 'password123',
+    plan: 'free',
+    aiCredits: 3,
+  });
+
+  const tokenReact = signToken({
+    userId: userReact.id,
+    email: userReact.email,
+    name: userReact.name,
+  });
+  const tokenPhp = signToken({
+    userId: userPhp.id,
+    email: userPhp.email,
+    name: userPhp.name,
+  });
+
+  const reqReact = new NextRequest('http://localhost:3000/api/jobs/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${tokenReact}`,
+    },
+    body: JSON.stringify({
+      ...sharedQueryParams,
+      skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL'],
+      seniority: 'senior',
+    }),
+  });
+
+  const reqPhp = new NextRequest('http://localhost:3000/api/jobs/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${tokenPhp}`,
+    },
+    body: JSON.stringify({
+      ...sharedQueryParams,
+      skills: ['PHP', 'Laravel', 'MySQL', 'WordPress'],
+      seniority: 'junior',
+    }),
+  });
+
+  const resReact = await jobSearchPOST(reqReact);
+  const resPhp = await jobSearchPOST(reqPhp);
+  assert.strictEqual(resReact.status, 200);
+  assert.strictEqual(resPhp.status, 200);
+
+  const dataReact = await resReact.json();
+  const dataPhp = await resPhp.json();
+
+  assert.strictEqual(dataReact.cached, true, 'User 1 should hit cache');
+  assert.strictEqual(dataPhp.cached, true, 'User 2 should hit cache');
+
+  const scoreReact = dataReact.jobs[0].matchScore;
+  const scorePhp = dataPhp.jobs[0].matchScore;
+  console.log(`  User 1 (React/TS/Senior) Score: ${scoreReact}% | User 2 (PHP/Junior) Score: ${scorePhp}%`);
+
+  assert.notStrictEqual(
+    scoreReact,
+    scorePhp,
+    'Two users with different skills on the same query must receive different match scores'
+  );
+  assert.ok(
+    scoreReact > scorePhp,
+    `Matching skill user score (${scoreReact}) must be higher than non-matching skill user score (${scorePhp})`
+  );
+  assert.ok(
+    dataReact.jobs[0].matchedSkills.includes('React'),
+    'User 1 matchedSkills must include React'
+  );
+  assert.strictEqual(
+    dataPhp.jobs[0].matchedSkills.length,
+    0,
+    'User 2 matchedSkills must be empty'
+  );
+
+  console.log('  ✅ Test 11 Passed: Raw cache stores no user data; users with different skills get distinct scores.\n');
+  passedTests++;
+
+  // ---------------------------------------------------------------
+  // TEST 12: End-to-End Quota on Cache Hit/Miss (4th Search Deducts Credit + Concurrent Atomic Guard)
+  // ---------------------------------------------------------------
+  console.log('Test 12: End-to-End Quota (Every Search Consumes 1 Slot, 4th Deducts Credit, Atomic Concurrent Guard)...');
+  const quotaUser = await DataStore.createUserAccount({
+    name: 'Quota E2E User',
+    email: `quota_e2e_${Date.now()}@example.com`,
+    password: 'password123',
+    plan: 'free',
+    aiCredits: 2,
+  });
+  const quotaToken = signToken({
+    userId: quotaUser.id,
+    email: quotaUser.email,
+    name: quotaUser.name,
+  });
+
+  const makeSearchReq = () =>
+    new NextRequest('http://localhost:3000/api/jobs/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${quotaToken}`,
+      },
+      body: JSON.stringify({
+        ...sharedQueryParams,
+        skills: ['React', 'TypeScript'],
+        seniority: 'senior',
+      }),
+    });
+
+  // Search 1 (Free #1)
+  const s1Res = await jobSearchPOST(makeSearchReq());
+  const s1Data = await s1Res.json();
+  assert.strictEqual(s1Res.status, 200);
+  assert.strictEqual(s1Data.freeRemaining, 2, 'After 1st search, freeRemaining must be 2');
+  assert.strictEqual(s1Data.creditsRemaining, 2, 'After 1st search, creditsRemaining must remain 2');
+  assert.strictEqual(s1Data.charged, false, '1st search must have charged: false');
+
+  // Search 2 (Free #2)
+  const s2Res = await jobSearchPOST(makeSearchReq());
+  const s2Data = await s2Res.json();
+  assert.strictEqual(s2Res.status, 200);
+  assert.strictEqual(s2Data.freeRemaining, 1, 'After 2nd search, freeRemaining must be 1');
+  assert.strictEqual(s2Data.creditsRemaining, 2, 'After 2nd search, creditsRemaining must remain 2');
+  assert.strictEqual(s2Data.charged, false, '2nd search must have charged: false');
+
+  // Search 3 (Free #3)
+  const s3Res = await jobSearchPOST(makeSearchReq());
+  const s3Data = await s3Res.json();
+  assert.strictEqual(s3Res.status, 200);
+  assert.strictEqual(s3Data.freeRemaining, 0, 'After 3rd search, freeRemaining must be 0');
+  assert.strictEqual(s3Data.creditsRemaining, 2, 'After 3rd search, creditsRemaining must remain 2');
+  assert.strictEqual(s3Data.charged, false, '3rd search must have charged: false');
+
+  // Search 4 (Paid #1 -> deducts 1 credit!)
+  const s4Res = await jobSearchPOST(makeSearchReq());
+  const s4Data = await s4Res.json();
+  assert.strictEqual(s4Res.status, 200);
+  assert.strictEqual(s4Data.freeRemaining, 0, 'On 4th search, freeRemaining must be 0');
+  assert.strictEqual(s4Data.creditsRemaining, 1, 'On 4th search, creditsRemaining must drop from 2 to 1');
+  assert.strictEqual(s4Data.charged, true, '4th search must have charged: true');
+
+  // Search 5 & 6 concurrently when only 1 credit remains -> only 1 succeeds (200), the other gets 402!
+  const [concRes1, concRes2] = await Promise.all([
+    jobSearchPOST(makeSearchReq()),
+    jobSearchPOST(makeSearchReq()),
+  ]);
+  const statuses = [concRes1.status, concRes2.status].sort();
+  assert.deepStrictEqual(
+    statuses,
+    [200, 402],
+    `Concurrent requests with 1 credit left must result in [200, 402], got [${statuses.join(', ')}]`
+  );
+
+  // Clean up test users
+  await DataStore.deleteUser(userReact.id);
+  await DataStore.deleteUser(userPhp.id);
+  await DataStore.deleteUser(quotaUser.id);
+
+  console.log('  ✅ Test 12 Passed: 4th search deducts credit (charged: true) and concurrent requests cannot bypass atomic limit.\n');
+  passedTests++;
+
+  // ---------------------------------------------------------------
+  // TEST 13: Provider Status ({ jobs, status, error?, tookMs }), 502 on All Failed, & Zero Deduction on 502
+  // ---------------------------------------------------------------
+  console.log('Test 13: Provider Status, HTTP 502 When All Providers Fail, & Zero Credit Deduction on Failure...');
+  if (!process.env.ADZUNA_APP_ID) {
+    const adzunaRes = await adzunaProvider.search({ query: 'Engineer' });
+    assert.strictEqual(adzunaRes.status, 'skipped', 'Adzuna without API key must return status: skipped');
+    assert.ok(Array.isArray(adzunaRes.jobs) && adzunaRes.jobs.length === 0);
+    assert.strictEqual(typeof adzunaRes.tookMs, 'number');
+  }
+  if (!process.env.JOOBLE_API_KEY) {
+    const joobleRes = await joobleProvider.search({ query: 'Engineer' });
+    assert.strictEqual(joobleRes.status, 'skipped', 'Jooble without API key must return status: skipped');
+    assert.strictEqual(typeof joobleRes.tookMs, 'number');
+  }
+
+  // Test POST /api/jobs/search when all providers fail -> 502 and 0 deduction
+  const failTestUser = await DataStore.createUserAccount({
+    name: 'Provider Fail User',
+    email: `fail_prov_${Date.now()}@example.com`,
+    password: 'password123',
+    plan: 'free',
+    aiCredits: 5,
+  });
+  // Exhaust free quota first so any deduction would come out of aiCredits (5)
+  await DataStore.consumeJobMatchCredit(failTestUser.id);
+  await DataStore.consumeJobMatchCredit(failTestUser.id);
+  await DataStore.consumeJobMatchCredit(failTestUser.id);
+
+  const failToken = signToken({
+    userId: failTestUser.id,
+    email: failTestUser.email,
+    name: failTestUser.name,
+  });
+
+  const origFetch = global.fetch;
+  global.fetch = (async () => {
+    return new Response('Upstream Error', { status: 503 });
+  }) as any;
+
+  try {
+    const failSearchReq = new NextRequest('http://localhost:3000/api/jobs/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${failToken}`,
+      },
+      body: JSON.stringify({
+        query: `UncachedFailQuery_${Date.now()}`,
+        location: 'Cairo, Egypt',
+        remote: true,
+        country: 'eg',
+        skills: ['React'],
+        seniority: 'senior',
+      }),
+    });
+
+    const failSearchRes = await jobSearchPOST(failSearchReq);
+    assert.strictEqual(
+      failSearchRes.status,
+      502,
+      `Expected HTTP 502 when all providers fail, got ${failSearchRes.status}`
+    );
+    const failSearchBody = await failSearchRes.json();
+    assert.strictEqual(failSearchBody.error, 'ALL_PROVIDERS_FAILED');
+    assert.ok(Array.isArray(failSearchBody.providerStatus), 'Response must include providerStatus array');
+    assert.strictEqual(failSearchBody.charged, false, 'Must not charge when all providers fail');
+
+    const failedProviders = failSearchBody.providerStatus.filter((p: any) => p.status === 'failed');
+    assert.ok(failedProviders.length >= 4, 'All 4 open providers must report status: failed');
+
+    // Verify user credits & freeUsed were NOT deducted!
+    const userAfter502 = await DataStore.findUserById(failTestUser.id);
+    assert.strictEqual(
+      userAfter502?.aiCredits,
+      5,
+      'User aiCredits must remain 5 (zero deduction when all providers fail)'
+    );
+    assert.strictEqual(
+      userAfter502?.jobMatchFreeUsed,
+      3,
+      'User jobMatchFreeUsed must remain 3'
+    );
+  } finally {
+    global.fetch = origFetch;
+    await DataStore.deleteUser(failTestUser.id);
+  }
+
+  console.log('  ✅ Test 13 Passed: Providers return { jobs, status, error?, tookMs }, API returns 502 with providerStatus when all fail, and 0 credits deducted.\n');
+  passedTests++;
 
   console.log('====================================================');
   console.log(`🎉 All ${passedTests}/${passedTests} Task B8 Job Match Tests Passed!`);

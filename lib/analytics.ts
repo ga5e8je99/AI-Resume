@@ -1,5 +1,3 @@
-import posthog from 'posthog-js';
-
 export type FunnelEvent =
   | 'signup_completed'
   | 'demo_started'
@@ -25,6 +23,44 @@ export interface AnalyticsEventRecord {
 const analyticsEventLog: AnalyticsEventRecord[] = [];
 
 let posthogInitialized = false;
+let posthogInstance: any = null;
+let posthogLoadingPromise: Promise<any> | null = null;
+const pendingEventsQueue: Array<{ event: string; properties: Record<string, any> }> = [];
+
+function scheduleAfterInteractive(callback: () => void): void {
+  if (typeof window === 'undefined') return;
+  const run = () => {
+    if (typeof (window as any).requestIdleCallback === 'function') {
+      (window as any).requestIdleCallback(callback, { timeout: 2500 });
+    } else {
+      setTimeout(callback, 200);
+    }
+  };
+  if (typeof document !== 'undefined' && document.readyState !== 'complete') {
+    window.addEventListener('load', run, { once: true });
+  } else {
+    run();
+  }
+}
+
+function loadPostHogLazy(): Promise<any> {
+  if (posthogInstance) {
+    return Promise.resolve(posthogInstance);
+  }
+  if (!posthogLoadingPromise) {
+    posthogLoadingPromise = import('posthog-js')
+      .then((mod) => {
+        posthogInstance = mod.default || mod;
+        return posthogInstance;
+      })
+      .catch((err) => {
+        posthogLoadingPromise = null;
+        console.error('[PostHog Lazy Load Error]', err);
+        return null;
+      });
+  }
+  return posthogLoadingPromise;
+}
 
 /**
  * PII blacklist: keys that must never be transmitted to analytics
@@ -103,7 +139,9 @@ export function getConsentStatus(): ConsentStatus {
     if (stored === 'granted' || stored === 'denied') {
       return stored;
     }
-  } catch {}
+  } catch {
+    // Intentionally ignored: localStorage may be unavailable in private browsing or restricted iframes
+  }
   return 'pending';
 }
 
@@ -124,16 +162,21 @@ export function setConsentStatus(status: 'granted' | 'denied'): void {
 
   try {
     localStorage.setItem(CONSENT_STORAGE_KEY, status);
-  } catch {}
+  } catch {
+    // Intentionally ignored: localStorage may throw QuotaExceededError or SecurityError in private mode
+  }
 
   if (status === 'granted') {
     initPostHog();
   } else {
+    pendingEventsQueue.length = 0;
     try {
-      if (posthog.__loaded) {
-        posthog.opt_out_capturing();
+      if (posthogInstance?.__loaded) {
+        posthogInstance.opt_out_capturing();
       }
-    } catch {}
+    } catch {
+      // Intentionally ignored: PostHog opt-out failure must never block user consent state change
+    }
   }
 
   // Notify listeners (UI components, banner, provider)
@@ -141,7 +184,8 @@ export function setConsentStatus(status: 'granted' | 'denied'): void {
 }
 
 /**
- * Initialize PostHog client ONLY after consent is granted
+ * Initialize PostHog client lazily after interactive ONLY after consent is granted
+ * so it never blocks LCP or bloats initial synchronous JS.
  */
 export function initPostHog(): boolean {
   if (typeof window === 'undefined') return false;
@@ -151,7 +195,7 @@ export function initPostHog(): boolean {
     return false;
   }
 
-  if (posthogInitialized && posthog.__loaded) {
+  if (posthogInitialized && posthogInstance?.__loaded) {
     return true;
   }
 
@@ -164,24 +208,77 @@ export function initPostHog(): boolean {
     return true;
   }
 
-  try {
-    posthog.init(posthogKey, {
-      api_host: posthogHost,
-      person_profiles: 'identified_only',
-      capture_pageview: false, // controlled manually
-      capture_pageleave: true,
-      autocapture: false, // prevent automated form input capturing
-      disable_session_recording: true, // strict privacy
-      loaded: (ph) => {
-        posthogInitialized = true;
-        ph.opt_in_capturing();
-      },
+  posthogInitialized = true;
+
+  scheduleAfterInteractive(() => {
+    if (!hasConsent()) return;
+    loadPostHogLazy().then((ph) => {
+      if (!ph || !hasConsent()) return;
+      try {
+        if (!ph.__loaded) {
+          ph.init(posthogKey, {
+            api_host: posthogHost,
+            person_profiles: 'identified_only',
+            capture_pageview: false, // controlled manually
+            capture_pageleave: true,
+            autocapture: false, // prevent automated form input capturing
+            disable_session_recording: true, // strict privacy
+            loaded: (instance: any) => {
+              instance.opt_in_capturing();
+              while (pendingEventsQueue.length > 0) {
+                const item = pendingEventsQueue.shift();
+                if (item && hasConsent()) {
+                  instance.capture(item.event, item.properties);
+                }
+              }
+            },
+          });
+        } else {
+          ph.opt_in_capturing();
+          while (pendingEventsQueue.length > 0) {
+            const item = pendingEventsQueue.shift();
+            if (item && hasConsent()) {
+              ph.capture(item.event, item.properties);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[PostHog Init Exception]', err);
+      }
     });
-    return true;
-  } catch (err) {
-    console.error('[PostHog Init Exception]', err);
-    return false;
+  });
+
+  return true;
+}
+
+/**
+ * Track a sanitized pageview lazily after interactive without blocking LCP.
+ */
+export function trackPageView(pathname: string): void {
+  if (typeof window === 'undefined' || !pathname || !hasConsent()) return;
+
+  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!posthogKey) return;
+
+  if (!posthogInitialized) {
+    initPostHog();
   }
+
+  scheduleAfterInteractive(() => {
+    if (!hasConsent()) return;
+    if (posthogInstance?.__loaded) {
+      try {
+        posthogInstance.capture('$pageview', { $current_url: pathname });
+      } catch {
+        // Intentionally ignored: analytics telemetry errors must never disrupt page navigation
+      }
+    } else {
+      pendingEventsQueue.push({
+        event: '$pageview',
+        properties: { $current_url: pathname },
+      });
+    }
+  });
 }
 
 /**
@@ -189,7 +286,7 @@ export function initPostHog(): boolean {
  * Guaranteed to:
  * 1. Check user consent (aborts if not granted)
  * 2. Sanitize all properties (drops any PII or resume text)
- * 3. Forward to PostHog if configured
+ * 3. Forward to PostHog if configured (lazily queued if PostHog is still loading)
  */
 export function trackEvent(event: FunnelEvent, properties?: Record<string, any>): boolean {
   const consented = hasConsent();
@@ -215,13 +312,18 @@ export function trackEvent(event: FunnelEvent, properties?: Record<string, any>)
 
   const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 
-  if (posthogKey && posthog.__loaded) {
-    try {
-      posthog.capture(event, sanitized);
+  if (posthogKey) {
+    if (posthogInstance?.__loaded) {
+      try {
+        posthogInstance.capture(event, sanitized);
+        return true;
+      } catch (err) {
+        console.error('[PostHog Capture Error]', err);
+        return false;
+      }
+    } else {
+      pendingEventsQueue.push({ event, properties: sanitized });
       return true;
-    } catch (err) {
-      console.error('[PostHog Capture Error]', err);
-      return false;
     }
   }
 

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
-import { AlertTriangle, AlertCircle, Info, Loader2, X } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
 import { Button } from './Button';
 
 export interface ConfirmModalProps {
@@ -34,9 +34,28 @@ export function ConfirmModal({
   onClose,
 }: ConfirmModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [isRendered, setIsRendered] = useState(isOpen);
   const effectiveConfirm = confirmLabel || confirmText || 'Confirm';
   const effectiveCancel = cancelLabel || cancelText || 'Cancel';
-  const handleDismiss = onCancel || onClose || (() => {});
+  const handleDismiss = useCallback(() => {
+    if (onCancel) {
+      onCancel();
+    } else if (onClose) {
+      onClose();
+    }
+  }, [onCancel, onClose]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const raf = requestAnimationFrame(() => setIsRendered(true));
+      return () => cancelAnimationFrame(raf);
+    }
+
+    if (isRendered) {
+      const timer = setTimeout(() => setIsRendered(false), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isRendered]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -81,7 +100,10 @@ export function ConfirmModal({
     };
   }, [isOpen, isLoading, handleDismiss]);
 
-  if (!isOpen) return null;
+  const shouldShow = isOpen || isRendered;
+  if (!shouldShow) return null;
+
+  const isClosing = !isOpen && isRendered;
 
   const variantIcons = {
     danger: (
@@ -107,7 +129,10 @@ export function ConfirmModal({
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
       aria-describedby="confirm-modal-desc"
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-ink/40 backdrop-blur-xs modal-backdrop-animate"
+      data-state={isClosing ? 'closed' : 'open'}
+      className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-ink/40 backdrop-blur-xs ${
+        isClosing ? 'modal-backdrop-exit pointer-events-none' : 'modal-backdrop-animate modal-backdrop-enter'
+      }`}
     >
       {/* Backdrop */}
       <div
@@ -121,14 +146,19 @@ export function ConfirmModal({
       {/* Modal Dialog Card */}
       <div
         ref={modalRef}
-        className="relative bg-elevated border border-border rounded-t-2xl sm:rounded-2xl w-full max-w-md p-6 shadow-elevated z-10 modal-card-animate space-y-4 text-start pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6"
+        onAnimationEnd={() => {
+          if (!isOpen) setIsRendered(false);
+        }}
+        className={`relative bg-elevated border border-line-strong rounded-t-2xl sm:rounded-2xl w-full max-w-md p-6 shadow-elevated z-10 space-y-4 text-start pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 ${
+          isClosing ? 'modal-card-exit' : 'modal-card-animate modal-card-enter'
+        }`}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             {variantIcons[variant]}
             <h3
               id="confirm-modal-title"
-              className="text-base sm:text-lg font-serif font-semibold text-text-primary tracking-tight"
+              className="text-base sm:text-lg font-serif font-semibold text-ink tracking-tight"
             >
               {title}
             </h3>
@@ -138,18 +168,18 @@ export function ConfirmModal({
             type="button"
             onClick={handleDismiss}
             disabled={isLoading}
-            className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-50 cursor-pointer"
+            className="btn p-1.5 rounded-md text-ink-2 hover:text-ink hover:bg-surface-2 transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:opacity-50 cursor-pointer"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <p id="confirm-modal-desc" className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+        <p id="confirm-modal-desc" className="text-xs sm:text-sm text-ink-2 leading-relaxed">
           {message}
         </p>
 
-        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border">
+        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-line-strong">
           <Button
             type="button"
             variant="secondary"

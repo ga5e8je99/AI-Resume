@@ -96,6 +96,53 @@ interface PuterStore {
   clearError: () => void;
 }
 
+let puterLoadPromise: Promise<typeof window.puter | null> | null = null;
+
+/**
+ * Dynamically loads Puter.js (`https://js.puter.com/v2/`) on demand upon first use
+ * instead of loading it synchronously/globally in the root layout.
+ */
+export function ensurePuterLoaded(): Promise<typeof window.puter | null> {
+  if (typeof window === "undefined") {
+    return Promise.resolve(null);
+  }
+  if (window.puter) {
+    return Promise.resolve(window.puter);
+  }
+  if (puterLoadPromise) {
+    return puterLoadPromise;
+  }
+
+  puterLoadPromise = new Promise((resolve) => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src="https://js.puter.com/v2/"]'
+    );
+    if (existing) {
+      existing.addEventListener(
+        "load",
+        () => resolve(typeof window !== "undefined" && window.puter ? window.puter : null),
+        { once: true }
+      );
+      existing.addEventListener("error", () => resolve(null), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://js.puter.com/v2/";
+    script.async = true;
+    script.defer = true;
+    script.onload = () =>
+      resolve(typeof window !== "undefined" && window.puter ? window.puter : null);
+    script.onerror = () => {
+      puterLoadPromise = null;
+      resolve(null);
+    };
+    document.head.appendChild(script);
+  });
+
+  return puterLoadPromise;
+}
+
 const getPuter = (): typeof window.puter | null =>
   typeof window !== "undefined" && window.puter ? window.puter : null;
 

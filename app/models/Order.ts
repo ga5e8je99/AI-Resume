@@ -8,14 +8,15 @@ export type OrderStatus =
   | 'expired'
   | 'rejected';
 
-export type PaymentMethodType = 'binance_pay' | 'manual_crypto';
-export type CryptoNetwork = 'BEP20' | 'TRC20' | 'binance';
+export type PaymentMethodType = 'binance_pay' | 'manual_crypto' | 'paymob' | 'stripe';
+export type CryptoNetwork = 'BEP20' | 'TRC20' | 'binance' | 'paymob' | 'stripe';
+export type OrderCurrency = 'USDT' | 'EGP' | 'USD';
 
 export interface IOrderAuditLog {
   status: OrderStatus;
   timestamp: Date;
   note?: string;
-  actor?: string; // 'system' | 'user' | 'admin' | 'binance_webhook'
+  actor?: string; // 'system' | 'user' | 'admin' | 'binance_webhook' | 'paymob_webhook'
 }
 
 export interface IOrder extends Document {
@@ -24,8 +25,8 @@ export interface IOrder extends Document {
   planId: 'pro' | 'payg';
   billingCycle: 'monthly' | 'annual' | 'once';
   baseAmount: number;
-  amount: number; // e.g. 9.14 USDT with unique cents suffix
-  currency: 'USDT';
+  amount: number; // e.g. 9.14 USDT or 199 EGP
+  currency: OrderCurrency;
   method: PaymentMethodType;
   network: CryptoNetwork;
   status: OrderStatus;
@@ -34,6 +35,7 @@ export interface IOrder extends Document {
   recipientAddress?: string;
   expiresAt: Date;
   paidAt?: Date | null;
+  proExpiresAt?: Date | null;
   auditLog: IOrderAuditLog[];
   metadata?: Record<string, any>;
   createdAt: Date;
@@ -96,19 +98,19 @@ const OrderSchema = new Schema<IOrder>(
     },
     currency: {
       type: String,
-      enum: ['USDT'],
+      enum: ['USDT', 'EGP', 'USD'],
       default: 'USDT',
       required: true,
     },
     method: {
       type: String,
-      enum: ['binance_pay', 'manual_crypto'],
+      enum: ['binance_pay', 'manual_crypto', 'paymob', 'stripe'],
       required: true,
       index: true,
     },
     network: {
       type: String,
-      enum: ['BEP20', 'TRC20', 'binance'],
+      enum: ['BEP20', 'TRC20', 'binance', 'paymob', 'stripe'],
       required: true,
       index: true,
     },
@@ -123,6 +125,7 @@ const OrderSchema = new Schema<IOrder>(
       unique: true,
       sparse: true, // Only enforces uniqueness when txid is non-null
       trim: true,
+      lowercase: true,
     },
     reference: {
       type: String,
@@ -142,6 +145,10 @@ const OrderSchema = new Schema<IOrder>(
       index: true,
     },
     paidAt: {
+      type: Date,
+      default: null,
+    },
+    proExpiresAt: {
       type: Date,
       default: null,
     },

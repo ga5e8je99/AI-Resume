@@ -58,7 +58,7 @@ export function ToneCardSelector({ selectedTone, onChange, language }: ToneCardS
               className={`p-3 rounded-[10px] border text-start transition-all cursor-pointer flex flex-col justify-between gap-1.5 focus-visible:outline-2 focus-visible:outline-accent relative ${
                 isSelected
                   ? 'bg-surface border-accent shadow-xs text-ink ring-2 ring-accent/20'
-                  : 'bg-surface-2/40 border-line hover:border-line-strong hover:bg-surface text-ink-2'
+                  : '-surface-2 border-line hover:border-line-strong hover:bg-surface text-ink-2'
               }`}
             >
               <div className="flex items-center justify-between w-full">
@@ -98,7 +98,7 @@ export function ToneCardSelector({ selectedTone, onChange, language }: ToneCardS
             className={`w-full py-1.5 px-3 rounded-[8px] border text-start transition-all cursor-pointer flex items-center justify-between text-xs focus-visible:outline-2 focus-visible:outline-accent ${
               selectedTone === 'technical'
                 ? 'bg-surface border-cyan-500/50 shadow-xs text-ink ring-1 ring-cyan-500/30'
-                : 'bg-surface-2/30 border-line hover:border-line-strong hover:bg-surface text-ink-3 hover:text-ink'
+                : '-surface-2 border-line hover:border-line-strong hover:bg-surface text-ink-3 hover:text-ink'
             }`}
           >
             <div className="flex items-center gap-2">

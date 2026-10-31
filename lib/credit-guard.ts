@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import mongoose from 'mongoose';
 import User from '@/app/models/User';
 import DataStore, { isMongoAvailable } from '@/app/lib/datastore';
+import { requireAuth, AuthenticatedUser } from '@/app/lib/auth';
 import { getUserEntitlements } from '@/lib/credits';
 import { applyRateLimit } from '@/app/lib/rateLimit';
-import { RESUME_GENERATION_CREDIT_COST, JOB_MATCH_CREDIT_COST } from './plans';
+import {
+  RESUME_GENERATION_CREDIT_COST,
+  JOB_MATCH_CREDIT_COST,
+  JOB_MATCH_FREE_QUOTA,
+} from './plans';
 
 export interface CreditOptions {
   cost?: number;
@@ -23,23 +29,37 @@ export interface CreditConsumeResult {
   success: boolean;
   remaining: number;
   deducted: boolean;
+  charged?: boolean;
+  freeUsed?: number;
+  freeRemaining?: number;
+  creditsRemaining?: number;
+  creditsDeducted?: number;
+  resumeGenIncremented?: boolean;
+  jobMatchFreeIncremented?: boolean;
   error?: string;
+}
+
+export interface CreditGuardHandlerContext {
+  user: AuthenticatedUser;
+  creditCheck: CreditCheckResult;
+  routeContext?: any;
 }
 
 /**
  * Checks whether the given user has sufficient AI generation credits or an active Pro plan.
- * 
+ *
  * Rules:
+ * - Missing or unauthenticated user -> HTTP 401 UNAUTHORIZED (never grants fallback credits).
  * - Pro/enterprise active plan -> unlimited, no deduction required.
  * - Demo users (isDemo) -> never charged, protected by a 30 req/hour rate limit.
- * - Free users -> requires aiCredits > 0, returns HTTP 402 with { error: "NO_CREDITS", upgradeUrl: "/pricing" } if exhausted.
+ * - Free users -> requires feature quota or aiCredits > 0, returns HTTP 402 with { error: "NO_CREDITS", upgradeUrl: "/pricing" } if exhausted.
  */
 export async function requireCredits(
-  userId: string,
+  userId: string | null | undefined,
   req?: NextRequest,
   options?: CreditOptions
 ): Promise<CreditCheckResult> {
-  if (!userId) {
+  if (!userId || typeof userId !== 'string' || !userId.trim()) {
     return {
       allowed: false,
       isDemo: false,
@@ -60,20 +80,42 @@ export async function requireCredits(
       if (mongoose.Types.ObjectId.isValid(userId)) {
         user = await User.findById(userId).lean();
       }
-    } catch {}
+    } catch (err) {
+      console.error('[CreditGuard] MongoDB user lookup failed in requireCredits:', err);
+      Sentry.captureException(err);
+    }
   }
 
   if (!user) {
-    user = await DataStore.findUserById(userId);
+    try {
+      user = await DataStore.findUserById(userId);
+    } catch (err) {
+      console.error('[CreditGuard] DataStore user lookup failed in requireCredits:', err);
+      Sentry.captureException(err);
+      return {
+        allowed: false,
+        isDemo: false,
+        unlimited: false,
+        creditsLeft: 0,
+        errorResponse: NextResponse.json(
+          { error: 'CREDIT_CHECK_FAILED', message: 'Failed to verify user account credits' },
+          { status: 500 }
+        ),
+      };
+    }
   }
 
+  // Unregistered / non-existent user -> 401 (never grant fallback credits)
   if (!user) {
-    // Ephemeral or test token with verified signature: grant default 3 free credits
     return {
-      allowed: true,
+      allowed: false,
       isDemo: false,
       unlimited: false,
-      creditsLeft: 3,
+      creditsLeft: 0,
+      errorResponse: NextResponse.json(
+        { error: 'UNAUTHORIZED', message: 'Authentication required' },
+        { status: 401 }
+      ),
     };
   }
 
@@ -122,12 +164,13 @@ export async function requireCredits(
     };
   }
 
-  // 4. Feature-specific rules (Resume Generation vs Cover Letter)
-  const currentCredits = typeof user.aiCredits === 'number' ? user.aiCredits : 3;
+  // 4. Feature-specific rules (Resume Generation, Job Match, Cover Letter)
+  const currentCredits = typeof user.aiCredits === 'number' ? user.aiCredits : 0;
 
   if (options?.feature === 'resume_generation') {
     const cost = options.cost ?? RESUME_GENERATION_CREDIT_COST;
-    const resumeGensCount = typeof user.aiResumeGenerationsCount === 'number' ? user.aiResumeGenerationsCount : 0;
+    const resumeGensCount =
+      typeof user.aiResumeGenerationsCount === 'number' ? user.aiResumeGenerationsCount : 0;
 
     // Free tier gets 1 AI resume/CV generation total (taste)
     if (resumeGensCount < 1) {
@@ -139,7 +182,6 @@ export async function requireCredits(
       };
     }
 
-    // Free taste already consumed: requires pay-as-you-go credits (at least cost credits)
     if (currentCredits < cost) {
       return {
         allowed: false,
@@ -150,7 +192,8 @@ export async function requireCredits(
           {
             error: 'NO_CREDITS',
             upgradeUrl: '/pricing',
-            message: 'You have used your 1 free AI resume generation. Upgrade to Pro for unlimited generations or purchase Pay-As-You-Go credits.',
+            message:
+              'You have used your 1 free AI resume generation. Upgrade to Pro for unlimited generations or purchase Pay-As-You-Go credits.',
           },
           { status: 402 }
         ),
@@ -167,19 +210,19 @@ export async function requireCredits(
 
   if (options?.feature === 'job_match') {
     const cost = options.cost ?? JOB_MATCH_CREDIT_COST;
-    const jobMatchFreeUsed = typeof user.jobMatchFreeUsed === 'number' ? user.jobMatchFreeUsed : 0;
+    const jobMatchFreeUsed =
+      typeof user.jobMatchFreeUsed === 'number' ? user.jobMatchFreeUsed : 0;
 
-    // Free tier gets 3 free Job Match searches total
-    if (jobMatchFreeUsed < 3) {
+    // Free tier gets JOB_MATCH_FREE_QUOTA free Job Match searches total
+    if (jobMatchFreeUsed < JOB_MATCH_FREE_QUOTA) {
       return {
         allowed: true,
         isDemo: false,
         unlimited: false,
-        creditsLeft: 3 - jobMatchFreeUsed,
+        creditsLeft: JOB_MATCH_FREE_QUOTA - jobMatchFreeUsed,
       };
     }
 
-    // Free quota exhausted: requires pay-as-you-go credits (at least 1 credit)
     if (currentCredits < cost) {
       return {
         allowed: false,
@@ -190,7 +233,7 @@ export async function requireCredits(
           {
             error: 'NO_CREDITS',
             upgradeUrl: '/pricing',
-            message: 'You have used all 3 free Job Match searches. Upgrade to Pro for unlimited searches or purchase Pay-As-You-Go credits.',
+            message: `You have used all ${JOB_MATCH_FREE_QUOTA} free Job Match searches. Upgrade to Pro for unlimited searches or purchase Pay-As-You-Go credits.`,
             jobMatchFreeUsed,
           },
           { status: 402 }
@@ -206,18 +249,20 @@ export async function requireCredits(
     };
   }
 
-  // Default: Free plan cover letters require aiCredits > 0
-  if (currentCredits <= 0) {
+  // Default: Cover letters require aiCredits > 0
+  const requiredCost = options?.cost ?? 1;
+  if (currentCredits < requiredCost) {
     return {
       allowed: false,
       isDemo: false,
       unlimited: false,
-      creditsLeft: 0,
+      creditsLeft: currentCredits,
       errorResponse: NextResponse.json(
         {
           error: 'NO_CREDITS',
           upgradeUrl: '/pricing',
-          message: 'You have exhausted your free AI generation credits. Upgrade to Pro for unlimited generations.',
+          message:
+            'You have exhausted your free AI generation credits. Upgrade to Pro for unlimited generations.',
         },
         { status: 402 }
       ),
@@ -233,18 +278,21 @@ export async function requireCredits(
 }
 
 /**
- * Deducts credit ONLY after successful AI generation.
- * For resume generation:
- * - Free user on 1st generation (taste): increments generation count without consuming credits.
- * - Free user on subsequent generations: consumes `cost` (default 2) credits atomically.
+ * Deducts credit ONLY after successful execution.
  * Pro / Enterprise users and Demo users are never deducted.
+ * Unauthenticated / missing users fail with UNAUTHORIZED.
  */
 export async function consumeCredit(
-  userId: string,
+  userId: string | null | undefined,
   options?: CreditOptions
 ): Promise<CreditConsumeResult> {
-  if (!userId) {
-    return { success: false, remaining: 0, deducted: false, error: 'Missing userId' };
+  if (!userId || typeof userId !== 'string' || !userId.trim()) {
+    return {
+      success: false,
+      remaining: 0,
+      deducted: false,
+      error: 'UNAUTHORIZED',
+    };
   }
 
   // 1. Fetch user to check demo or subscription status
@@ -255,15 +303,34 @@ export async function consumeCredit(
       if (mongoose.Types.ObjectId.isValid(userId)) {
         user = await User.findById(userId).lean();
       }
-    } catch {}
+    } catch (err) {
+      console.error('[CreditGuard] MongoDB user lookup failed in consumeCredit:', err);
+      Sentry.captureException(err);
+    }
   }
 
   if (!user) {
-    user = await DataStore.findUserById(userId);
+    try {
+      user = await DataStore.findUserById(userId);
+    } catch (err) {
+      console.error('[CreditGuard] DataStore user lookup failed in consumeCredit:', err);
+      Sentry.captureException(err);
+      return {
+        success: false,
+        remaining: 0,
+        deducted: false,
+        error: 'DATABASE_ERROR',
+      };
+    }
   }
 
   if (!user) {
-    return { success: true, remaining: 2, deducted: true };
+    return {
+      success: false,
+      remaining: 0,
+      deducted: false,
+      error: 'UNAUTHORIZED',
+    };
   }
 
   // Demo users are never charged
@@ -280,7 +347,8 @@ export async function consumeCredit(
   // 2. Resume generation handling
   if (options?.feature === 'resume_generation') {
     const cost = options.cost ?? RESUME_GENERATION_CREDIT_COST;
-    const resumeGensCount = typeof user.aiResumeGenerationsCount === 'number' ? user.aiResumeGenerationsCount : 0;
+    const resumeGensCount =
+      typeof user.aiResumeGenerationsCount === 'number' ? user.aiResumeGenerationsCount : 0;
 
     // If consuming free taste: increment count without deducting credits
     if (resumeGensCount < 1) {
@@ -292,11 +360,31 @@ export async function consumeCredit(
             { new: true }
           );
           if (updated) {
-            return { success: true, remaining: updated.aiCredits, deducted: true };
+            return {
+              success: true,
+              remaining: updated.aiCredits,
+              deducted: true,
+              creditsDeducted: 0,
+              resumeGenIncremented: true,
+            };
           }
-        } catch {}
+        } catch (err) {
+          console.error('[CreditGuard] Failed to increment aiResumeGenerationsCount in MongoDB:', err);
+          Sentry.captureException(err);
+          return {
+            success: false,
+            remaining: 0,
+            deducted: false,
+            error: 'CREDIT_DEDUCTION_FAILED',
+          };
+        }
       }
-      return DataStore.decrementUserCredits(userId, 0, true);
+      const res = await DataStore.decrementUserCredits(userId, 0, true);
+      return {
+        ...res,
+        creditsDeducted: 0,
+        resumeGenIncremented: res.deducted,
+      };
     }
 
     // Free taste already consumed: deduct cost credits (e.g. 2) atomically
@@ -318,36 +406,75 @@ export async function consumeCredit(
             success: true,
             remaining: updatedUser.aiCredits,
             deducted: true,
-          };
-        } else {
-          return {
-            success: false,
-            remaining: 0,
-            deducted: false,
-            error: 'No credits remaining',
+            creditsDeducted: cost,
+            resumeGenIncremented: true,
           };
         }
-      } catch (err: any) {}
+        return {
+          success: false,
+          remaining: 0,
+          deducted: false,
+          error: 'No credits remaining',
+        };
+      } catch (err) {
+        console.error('[CreditGuard] Failed to deduct resume generation credits in MongoDB:', err);
+        Sentry.captureException(err);
+        return {
+          success: false,
+          remaining: 0,
+          deducted: false,
+          error: 'CREDIT_DEDUCTION_FAILED',
+        };
+      }
     }
 
-    return DataStore.decrementUserCredits(userId, cost, true);
+    const res = await DataStore.decrementUserCredits(userId, cost, true);
+    return {
+      ...res,
+      creditsDeducted: res.deducted ? cost : 0,
+      resumeGenIncremented: res.deducted,
+    };
   }
 
-  // 3. Job Match search consumption: first 3 free, then 1 PAYG credit
+  // 3. Job Match search consumption: first JOB_MATCH_FREE_QUOTA free, then 1 PAYG credit
   if (options?.feature === 'job_match') {
-    return DataStore.consumeJobMatchCredit(userId);
+    try {
+      const res = await DataStore.consumeJobMatchCredit(userId);
+      return {
+        success: res.success,
+        remaining: res.remaining,
+        deducted: res.deducted,
+        charged: res.charged,
+        freeUsed: res.freeUsed,
+        freeRemaining: res.freeRemaining,
+        creditsRemaining: res.creditsRemaining,
+        creditsDeducted: res.creditsDeducted ?? 0,
+        jobMatchFreeIncremented: res.jobMatchFreeIncremented ?? res.deducted,
+      };
+    } catch (err) {
+      console.error('[CreditGuard] Failed to consume job match credit:', err);
+      Sentry.captureException(err);
+      return {
+        success: false,
+        remaining: 0,
+        deducted: false,
+        charged: false,
+        error: 'CREDIT_DEDUCTION_FAILED',
+      };
+    }
   }
 
-  // 4. Default: Free users atomic 1 credit decrement for cover letters
+  // 4. Default: Free users atomic credit decrement for cover letters
+  const cost = options?.cost ?? 1;
   if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
     try {
       const updatedUser = await User.findOneAndUpdate(
         {
           _id: new mongoose.Types.ObjectId(userId),
-          aiCredits: { $gt: 0 },
+          aiCredits: { $gte: cost },
         },
         {
-          $inc: { aiCredits: -1 },
+          $inc: { aiCredits: -cost },
         },
         {
           new: true,
@@ -359,37 +486,177 @@ export async function consumeCredit(
           success: true,
           remaining: updatedUser.aiCredits,
           deducted: true,
-        };
-      } else {
-        return {
-          success: false,
-          remaining: 0,
-          deducted: false,
-          error: 'No credits remaining',
+          creditsDeducted: cost,
         };
       }
-    } catch (err: any) {
-      // Fall through to DataStore in case of unexpected Mongoose error
+      return {
+        success: false,
+        remaining: 0,
+        deducted: false,
+        error: 'No credits remaining',
+      };
+    } catch (err) {
+      console.error('[CreditGuard] Failed to deduct cover letter credit in MongoDB:', err);
+      Sentry.captureException(err);
+      return {
+        success: false,
+        remaining: 0,
+        deducted: false,
+        error: 'CREDIT_DEDUCTION_FAILED',
+      };
     }
   }
 
-  // Fallback to local DataStore atomic decrement
-  return DataStore.decrementUserCredits(userId);
+  try {
+    const res = await DataStore.decrementUserCredits(userId, cost, false);
+    return {
+      ...res,
+      creditsDeducted: res.deducted ? cost : 0,
+      error: res.success ? undefined : 'No credits remaining',
+    };
+  } catch (err) {
+    console.error('[CreditGuard] Failed to deduct credit in DataStore:', err);
+    Sentry.captureException(err);
+    return {
+      success: false,
+      remaining: 0,
+      deducted: false,
+      error: 'CREDIT_DEDUCTION_FAILED',
+    };
+  }
 }
 
 /**
- * Route handler middleware wrapper for AI-generation endpoints.
+ * Refunds a previously consumed credit or quota slot if the downstream operation failed.
+ */
+export async function refundCredit(
+  userId: string,
+  consumed?: CreditConsumeResult | null,
+  options?: CreditOptions
+): Promise<{ success: boolean; remaining: number }> {
+  if (!userId || (consumed !== undefined && consumed !== null && !consumed.deducted)) {
+    return { success: false, remaining: 0 };
+  }
+
+  const amount =
+    typeof consumed?.creditsDeducted === 'number'
+      ? consumed.creditsDeducted
+      : options?.cost ?? 1;
+
+  try {
+    return await DataStore.refundUserCredits(userId, {
+      amount,
+      decrementResumeGen: Boolean(
+        consumed?.resumeGenIncremented || options?.feature === 'resume_generation'
+      ),
+      decrementJobMatchFree: Boolean(
+        consumed?.jobMatchFreeIncremented || options?.feature === 'job_match'
+      ),
+    });
+  } catch (err) {
+    console.error('[CreditGuard] Failed to refund credit:', err);
+    Sentry.captureException(err);
+    return { success: false, remaining: 0 };
+  }
+}
+
+/**
+ * Route handler wrapper that enforces the full credit guard lifecycle:
+ * 1. Authenticates the user (401 if unauthenticated) and verifies credits/quota (402 if exhausted).
+ * 2. Executes the route handler.
+ * 3. Deducts credit ONLY when the handler succeeds (2xx status).
+ * 4. Refunds the credit automatically if a post-deduction error occurs.
  */
 export function withCreditGuard(
-  handler: (req: NextRequest, context?: any) => Promise<NextResponse>
+  handlerOrOptions:
+    | CreditOptions
+    | ((req: NextRequest, context: CreditGuardHandlerContext) => Promise<NextResponse>),
+  maybeHandler?: (req: NextRequest, context: CreditGuardHandlerContext) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest, context?: any): Promise<NextResponse> => {
-    return handler(req, context);
+  const options: CreditOptions | undefined =
+    typeof handlerOrOptions === 'function' ? undefined : handlerOrOptions;
+  const handler =
+    typeof handlerOrOptions === 'function' ? handlerOrOptions : maybeHandler!;
+
+  return async (req: NextRequest, routeContext?: any): Promise<NextResponse> => {
+    // 1. Authenticate user
+    const auth = requireAuth(req);
+    if (!auth.user || auth.errorResponse) {
+      return (
+        auth.errorResponse ||
+        NextResponse.json(
+          { error: 'UNAUTHORIZED', message: 'Authentication required' },
+          { status: 401 }
+        )
+      );
+    }
+
+    const userId = auth.user.id;
+
+    // 2. Verify credits / quota before executing operation
+    const creditCheck = await requireCredits(userId, req, options);
+    if (!creditCheck.allowed) {
+      return (
+        creditCheck.errorResponse ||
+        NextResponse.json(
+          { error: 'NO_CREDITS', upgradeUrl: '/pricing' },
+          { status: 402 }
+        )
+      );
+    }
+
+    let consumed: CreditConsumeResult | null = null;
+
+    try {
+      // 3. Execute handler
+      const response = await handler(req, {
+        user: auth.user,
+        creditCheck,
+        routeContext,
+      });
+
+      // Only deduct when the handler succeeded (2xx) and did not opt out (e.g. cache hit)
+      if (response.status >= 200 && response.status < 300) {
+        const skipDeduct = response.headers.get('x-skip-credit-deduction') === 'true';
+        if (!skipDeduct) {
+          consumed = await consumeCredit(userId, options);
+          if (!consumed.success) {
+            return NextResponse.json(
+              {
+                error: 'NO_CREDITS',
+                upgradeUrl: '/pricing',
+                message: consumed.error || 'Insufficient credits to complete request.',
+              },
+              { status: 402 }
+            );
+          }
+        }
+      }
+
+      return response;
+    } catch (err: any) {
+      console.error('[CreditGuard] Error during guarded handler execution:', err);
+      Sentry.captureException(err);
+
+      // 4. Refund credit if it was already deducted before the failure
+      if (consumed?.deducted) {
+        await refundCredit(userId, consumed, options);
+      }
+
+      return NextResponse.json(
+        {
+          error: 'INTERNAL_ERROR',
+          message: err?.message || 'An unexpected error occurred while processing your request.',
+        },
+        { status: 500 }
+      );
+    }
   };
 }
 
 export default {
   requireCredits,
   consumeCredit,
+  refundCredit,
   withCreditGuard,
 };

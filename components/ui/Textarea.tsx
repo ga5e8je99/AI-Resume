@@ -55,7 +55,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {label && (
             <label
               htmlFor={textareaId}
-              className="block text-xs font-semibold text-text-primary uppercase tracking-wide"
+              className="block text-xs font-semibold -ink uppercase tracking-wide"
             >
               {label}
               {required && <span className="text-danger ms-1" aria-hidden="true">*</span>}
@@ -63,7 +63,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           )}
 
           {showCount && (
-            <span className="text-[11px] font-mono text-text-muted">
+            <span className="text-[11px] font-mono -ink-2">
               {charCount}
               {maxLength ? ` / ${maxLength}` : ''}
             </span>
@@ -81,10 +81,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           onChange={handleChange}
           aria-invalid={!!error}
           aria-describedby={error ? errorId : helperText ? helperId : undefined}
-          className={`w-full rounded-md border bg-surface px-3 py-2 text-sm text-text-primary transition-colors duration-150 placeholder:text-text-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:border-transparent disabled:opacity-50 disabled:bg-surface-2 disabled:cursor-not-allowed resize-y ${
+          className={`w-full rounded-md border bg-surface px-3 py-2 text-sm -ink transition-colors duration-150 -ink-2/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:border-transparent disabled:opacity-50 disabled:bg-surface-2 disabled:cursor-not-allowed resize-y ${
             error
               ? 'border-danger focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-bg'
-              : 'border-border hover:border-border-strong'
+              : '-line-strong -line-strong'
           } ${className}`}
           {...props}
         />
@@ -101,7 +101,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
 
         {!error && helperText && (
-          <p id={helperId} className="mt-1 text-xs text-text-muted">
+          <p id={helperId} className="mt-1 text-xs -ink-2">
             {helperText}
           </p>
         )}

@@ -1,4 +1,6 @@
-import { Job, JobProvider, JobSearchParams } from '../types';
+import { Job, JobProvider, JobSearchParams, ProviderSearchResult } from '../types';
+
+const PROVIDER_TIMEOUT_MS = 8000;
 
 export class JoobleProvider implements JobProvider {
   name = 'Jooble';
@@ -12,14 +14,22 @@ export class JoobleProvider implements JobProvider {
     return Boolean(process.env.JOOBLE_API_KEY);
   }
 
-  async search(params: JobSearchParams): Promise<Job[]> {
+  async search(params: JobSearchParams): Promise<ProviderSearchResult> {
+    const startMs = Date.now();
     if (!this.isEnabled()) {
-      return [];
+      return {
+        jobs: [],
+        status: 'skipped',
+        error: 'JOOBLE_API_KEY is not configured',
+        tookMs: Date.now() - startMs,
+      };
     }
 
     const apiKey = process.env.JOOBLE_API_KEY;
     const query = (params.query || '').trim();
-    if (!query) return [];
+    if (!query) {
+      return { jobs: [], status: 'ok', tookMs: Date.now() - startMs };
+    }
 
     try {
       const url = `https://jooble.org/api/${apiKey}`;
@@ -36,17 +46,22 @@ export class JoobleProvider implements JobProvider {
           Accept: 'application/json',
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       });
 
       if (!res.ok) {
-        return [];
+        return {
+          jobs: [],
+          status: 'failed',
+          error: `HTTP ${res.status}`,
+          tookMs: Date.now() - startMs,
+        };
       }
 
       const data = await res.json();
       const rawJobs = Array.isArray(data.jobs) ? data.jobs : [];
 
-      return rawJobs.map((item: any) => ({
+      const jobs: Job[] = rawJobs.map((item: any) => ({
         id: `jooble_${item.id || Math.random().toString(36).slice(2)}`,
         title: item.title ? item.title.replace(/<\/?[^>]+(>|$)/g, '') : 'Untitled Role',
         company: item.company || 'Hiring Employer',
@@ -64,8 +79,22 @@ export class JoobleProvider implements JobProvider {
         salary: item.salary || undefined,
         jobType: item.type || 'Full-time',
       }));
-    } catch {
-      return [];
+
+      return {
+        jobs,
+        status: 'ok',
+        tookMs: Date.now() - startMs,
+      };
+    } catch (err: any) {
+      return {
+        jobs: [],
+        status: 'failed',
+        error:
+          err?.name === 'TimeoutError' || err?.name === 'AbortError'
+            ? 'Provider timed out after 8000ms'
+            : err?.message || 'Jooble fetch failed',
+        tookMs: Date.now() - startMs,
+      };
     }
   }
 }

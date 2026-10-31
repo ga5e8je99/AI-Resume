@@ -21,6 +21,7 @@ import {
   setStoredDocumentLanguage,
   getDocumentFontFamily,
 } from '@/app/lib/documentI18n';
+import { Stagger } from '@/app/components/landing/ScrollReveal';
 
 interface CvSidebarProps {
   selectedTemplate: CvTemplateId;
@@ -121,7 +122,7 @@ export default function CvSidebar({
   return (
     <aside className="w-full shrink-0 bg-surface border border-line rounded-[10px] flex flex-col shadow-xs overflow-hidden">
       {/* Header Tabs */}
-      <div className="p-3 border-b border-line flex items-center justify-between bg-surface-2/40">
+      <div className="p-3 border-b border-line flex items-center justify-between -surface-2">
         <div className="flex items-center gap-1 bg-surface border border-line p-0.5 rounded-[6px] text-xs">
           <button
             type="button"
@@ -154,37 +155,39 @@ export default function CvSidebar({
           <span className="block text-xs font-semibold text-ink mb-1">
             Curriculum Vitae Templates
           </span>
-          {templates.map((tpl) => {
-            const isSelected = selectedTemplate === tpl.id;
-            const Icon = tpl.icon;
-            return (
-              <button
-                key={tpl.id}
-                type="button"
-                onClick={() => onSelectTemplate(tpl.id)}
-                className={`w-full p-2.5 rounded-[6px] border text-start transition-colors cursor-pointer flex flex-col justify-between ${
-                  isSelected
-                    ? 'bg-surface border-accent shadow-xs text-ink ring-1 ring-accent'
-                    : 'bg-surface-2/40 border-line hover:bg-surface text-ink-2'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Icon className="w-3.5 h-3.5 text-accent shrink-0" strokeWidth={1.5} />
-                    <span className={`text-xs font-medium ${isSelected ? 'text-accent font-semibold' : 'text-ink'}`}>
-                      {tpl.name}
+          <Stagger className="space-y-2" direction="up">
+            {templates.map((tpl) => {
+              const isSelected = selectedTemplate === tpl.id;
+              const Icon = tpl.icon;
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => onSelectTemplate(tpl.id)}
+                  className={`card-interactive w-full p-2.5 rounded-[6px] border text-start cursor-pointer flex flex-col justify-between ${
+                    isSelected
+                      ? 'bg-surface border-accent shadow-xs text-ink ring-1 ring-accent'
+                      : 'bg-surface-2 border-line-strong hover:bg-surface text-ink-2'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-3.5 h-3.5 text-accent shrink-0" strokeWidth={1.5} />
+                      <span className={`text-xs font-medium ${isSelected ? 'text-accent font-semibold' : 'text-ink'}`}>
+                        {tpl.name}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-surface border border-line-strong text-ink-3">
+                      {tpl.tag}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-surface border border-line text-ink-3">
-                    {tpl.tag}
-                  </span>
-                </div>
-                <p className="text-[11px] text-ink-3 mt-1 leading-snug">
-                  {tpl.desc}
-                </p>
-              </button>
-            );
-          })}
+                  <p className="text-[11px] text-ink-3 mt-1 leading-snug">
+                    {tpl.desc}
+                  </p>
+                </button>
+              );
+            })}
+          </Stagger>
 
           {/* Quick Actions */}
           <div className="pt-2 border-t border-line flex items-center gap-2">

@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Script from 'next/script';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { trackAtsScanCompleted } from '@/lib/analytics';
@@ -151,12 +151,12 @@ export default function ReviewResultPage() {
 
   // Sync state on query param or session storage
   useEffect(() => {
+    const profile = getSampleProfile(sampleParam);
     if (sampleParam) {
-      const profile = getSampleProfile(sampleParam);
       setResumeText(profile.text);
       setResumeFileName(profile.fileName);
       setTargetRole(profile.role);
-      const res = analyzeResumeText(profile.text, profile.role, targetJobDescription);
+      const res = analyzeResumeText(profile.text, profile.role, '');
       setAnalysisResult(res);
       trackAtsScanCompleted(res.overallScore, res.metrics.matchLabel);
       return;
@@ -168,7 +168,7 @@ export default function ReviewResultPage() {
       if (storedText && storedText.trim().length > 20) {
         setResumeText(storedText);
         setResumeFileName(storedName || 'Uploaded_Resume.pdf');
-        const res = analyzeResumeText(storedText, targetRole, targetJobDescription);
+        const res = analyzeResumeText(storedText, profile.role, '');
         setAnalysisResult(res);
         trackAtsScanCompleted(res.overallScore, res.metrics.matchLabel);
       }
@@ -407,7 +407,9 @@ export default function ReviewResultPage() {
           ],
         })
       );
-    } catch {}
+    } catch {
+      // Intentionally ignored: prefilling builder cache in localStorage is best-effort before navigating to /builder
+    }
 
     router.push('/builder');
   };
@@ -473,9 +475,8 @@ export default function ReviewResultPage() {
   const scoreTier = getScoreTier(overallScore);
 
   return (
-    <div className="min-h-screen bg-bg text-text-primary flex flex-col justify-between selection:bg-brand/20 selection:text-brand print:bg-white print:text-black">
-      <Navbar />
-
+    <div className="min-h-[100dvh] bg-paper text-ink flex flex-col justify-between selection:bg-brand/20 selection:text-brand print:bg-white print:text-black overflow-x-clip">
+      <Script src="https://js.puter.com/v2/" strategy="lazyOnload" />
       {/* Hidden file input */}
       <input
         type="file"
@@ -494,19 +495,19 @@ export default function ReviewResultPage() {
       )}
 
       {/* 1. Document Action Ribbon */}
-      <div className="border-b border-line bg-surface/90 backdrop-blur-md py-3 px-4 sm:px-6 print:hidden w-full max-w-full overflow-x-hidden sticky top-14 z-30 shadow-xs box-border">
+      <div className="border-b border-line bg-surface backdrop-blur-md py-3 px-4 sm:px-6 print:hidden w-full max-w-full overflow-x-hidden sticky top-14 z-30 shadow-xs box-border">
         <div className="max-w-[1200px] w-full mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
-            <span className="font-mono text-text-muted shrink-0">
+            <span className="font-mono text-ink-2 shrink-0">
               {t('review_current_doc')}
             </span>
-            <span className="font-semibold text-text-primary font-mono truncate max-w-[150px] sm:max-w-xs">
+            <span className="font-semibold text-ink font-mono truncate max-w-[150px] sm:max-w-xs">
               {resumeFileName}
             </span>
             <span className="text-line-strong">|</span>
             <button
               onClick={() => setShowRawTextModal(true)}
-              className="text-text-secondary hover:text-text-primary underline cursor-pointer shrink-0"
+              className="text-ink-2 hover:text-ink underline cursor-pointer shrink-0"
             >
               {t('review_view_raw_text')}
             </button>
@@ -550,7 +551,7 @@ export default function ReviewResultPage() {
               variant="outline"
               size="sm"
               onClick={handleShareReport}
-              leftIcon={<Share2 className="w-3.5 h-3.5 text-text-secondary" />}
+              leftIcon={<Share2 className="w-3.5 h-3.5 text-ink-2" />}
               className="hidden sm:inline-flex"
             >
               {t('review_share')}
@@ -569,7 +570,7 @@ export default function ReviewResultPage() {
 
         {/* Sample Profile Switcher Ribbon */}
         <div className="max-w-[1200px] w-full max-w-full mx-auto pt-2.5 mt-2.5 border-t border-line/60 flex items-center gap-2 text-xs overflow-x-auto min-w-0 pb-1">
-          <span className="text-text-muted shrink-0 font-mono text-[11px]">
+          <span className="text-ink-2 shrink-0 font-mono text-[11px]">
             {t('review_quick_samples')}
           </span>
           {[
@@ -583,7 +584,7 @@ export default function ReviewResultPage() {
             <button
               key={sample.id}
               onClick={() => handleLoadSample(sample.id)}
-              className="px-2.5 py-0.5 rounded-md border border-line bg-surface-2 hover:bg-surface text-text-secondary hover:text-text-primary text-[11px] font-medium transition-colors shrink-0 cursor-pointer"
+              className="px-2.5 py-0.5 rounded-md border border-line bg-surface-2 hover:bg-surface text-ink-2 hover:text-ink text-[11px] font-medium transition-colors shrink-0 cursor-pointer"
             >
               {sample.label}
             </button>
@@ -613,10 +614,10 @@ export default function ReviewResultPage() {
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-text-primary">
+                    <h3 className="text-sm font-semibold text-ink">
                       {isAr ? 'جاري فحص وتشخيص السيرة الذاتية...' : 'Analyzing Resume with ATS Engine...'}
                     </h3>
-                    <p className="text-xs text-text-muted">
+                    <p className="text-xs text-ink-2">
                       {processingStage === 'reading'
                         ? t('review_stage_reading_desc')
                         : processingStage === 'extracting'
@@ -647,7 +648,7 @@ export default function ReviewResultPage() {
                           ? 'border-brand bg-brand/10 text-brand font-semibold shadow-xs'
                           : isPast
                           ? 'border-success/30 bg-success/5 text-success'
-                          : 'border-line bg-surface-2/40 text-text-muted opacity-70'
+                          : 'border-line bg-surface-2 text-ink-2 opacity-70'
                       }`}
                     >
                       <div className="flex items-center gap-1.5 mb-1">
@@ -680,7 +681,7 @@ export default function ReviewResultPage() {
                   size="sm"
                   variant="outline"
                   onClick={handleCancelProcessing}
-                  className="text-xs text-text-muted hover:text-danger hover:border-danger"
+                  className="text-xs text-ink-2 hover:text-danger hover:border-danger"
                 >
                   {t('loading_cancel')}
                 </Button>
@@ -703,7 +704,7 @@ export default function ReviewResultPage() {
                       ? 'خطأ في معالجة المستند'
                       : 'Unable to Process Document'}
                   </h4>
-                  <p className="text-xs text-text-secondary leading-relaxed">
+                  <p className="text-xs text-ink-2 leading-relaxed">
                     {uploadError.message}
                   </p>
                 </div>
@@ -763,27 +764,27 @@ export default function ReviewResultPage() {
                     <span className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${scoreTier.bgClass}`}>
                       {scoreTier.label}
                     </span>
-                    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border border-line bg-surface-2 text-text-secondary flex items-center gap-1.5 shadow-2xs">
+                    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border border-line bg-surface-2 text-ink-2 flex items-center gap-1.5 shadow-2xs">
                       <Globe className="w-3 h-3 text-brand" />
                       <span>
                         {t('review_doc_language')}{' '}
-                        <strong className="text-text-primary font-semibold">
+                        <strong className="text-ink font-semibold">
                           {DOCUMENT_LANGUAGE_OPTIONS.find(
                             (o) => o.id === (analysisResult.detectedLanguage || 'en')
                           )?.nativeName || (analysisResult.detectedLanguage || 'en').toUpperCase()}
                         </strong>
                       </span>
                     </span>
-                    <span className="text-xs font-mono text-text-muted">
+                    <span className="text-xs font-mono text-ink-2">
                       {`${t('review_rank')} ${metrics.rankPercentile}`}
                     </span>
                   </div>
 
-                  <h2 className="font-serif text-2xl sm:text-3xl font-bold text-text-primary tracking-tight">
+                  <h2 className="font-serif text-2xl sm:text-3xl font-bold text-ink tracking-tight">
                     {scoreTier.title}
                   </h2>
 
-                  <p className="text-xs sm:text-sm text-text-secondary max-w-xl leading-relaxed">
+                  <p className="text-xs sm:text-sm text-ink-2 max-w-xl leading-relaxed">
                     {scoreTier.desc}
                   </p>
                 </div>
@@ -814,10 +815,10 @@ export default function ReviewResultPage() {
 
             {/* Multilingual ATS Notice Banner */}
             {analysisResult.languageNotice && (
-              <div className="rounded-lg border border-brand/20 bg-brand/5 p-3.5 flex items-start gap-3 text-xs leading-relaxed text-text-secondary animate-in fade-in duration-200">
+              <div className="rounded-lg border border-brand/20 bg-brand/5 p-3.5 flex items-start gap-3 text-xs leading-relaxed text-ink-2 animate-in fade-in duration-200">
                 <Info className="w-4 h-4 text-brand shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <span className="font-semibold text-text-primary block">
+                  <span className="font-semibold text-ink block">
                     {t('review_multilingual_notice')}
                   </span>
                   <p>{isAr ? analysisResult.languageNotice.ar : analysisResult.languageNotice.en}</p>
@@ -827,38 +828,38 @@ export default function ReviewResultPage() {
 
             {/* Document Statistics Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
-              <div className="p-3 rounded-lg border border-line bg-surface-2/40">
-                <span className="text-text-muted block font-mono text-[10px] uppercase">
+              <div className="p-3 rounded-lg border border-line bg-surface-2">
+                <span className="text-ink-2 block font-mono text-[10px] uppercase">
                   {t('review_stat_words')}
                 </span>
-                <span className="font-mono text-base font-bold text-text-primary tabular-nums">
+                <span className="font-mono text-base font-bold text-ink tabular-nums">
                   {metrics.wordCount}
                 </span>
               </div>
 
-              <div className="p-3 rounded-lg border border-line bg-surface-2/40">
-                <span className="text-text-muted block font-mono text-[10px] uppercase">
+              <div className="p-3 rounded-lg border border-line bg-surface-2">
+                <span className="text-ink-2 block font-mono text-[10px] uppercase">
                   {t('review_stat_reading_time')}
                 </span>
-                <span className="font-mono text-base font-bold text-text-primary tabular-nums">
+                <span className="font-mono text-base font-bold text-ink tabular-nums">
                   {metrics.readingTimeString}
                 </span>
               </div>
 
-              <div className="p-3 rounded-lg border border-line bg-surface-2/40">
-                <span className="text-text-muted block font-mono text-[10px] uppercase">
+              <div className="p-3 rounded-lg border border-line bg-surface-2">
+                <span className="text-ink-2 block font-mono text-[10px] uppercase">
                   {t('review_stat_metrics')}
                 </span>
-                <span className="font-mono text-base font-bold text-text-primary tabular-nums">
+                <span className="font-mono text-base font-bold text-ink tabular-nums">
                   {metrics.quantifiedMetricsCount}
                 </span>
               </div>
 
-              <div className="p-3 rounded-lg border border-line bg-surface-2/40">
-                <span className="text-text-muted block font-mono text-[10px] uppercase">
+              <div className="p-3 rounded-lg border border-line bg-surface-2">
+                <span className="text-ink-2 block font-mono text-[10px] uppercase">
                   {t('review_stat_keywords')}
                 </span>
-                <span className="font-mono text-base font-bold text-text-primary tabular-nums">
+                <span className="font-mono text-base font-bold text-ink tabular-nums">
                   {keywordsDetected.length}
                 </span>
               </div>
@@ -867,19 +868,19 @@ export default function ReviewResultPage() {
 
           {/* 4. Five Diagnostic Breakdown Cards */}
           <div className="space-y-4">
-            <h3 className="font-serif text-lg font-semibold text-text-primary flex items-center gap-2">
+            <h3 className="font-serif text-lg font-semibold text-ink flex items-center gap-2">
               <Layers className="w-4 h-4 text-brand" />
               <span>{t('review_breakdown_title')}</span>
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Pillar 1: Keywords Match */}
-              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3">
+              <div className="p-4 rounded-xl border border-line bg-surface-2 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-text-primary">
+                  <span className="text-xs font-semibold text-ink">
                     {t('review_pillar_keywords')}
                   </span>
-                  <span className="font-mono text-xs font-bold text-text-primary">
+                  <span className="font-mono text-xs font-bold text-ink">
                     {subScores.keywordsMatch}%
                   </span>
                 </div>
@@ -888,18 +889,18 @@ export default function ReviewResultPage() {
                   size="sm"
                   variant={subScores.keywordsMatch >= 75 ? 'success' : subScores.keywordsMatch >= 50 ? 'brand' : 'warning'}
                 />
-                <p className="text-[11px] text-text-muted leading-relaxed">
+                <p className="text-[11px] text-ink-2 leading-relaxed">
                   {t('review_pillar_keywords_desc')}
                 </p>
               </div>
 
               {/* Pillar 2: Formatting & ATS Readability */}
-              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3">
+              <div className="p-4 rounded-xl border border-line bg-surface-2 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-text-primary">
+                  <span className="text-xs font-semibold text-ink">
                     {t('review_pillar_formatting')}
                   </span>
-                  <span className="font-mono text-xs font-bold text-text-primary">
+                  <span className="font-mono text-xs font-bold text-ink">
                     {subScores.formatting}%
                   </span>
                 </div>
@@ -908,18 +909,18 @@ export default function ReviewResultPage() {
                   size="sm"
                   variant={subScores.formatting >= 80 ? 'success' : subScores.formatting >= 60 ? 'brand' : 'warning'}
                 />
-                <p className="text-[11px] text-text-muted leading-relaxed">
+                <p className="text-[11px] text-ink-2 leading-relaxed">
                   {t('review_pillar_formatting_desc')}
                 </p>
               </div>
 
               {/* Pillar 3: Section Structure & Standard Headings */}
-              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3">
+              <div className="p-4 rounded-xl border border-line bg-surface-2 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-text-primary">
+                  <span className="text-xs font-semibold text-ink">
                     {t('review_pillar_structure')}
                   </span>
-                  <span className="font-mono text-xs font-bold text-text-primary">
+                  <span className="font-mono text-xs font-bold text-ink">
                     {subScores.structure}%
                   </span>
                 </div>
@@ -928,18 +929,18 @@ export default function ReviewResultPage() {
                   size="sm"
                   variant={subScores.structure >= 80 ? 'success' : subScores.structure >= 60 ? 'brand' : 'warning'}
                 />
-                <p className="text-[11px] text-text-muted leading-relaxed">
+                <p className="text-[11px] text-ink-2 leading-relaxed">
                   {t('review_pillar_structure_desc')}
                 </p>
               </div>
 
               {/* Pillar 4: Readability & Content Quality */}
-              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3">
+              <div className="p-4 rounded-xl border border-line bg-surface-2 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-text-primary">
+                  <span className="text-xs font-semibold text-ink">
                     {t('review_pillar_content')}
                   </span>
-                  <span className="font-mono text-xs font-bold text-text-primary">
+                  <span className="font-mono text-xs font-bold text-ink">
                     {subScores.contentQuality}%
                   </span>
                 </div>
@@ -948,18 +949,18 @@ export default function ReviewResultPage() {
                   size="sm"
                   variant={subScores.contentQuality >= 75 ? 'success' : subScores.contentQuality >= 50 ? 'brand' : 'warning'}
                 />
-                <p className="text-[11px] text-text-muted leading-relaxed">
+                <p className="text-[11px] text-ink-2 leading-relaxed">
                   {t('review_pillar_content_desc')}
                 </p>
               </div>
 
               {/* Pillar 5: Contact Information Integrity */}
-              <div className="p-4 rounded-xl border border-line bg-surface-2/30 space-y-3 md:col-span-2 lg:col-span-2">
+              <div className="p-4 rounded-xl border border-line bg-surface-2 space-y-3 md:col-span-2 lg:col-span-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-text-primary">
+                  <span className="text-xs font-semibold text-ink">
                     {t('review_pillar_contact')}
                   </span>
-                  <span className="font-mono text-xs font-bold text-text-primary">
+                  <span className="font-mono text-xs font-bold text-ink">
                     {contactInfo.completenessScore}%
                   </span>
                 </div>
@@ -968,7 +969,7 @@ export default function ReviewResultPage() {
                   size="sm"
                   variant={contactInfo.completenessScore >= 80 ? 'success' : 'warning'}
                 />
-                <div className="flex flex-wrap gap-3 text-[11px] text-text-muted pt-0.5">
+                <div className="flex flex-wrap gap-3 text-[11px] text-ink-2 pt-0.5">
                   <span className="flex items-center gap-1">
                     {contactInfo.hasEmail ? <Check className="w-3 h-3 text-success" /> : <AlertCircle className="w-3 h-3 text-danger" />}
                     {t('review_contact_email')}
@@ -982,7 +983,7 @@ export default function ReviewResultPage() {
                     {t('review_contact_location')}
                   </span>
                   <span className="flex items-center gap-1">
-                    {contactInfo.hasLinkedIn ? <Check className="w-3 h-3 text-success" /> : <AlertCircle className="w-3 h-3 text-text-muted" />}
+                    {contactInfo.hasLinkedIn ? <Check className="w-3 h-3 text-success" /> : <AlertCircle className="w-3 h-3 text-ink-2" />}
                     {t('review_contact_linkedin')}
                   </span>
                 </div>
@@ -992,16 +993,16 @@ export default function ReviewResultPage() {
 
           {/* 5. Matched vs Missing Keywords Section */}
           <div className="space-y-5 pt-2 border-t border-line">
-            <h3 className="font-serif text-lg font-semibold text-text-primary flex items-center justify-between">
+            <h3 className="font-serif text-lg font-semibold text-ink flex items-center justify-between">
               <span>{isAr ? 'تحليل الكلمات المفتاحية والمهارات' : 'Keyword Alignment & Skill Matching'}</span>
-              <span className="font-mono text-xs font-normal text-text-muted">
+              <span className="font-mono text-xs font-normal text-ink-2">
                 {keywordsDetected.length} {isAr ? 'مطابقة' : 'matched'} • {missingKeywords.length} {isAr ? 'مقترحة' : 'missing'}
               </span>
             </h3>
 
             {/* Matched Keywords Group */}
             <div className="space-y-2">
-              <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-success" />
                 <span>{t('review_keywords_detected_title')}</span>
               </span>
@@ -1009,14 +1010,14 @@ export default function ReviewResultPage() {
                 {keywordsDetected.map((km, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-line bg-surface-2 text-text-primary text-xs font-mono"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-line bg-surface-2 text-ink text-xs font-mono"
                   >
                     <span>{km.keyword}</span>
-                    <span className="text-[10px] text-text-muted">({km.count}x)</span>
+                    <span className="text-[10px] text-ink-2">({km.count}x)</span>
                   </span>
                 ))}
                 {keywordsDetected.length === 0 && (
-                  <span className="text-xs text-text-muted italic">
+                  <span className="text-xs text-ink-2 italic">
                     {t('review_keywords_none')}
                   </span>
                 )}
@@ -1033,7 +1034,7 @@ export default function ReviewResultPage() {
                       {`${t('review_keywords_missing_title')} (${targetRole}):`}
                     </span>
                   </span>
-                  <span className="text-[11px] text-text-muted print:hidden">
+                  <span className="text-[11px] text-ink-2 print:hidden">
                     {t('review_keywords_click_to_copy')}
                   </span>
                 </div>
@@ -1046,14 +1047,14 @@ export default function ReviewResultPage() {
                         key={idx}
                         type="button"
                         onClick={() => handleCopyKeyword(kw)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-brand/20 hover:border-brand bg-brand/5 text-text-primary text-xs font-mono transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-brand/20 hover:border-brand bg-brand/5 text-ink text-xs font-mono transition-colors cursor-pointer"
                         title={kw}
                       >
                         <span>{kw}</span>
                         {isCopied ? (
                           <Check className="w-3 h-3 text-success shrink-0" />
                         ) : (
-                          <Copy className="w-3 h-3 text-text-muted shrink-0 print:hidden" />
+                          <Copy className="w-3 h-3 text-ink-2 shrink-0 print:hidden" />
                         )}
                       </button>
                     );
@@ -1065,7 +1066,7 @@ export default function ReviewResultPage() {
 
           {/* 6. Prioritized Suggestions with Severity Badges */}
           <div className="space-y-4 pt-2 border-t border-line">
-            <h3 className="font-serif text-lg font-semibold text-text-primary flex items-center gap-2">
+            <h3 className="font-serif text-lg font-semibold text-ink flex items-center gap-2">
               <Flame className="w-4 h-4 text-warning" />
               <span>{t('review_suggestions_title')}</span>
             </h3>
@@ -1092,12 +1093,12 @@ export default function ReviewResultPage() {
                 return (
                   <div
                     key={idx}
-                    className={`p-4 rounded-xl border border-line bg-surface-2/40 space-y-2 text-xs list-item-enter ${
+                    className={`p-4 rounded-xl border border-line bg-surface-2 space-y-2 text-xs list-item-enter ${
                       idx < 8 ? `stagger-${idx + 1}` : ''
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 font-semibold text-text-primary text-sm">
+                      <div className="flex items-center gap-2 font-semibold text-ink text-sm">
                         <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
                         <span>{weakness.title}</span>
                       </div>
@@ -1106,7 +1107,7 @@ export default function ReviewResultPage() {
                       </span>
                     </div>
 
-                    <p className="text-text-secondary leading-relaxed ps-6">
+                    <p className="text-ink-2 leading-relaxed ps-6">
                       {weakness.description}
                     </p>
 
@@ -1129,18 +1130,18 @@ export default function ReviewResultPage() {
                     (weaknesses.length + idx) < 8 ? `stagger-${weaknesses.length + idx + 1}` : ''
                   }`}
                 >
-                  <div className="flex items-center gap-2 text-text-primary font-semibold">
+                  <div className="flex items-center gap-2 text-ink font-semibold">
                     <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                     <span>{str.title}</span>
                   </div>
-                  <p className="text-text-secondary ps-6 leading-relaxed">{str.description}</p>
+                  <p className="text-ink-2 ps-6 leading-relaxed">{str.description}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* 7. Report Footer & Call-to-Action */}
-          <div className="pt-6 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
+          <div className="pt-6 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-ink-2">
             <span className="font-mono">
               {t('review_diagnostic_engine')}
             </span>
@@ -1203,11 +1204,11 @@ export default function ReviewResultPage() {
         maxWidth="lg"
       >
         <div className="space-y-4">
-          <div className="max-h-96 overflow-y-auto p-4 rounded-lg border border-line bg-surface-2 font-mono text-xs text-text-primary leading-relaxed whitespace-pre-wrap select-all">
+          <div className="max-h-96 overflow-y-auto p-4 rounded-lg border border-line bg-surface-2 font-mono text-xs text-ink leading-relaxed whitespace-pre-wrap select-all">
             {resumeText}
           </div>
 
-          <div className="flex items-center justify-between text-xs text-text-muted">
+          <div className="flex items-center justify-between text-xs text-ink-2">
             <span>
               {resumeText.length} {t('review_modal_raw_chars')}
             </span>

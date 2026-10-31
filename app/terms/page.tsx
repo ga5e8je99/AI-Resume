@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useLanguage } from '../context/LanguageContext';
 import { ChevronDown } from 'lucide-react';
@@ -22,9 +21,7 @@ export default function TermsOfService() {
   ];
 
   return (
-    <div className="min-h-screen bg-paper text-ink flex flex-col justify-between selection:bg-accent-soft selection:text-ink" dir={isRtl ? 'rtl' : 'ltr'}>
-      <Navbar />
-
+    <div className="min-h-[100dvh] bg-paper text-ink flex flex-col justify-between selection:bg-accent-soft selection:text-ink" dir={isRtl ? 'rtl' : 'ltr'}>
       <main id="main-content" className="max-w-[1160px] mx-auto px-4 sm:px-6 py-12 md:py-20 w-full">
         {/* Document Header */}
         <div className="max-w-[680px] mx-auto text-start pb-8 border-b border-line mb-8">

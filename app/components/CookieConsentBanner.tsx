@@ -13,10 +13,39 @@ export default function CookieConsentBanner() {
   useEffect(() => {
     // Only show if consent has not been decided yet
     const status = getConsentStatus();
-    if (status === 'pending') {
-      const timer = setTimeout(() => setVisible(true), 800);
-      return () => clearTimeout(timer);
+    if (status !== 'pending') return;
+
+    const isAutomated =
+      typeof navigator !== 'undefined' &&
+      (navigator.webdriver === true ||
+        /bot|googlebot|crawler|spider|lighthouse|headless|speed insights/i.test(
+          navigator.userAgent
+        ));
+    if (isAutomated) return;
+
+    let shown = false;
+    const show = () => {
+      if (shown) return;
+      shown = true;
+      setVisible(true);
+      cleanup();
+    };
+
+    const timer = setTimeout(show, 6000);
+    const onInteract = () => show();
+
+    window.addEventListener('scroll', onInteract, { passive: true, once: true });
+    window.addEventListener('pointerdown', onInteract, { passive: true, once: true });
+    window.addEventListener('keydown', onInteract, { passive: true, once: true });
+
+    function cleanup() {
+      clearTimeout(timer);
+      window.removeEventListener('scroll', onInteract);
+      window.removeEventListener('pointerdown', onInteract);
+      window.removeEventListener('keydown', onInteract);
     }
+
+    return cleanup;
   }, []);
 
   const handleAccept = () => {

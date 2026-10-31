@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
@@ -68,6 +68,43 @@ export function getAuthenticatedUser(req: NextRequest): AuthTokenPayload | null 
   return null;
 }
 
+export interface AuthenticatedUser extends AuthTokenPayload {
+  id: string;
+}
+
+export interface RequireAuthResult {
+  user: AuthenticatedUser | null;
+  errorResponse?: NextResponse;
+}
+
+/**
+ * Enforces JWT authentication on an API route.
+ * Returns { user } with `user.id` and `user.userId` if authenticated,
+ * or { user: null, errorResponse } with HTTP 401 UNAUTHORIZED if not.
+ */
+export function requireAuth(req: NextRequest): RequireAuthResult {
+  const authUser = getAuthenticatedUser(req);
+  if (!authUser || !authUser.userId) {
+    return {
+      user: null,
+      errorResponse: NextResponse.json(
+        {
+          error: 'UNAUTHORIZED',
+          message: 'Authentication required',
+        },
+        { status: 401 }
+      ),
+    };
+  }
+
+  return {
+    user: {
+      ...authUser,
+      id: authUser.userId,
+    },
+  };
+}
+
 // Verify if the incoming request has Admin privileges
 // Validates:
 // 1. x-admin-key header or jobmatch_admin_key cookie matching ADMIN_SECRET_KEY
@@ -116,7 +153,9 @@ export function validateCsrfOrigin(req: NextRequest): boolean {
       try {
         const appUrl = new URL(process.env.NEXT_PUBLIC_APP_URL);
         if (originUrl.host.toLowerCase() === appUrl.host.toLowerCase()) return true;
-      } catch {}
+      } catch {
+        // Intentionally ignored: malformed NEXT_PUBLIC_APP_URL should not crash CSRF validation
+      }
     }
 
     return false;

@@ -42,7 +42,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="block text-xs font-semibold text-text-primary uppercase tracking-wide mb-1.5"
+            className="block text-xs font-semibold -ink uppercase tracking-wide mb-1.5"
           >
             {label}
             {required && <span className="text-danger ms-1" aria-hidden="true">*</span>}
@@ -56,8 +56,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             disabled={disabled}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
-            className={`w-full appearance-none rounded-md border bg-surface pe-9 ps-3 py-2 text-sm text-text-primary transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:border-transparent disabled:opacity-50 disabled:bg-surface-2 disabled:cursor-not-allowed cursor-pointer ${
-              error ? 'border-danger focus-visible:ring-danger' : 'border-border hover:border-border-strong'
+            className={`w-full appearance-none rounded-md border bg-surface pe-9 ps-3 py-2 text-sm -ink transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:border-transparent disabled:opacity-50 disabled:bg-surface-2 disabled:cursor-not-allowed cursor-pointer ${
+              error ? 'border-danger focus-visible:ring-danger' : '-line-strong -line-strong'
             } ${className}`}
             {...props}
           >
@@ -70,7 +70,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               : children}
           </select>
 
-          <div className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-text-muted">
+          <div className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 -ink-2">
             <ChevronDown className="w-4 h-4" aria-hidden="true" />
           </div>
         </div>
@@ -87,7 +87,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         )}
 
         {!error && helperText && (
-          <p id={helperId} className="mt-1 text-xs text-text-muted">
+          <p id={helperId} className="mt-1 text-xs -ink-2">
             {helperText}
           </p>
         )}
