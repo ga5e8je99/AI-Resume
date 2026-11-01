@@ -36,6 +36,9 @@ export interface GeneratedResumeResult {
   keywordCoverage: KeywordCoverageResult;
   provider: string;
   aiGenerated: boolean;
+  fallbackReason?: string;
+  tokens?: number;
+  costUsd?: number;
   latencyMs: number;
   documentType: ResumeDocumentType;
   outputLanguage: DocumentLanguage;

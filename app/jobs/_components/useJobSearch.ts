@@ -12,6 +12,11 @@ import {
   JobProviderAttribution,
 } from '@/lib/jobs/types';
 import { JOB_MATCH_FREE_QUOTA } from '@/lib/plans';
+import {
+  trackResumeUploaded,
+  trackJobSearchRun,
+  trackFreeQuotaExhausted,
+} from '@/lib/analytics';
 
 export interface SavedResumeOption {
   id: string;
@@ -246,6 +251,9 @@ export function useJobSearch() {
           return;
         }
 
+        const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+        trackResumeUploaded({ fileType: ext, source: 'jobs' });
+
         const res = await fetch('/api/jobs/extract-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -329,6 +337,10 @@ export function useJobSearch() {
       if (controller.signal.aborted) return;
 
       if (res.status === 402) {
+        trackFreeQuotaExhausted({
+          feature: 'job_search',
+          reason: 'job_match_quota_reached',
+        });
         setIsQuotaExhausted(true);
         setIsUpgradeModalOpen(true);
         setFreeQuotaUsed(JOB_MATCH_FREE_QUOTA);
@@ -370,6 +382,14 @@ export function useJobSearch() {
       setProviderStatus(Array.isArray(data.providerStatus) ? data.providerStatus : []);
       setIsCachedResult(Boolean(data.cached));
       setHasSearched(true);
+
+      trackJobSearchRun({
+        country,
+        remoteOnly,
+        seniority,
+        resultsCount: (data.jobs || []).length,
+        cached: Boolean(data.cached),
+      });
 
       if (data.quota && typeof data.quota.freeUsed === 'number') {
         setFreeQuotaUsed(data.quota.freeUsed);

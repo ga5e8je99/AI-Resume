@@ -112,7 +112,7 @@ async function runPricingTests() {
   assert(res500.errorCode === 'CHECKOUT_FAILED', '500 maps to CHECKOUT_FAILED');
   assert(!res500.message?.toLowerCase().includes('coming soon'), 'Never hides error under coming soon');
 
-  assert(toInternalPath('/payment/crypto?reference=ORD-1') === '/payment/crypto?reference=ORD-1', 'Detects relative internal path');
+  assert(toInternalPath('/payment/success?reference=ORD-1') === '/payment/success?reference=ORD-1', 'Detects relative internal path');
   assert(toInternalPath('https://checkout.stripe.com/c/pay/cs_123') === null, 'Detects external Stripe URL');
 
   console.log('\n============================================================');

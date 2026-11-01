@@ -23,9 +23,9 @@ type OrderPollStatus = 'paid' | 'awaiting_payment' | 'pending' | 'failed' | 'exp
 interface OrderStatusResponse {
   status: 'paid' | 'awaiting_payment' | 'pending' | 'failed' | 'expired';
   planId: 'pro' | 'payg';
-  provider: 'stripe' | 'paymob' | 'binance_pay' | 'manual_crypto';
+  provider: 'lemonsqueezy' | 'stripe' | 'paymob';
   amount: number;
-  currency: 'USD' | 'EGP' | 'USDT';
+  currency: 'USD' | 'EGP';
 }
 
 const POLL_INTERVAL_MS = 2000;
@@ -124,7 +124,13 @@ function PaymentSuccessContent() {
 
           if (!hasTrackedRef.current) {
             hasTrackedRef.current = true;
-            trackPaymentSucceeded(data.planId, data.amount, data.currency);
+            trackPaymentSucceeded(
+              data.planId,
+              data.amount,
+              data.currency,
+              data.provider,
+              'verified_order'
+            );
           }
         } else if (data.status === 'failed' || data.status === 'expired') {
           stopPolling();
@@ -155,8 +161,6 @@ function PaymentSuccessContent() {
   const providerBadgeText =
     resolvedProvider === 'paymob'
       ? t('payment_confirmed_paymob')
-      : resolvedProvider === 'binance_pay' || resolvedProvider === 'manual_crypto'
-      ? t('payment_confirmed_crypto')
       : t('payment_confirmed_stripe');
 
   // 1. Awaiting Payment / Pending Spinner State

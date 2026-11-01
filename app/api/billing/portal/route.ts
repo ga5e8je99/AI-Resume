@@ -6,6 +6,7 @@ import {
   ProviderNotConfiguredError,
   isMockPaymentsAllowed,
 } from '@/lib/payments/stripe';
+import { getLemonSqueezyCustomerPortalUrl } from '@/lib/payments/providers/lemonsqueezy';
 import { applyRateLimit } from '@/lib/rate-limit';
 
 async function resolvePortalUrl(req: NextRequest) {
@@ -64,6 +65,39 @@ async function resolvePortalUrl(req: NextRequest) {
     }
   }
 
+  const lemonSubscriptionId =
+    (user as any).lemonSubscriptionId ||
+    ((user as any).paymentProvider === 'lemonsqueezy'
+      ? (user as any).providerSubscriptionId
+      : '') ||
+    '';
+  const lemonCustomerId =
+    (user as any).lemonCustomerId ||
+    ((user as any).paymentProvider === 'lemonsqueezy'
+      ? (user as any).providerCustomerId
+      : '') ||
+    '';
+
+  if (
+    lemonSubscriptionId ||
+    lemonCustomerId ||
+    (user as any).paymentProvider === 'lemonsqueezy'
+  ) {
+    const lsPortal = await getLemonSqueezyCustomerPortalUrl({
+      subscriptionId: lemonSubscriptionId,
+      customerId: lemonCustomerId,
+      returnUrl,
+    });
+    return {
+      status: 200,
+      body: {
+        success: true,
+        provider: 'lemonsqueezy',
+        url: lsPortal.url,
+      },
+    };
+  }
+
   const customerId =
     (user as any).stripeCustomerId ||
     ((user as any).paymentProvider === 'stripe' ? (user as any).providerCustomerId : '') ||
@@ -74,7 +108,7 @@ async function resolvePortalUrl(req: NextRequest) {
       status: 400,
       body: {
         error: 'NO_STRIPE_CUSTOMER',
-        message: 'No active Stripe customer billing record is linked to this account.',
+        message: 'No active billing customer record is linked to this account.',
       },
     };
   }
@@ -88,6 +122,7 @@ async function resolvePortalUrl(req: NextRequest) {
     status: 200,
     body: {
       success: true,
+      provider: 'stripe',
       url: session.url,
     },
   };

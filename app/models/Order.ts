@@ -6,29 +6,30 @@ export type OrderStatus =
   | 'pending_review'
   | 'paid'
   | 'expired'
-  | 'rejected';
+  | 'rejected'
+  | 'refunded';
 
-export type PaymentMethodType = 'binance_pay' | 'manual_crypto' | 'paymob' | 'stripe';
-export type CryptoNetwork = 'BEP20' | 'TRC20' | 'binance' | 'paymob' | 'stripe';
-export type OrderCurrency = 'USDT' | 'EGP' | 'USD';
+export type PaymentMethodType = 'lemonsqueezy' | 'paymob' | 'stripe';
+export type OrderCurrency = 'EGP' | 'USD';
 
-export interface IOrderAuditLog {
+export interface IOrderAuditEntry {
   status: OrderStatus;
   timestamp: Date;
   note?: string;
-  actor?: string; // 'system' | 'user' | 'admin' | 'binance_webhook' | 'paymob_webhook'
+  actor?: string;
 }
 
 export interface IOrder extends Document {
+  _id: mongoose.Types.ObjectId;
   userId: string;
   userEmail: string;
   planId: 'pro' | 'payg';
   billingCycle: 'monthly' | 'annual' | 'once';
   baseAmount: number;
-  amount: number; // e.g. 9.14 USDT or 199 EGP
+  amount: number;
   currency: OrderCurrency;
   method: PaymentMethodType;
-  network: CryptoNetwork;
+  network?: string | null;
   status: OrderStatus;
   txid?: string | null;
   reference: string;
@@ -36,16 +37,17 @@ export interface IOrder extends Document {
   expiresAt: Date;
   paidAt?: Date | null;
   proExpiresAt?: Date | null;
-  auditLog: IOrderAuditLog[];
+  auditLog: IOrderAuditEntry[];
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const OrderAuditLogSchema = new Schema<IOrderAuditLog>(
+const OrderAuditSchema = new Schema<IOrderAuditEntry>(
   {
     status: {
       type: String,
+      enum: ['created', 'awaiting_payment', 'pending_review', 'paid', 'expired', 'rejected', 'refunded'],
       required: true,
     },
     timestamp: {
@@ -68,76 +70,71 @@ const OrderSchema = new Schema<IOrder>(
   {
     userId: {
       type: String,
-      required: [true, 'userId is required'],
+      required: true,
       index: true,
     },
     userEmail: {
       type: String,
-      required: [true, 'userEmail is required'],
+      required: true,
       lowercase: true,
       trim: true,
     },
     planId: {
       type: String,
       enum: ['pro', 'payg'],
-      required: [true, 'planId is required'],
-      index: true,
+      required: true,
     },
     billingCycle: {
       type: String,
       enum: ['monthly', 'annual', 'once'],
-      required: [true, 'billingCycle is required'],
+      required: true,
     },
     baseAmount: {
       type: Number,
-      required: [true, 'baseAmount is required'],
+      required: true,
     },
     amount: {
       type: Number,
-      required: [true, 'amount is required'],
+      required: true,
     },
     currency: {
       type: String,
-      enum: ['USDT', 'EGP', 'USD'],
-      default: 'USDT',
+      enum: ['EGP', 'USD'],
+      default: 'USD',
       required: true,
     },
     method: {
       type: String,
-      enum: ['binance_pay', 'manual_crypto', 'paymob', 'stripe'],
+      enum: ['lemonsqueezy', 'paymob', 'stripe'],
       required: true,
-      index: true,
     },
     network: {
       type: String,
-      enum: ['BEP20', 'TRC20', 'binance', 'paymob', 'stripe'],
-      required: true,
-      index: true,
+      required: false,
+      default: null,
     },
     status: {
       type: String,
-      enum: ['created', 'awaiting_payment', 'pending_review', 'paid', 'expired', 'rejected'],
+      enum: ['created', 'awaiting_payment', 'pending_review', 'paid', 'expired', 'rejected', 'refunded'],
       default: 'awaiting_payment',
       index: true,
     },
     txid: {
       type: String,
+      required: false,
       unique: true,
-      sparse: true, // Only enforces uniqueness when txid is non-null
+      sparse: true,
       trim: true,
-      lowercase: true,
     },
     reference: {
       type: String,
-      required: [true, 'reference is required'],
+      required: true,
       unique: true,
-      trim: true,
       index: true,
     },
     recipientAddress: {
       type: String,
       default: '',
-      trim: true,
     },
     expiresAt: {
       type: Date,
@@ -153,7 +150,7 @@ const OrderSchema = new Schema<IOrder>(
       default: null,
     },
     auditLog: {
-      type: [OrderAuditLogSchema],
+      type: [OrderAuditSchema],
       default: [],
     },
     metadata: {
@@ -166,10 +163,6 @@ const OrderSchema = new Schema<IOrder>(
   }
 );
 
-OrderSchema.index({ status: 1, expiresAt: 1 });
-OrderSchema.index({ userId: 1, createdAt: -1 });
-
-// Prevent re-compilation of model in Next.js development hot reload
 const Order: Model<IOrder> =
   mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 

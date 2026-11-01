@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import * as Sentry from '@sentry/nextjs';
 import mongoose from 'mongoose';
 import connectToDatabase from './db';
@@ -9,7 +10,8 @@ import Analysis, { IAnalysis } from '../models/Analysis';
 import CoverLetter, { ICoverLetter } from '../models/CoverLetter';
 import Payment, { IPayment } from '../models/Payment';
 import PaymentEvent, { IPaymentEvent, PaymentEventStatus } from '../models/PaymentEvent';
-import Order, { IOrder, OrderStatus, PaymentMethodType, CryptoNetwork, OrderCurrency } from '../models/Order';
+import Order, { IOrder, OrderStatus, PaymentMethodType, OrderCurrency } from '../models/Order';
+import AiUsage, { AiUsageStatus } from '../models/AiUsage';
 import { CoverLetterService } from './coverLetterService';
 import { getPlanCredits, JOB_MATCH_FREE_QUOTA, JOB_MATCH_CREDIT_COST } from '@/lib/plans';
 
@@ -30,13 +32,20 @@ export interface StoredUser {
   billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
   planExpiresAt?: string | null;
   proExpiresAt?: string | null;
-  paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+  paymentProvider?: 'lemonsqueezy' | 'stripe' | 'paymob' | 'paddle' | 'none';
   providerCustomerId?: string;
   providerSubscriptionId?: string;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  lemonCustomerId?: string;
+  lemonSubscriptionId?: string;
   subscriptionStatus?: 'active' | 'past_due' | 'canceled' | 'expired' | 'none';
   paymentFailedAt?: string | null;
+  emailVerified?: string | null;
+  emailVerifyTokenHash?: string | null;
+  emailVerifyExpires?: string | null;
+  termsAcceptedAt?: string | null;
+  termsVersion?: string | null;
   resetPasswordToken?: string | null;
   resetPasswordExpires?: string | null;
   createdAt: string;
@@ -53,7 +62,7 @@ export interface StoredOrder {
   amount: number;
   currency: OrderCurrency;
   method: PaymentMethodType;
-  network: CryptoNetwork;
+  network?: string | null;
   status: OrderStatus;
   txid?: string | null;
   reference: string;
@@ -124,6 +133,25 @@ export interface StoredCoverLetter {
   updatedAt: string;
 }
 
+export interface StoredAiUsage {
+  id: string;
+  userId: string;
+  endpoint: string;
+  tokens: number;
+  promptTokens: number;
+  completionTokens: number;
+  cost: number;
+  costUsd: number;
+  latency: number;
+  latencyMs: number;
+  status: AiUsageStatus;
+  fallbackReason?: string;
+  provider: string;
+  model: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface LocalDatabase {
   users: StoredUser[];
   resumes: StoredResume[];
@@ -133,6 +161,7 @@ interface LocalDatabase {
   paymentEvents?: any[];
   jobCache?: any[];
   orders?: StoredOrder[];
+  aiUsage?: StoredAiUsage[];
 }
 
 // Initial seed data so user sees complete, realistic data right away
@@ -144,6 +173,7 @@ const INITIAL_DB: LocalDatabase = {
       email: 'admin@jobmatch.ai',
       password: '$2a$10$wT8m9aHn9q6XqZvZl0lPbe4E7mO8QGqVw1jG6w6rD7eF9tY1yM8aW', // admin123
       role: 'admin',
+      emailVerified: new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString(),
       createdAt: new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -152,6 +182,7 @@ const INITIAL_DB: LocalDatabase = {
       name: 'Sarah Jenkins',
       email: 'sarah.jenkins@example.com',
       role: 'user',
+      emailVerified: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
       createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
       updatedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
     },
@@ -160,6 +191,7 @@ const INITIAL_DB: LocalDatabase = {
       name: 'Omar Mansour',
       email: 'omar.mansour@gmail.com',
       role: 'user',
+      emailVerified: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
       createdAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -308,6 +340,8 @@ const INITIAL_DB: LocalDatabase = {
   ],
 };
 
+let lastKnownGoodDb: LocalDatabase | null = null;
+
 function readLocalDb(): LocalDatabase {
   try {
     // In serverless environments (e.g. Vercel), root filesystem is read-only
@@ -316,9 +350,10 @@ function readLocalDb(): LocalDatabase {
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
         if (!parsed.coverLetters) parsed.coverLetters = [];
+        lastKnownGoodDb = parsed;
         return parsed;
       }
-      return INITIAL_DB;
+      return lastKnownGoodDb ?? INITIAL_DB;
     }
 
     if (!fs.existsSync(DATA_DIR)) {
@@ -326,19 +361,42 @@ function readLocalDb(): LocalDatabase {
     }
     if (!fs.existsSync(DB_FILE)) {
       fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_DB, null, 2), 'utf-8');
+      lastKnownGoodDb = INITIAL_DB;
       return INITIAL_DB;
     }
-    const raw = fs.readFileSync(DB_FILE, 'utf-8');
-    const parsed = JSON.parse(raw);
-    if (!parsed.coverLetters) parsed.coverLetters = [];
-    return parsed;
+
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const raw = fs.readFileSync(DB_FILE, 'utf-8');
+        if (!raw || !raw.trim()) {
+          throw new SyntaxError('Empty local db file during concurrent write');
+        }
+        const parsed = JSON.parse(raw);
+        if (!parsed.coverLetters) parsed.coverLetters = [];
+        lastKnownGoodDb = parsed;
+        return parsed;
+      } catch (readErr) {
+        lastErr = readErr;
+      }
+    }
+
+    if (lastKnownGoodDb) {
+      return lastKnownGoodDb;
+    }
+    console.warn('[DataStore] Error reading local db file, fallback to initial:', lastErr);
+    return INITIAL_DB;
   } catch (err) {
+    if (lastKnownGoodDb) {
+      return lastKnownGoodDb;
+    }
     console.warn('[DataStore] Error reading local db file, fallback to initial:', err);
     return INITIAL_DB;
   }
 }
 
 function writeLocalDb(db: LocalDatabase) {
+  lastKnownGoodDb = db;
   try {
     // In serverless environments (e.g. Vercel), root filesystem is read-only
     if (process.env.VERCEL) {
@@ -347,7 +405,22 @@ function writeLocalDb(db: LocalDatabase) {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
+    const serialized = JSON.stringify(db, null, 2);
+    const tmpFile = `${DB_FILE}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 7)}.tmp`;
+    try {
+      fs.writeFileSync(tmpFile, serialized, 'utf-8');
+      fs.renameSync(tmpFile, DB_FILE);
+    } catch {
+      // On Windows, renameSync can throw EPERM if another handle is open; fall back to direct write
+      fs.writeFileSync(DB_FILE, serialized, 'utf-8');
+      try {
+        if (fs.existsSync(tmpFile)) {
+          fs.unlinkSync(tmpFile);
+        }
+      } catch {
+        // Ignore cleanup failure for temp file
+      }
+    }
   } catch (err: any) {
     console.warn('[DataStore] Local file write skipped or unsupported in this environment:', err?.message);
   }
@@ -364,8 +437,8 @@ export async function isMongoAvailable(): Promise<boolean> {
   }
 
   const now = Date.now();
-  // Cache failed result for 30 seconds to avoid repeating failed connection attempts
-  if (now - lastCheckTime < 30000 && !isMongoWorking) {
+  // Cache failed result for 5 minutes to avoid repeating failed connection attempts
+  if (now - lastCheckTime < 300000 && !isMongoWorking) {
     return false;
   }
   lastCheckTime = now;
@@ -624,6 +697,246 @@ export const DataStore = {
     db.analyses = db.analyses.filter((a) => a.userId !== userId);
     writeLocalDb(db);
     return true;
+  },
+
+  /**
+   * Exports all user data (profile, resumes, cover letters, orders) in a structured JSON object.
+   * Strips sensitive password hashes and internal verification/reset tokens.
+   */
+  async exportUserData(userId: string) {
+    const user = await this.findUserById(userId);
+    if (!user) return null;
+
+    const [resumes, coverLettersResult, orders] = await Promise.all([
+      this.getUserResumes(userId),
+      this.getUserCoverLetters(userId, { limit: 100, summaryOnly: false }),
+      this.listOrders({ userId, limit: 500 }),
+    ]);
+
+    const profile = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role || 'user',
+      emailVerified: user.emailVerified || null,
+      termsAcceptedAt: (user as any).termsAcceptedAt || null,
+      termsVersion: (user as any).termsVersion || null,
+      plan: user.plan || 'free',
+      aiCredits: typeof user.aiCredits === 'number' ? user.aiCredits : 0,
+      aiResumeGenerationsCount:
+        typeof user.aiResumeGenerationsCount === 'number' ? user.aiResumeGenerationsCount : 0,
+      jobMatchFreeUsed: typeof user.jobMatchFreeUsed === 'number' ? user.jobMatchFreeUsed : 0,
+      billingCycle: user.billingCycle || 'none',
+      proExpiresAt: user.proExpiresAt || user.planExpiresAt || null,
+      paymentProvider: user.paymentProvider || 'none',
+      subscriptionStatus: user.subscriptionStatus || 'none',
+      createdAt: user.createdAt,
+      updatedAt: (user as any).updatedAt || user.createdAt,
+    };
+
+    return {
+      exportedAt: new Date().toISOString(),
+      profile,
+      resumes,
+      coverLetters: coverLettersResult.items || [],
+      orders: orders.map((o) => ({
+        id: o.id,
+        planId: o.planId,
+        billingCycle: o.billingCycle,
+        baseAmount: o.baseAmount,
+        amount: o.amount,
+        currency: o.currency,
+        method: o.method,
+        status: o.status,
+        reference: o.reference,
+        paidAt: o.paidAt || null,
+        proExpiresAt: o.proExpiresAt || null,
+        createdAt: o.createdAt,
+        updatedAt: o.updatedAt,
+      })),
+    };
+  },
+
+  /**
+   * Permanently deletes user account, resumes, cover letters, and analyses,
+   * while anonymizing orders and payments (removing PII while preserving financial ledger).
+   */
+  async deleteAccountAndAnonymizeBilling(userId: string): Promise<{
+    deleted: boolean;
+    anonymizedUserId: string;
+    anonymizedEmail: string;
+    deletedCounts: { resumes: number; coverLetters: number; analyses: number };
+    anonymizedCounts: { orders: number; payments: number };
+  }> {
+    const existingUser = await this.findUserById(userId);
+    if (!existingUser) {
+      throw new Error('USER_NOT_FOUND');
+    }
+    if (existingUser.isDemo) {
+      throw new Error('DEMO_ACCOUNT_CANNOT_BE_DELETED');
+    }
+
+    const anonHash = crypto
+      .createHash('sha256')
+      .update(`anon_${userId}_${existingUser.email.toLowerCase()}`)
+      .digest('hex')
+      .slice(0, 12);
+    const anonymizedUserId = `deleted_user_${anonHash}`;
+    const anonymizedEmail = `deleted_${anonHash}@anonymized.local`;
+    const nowIso = new Date().toISOString();
+
+    const sanitizeMetadata = (meta: Record<string, any> | undefined) => {
+      if (!meta || typeof meta !== 'object') return { anonymized: true, anonymizedAt: nowIso };
+      const copy: Record<string, any> = { ...meta, anonymized: true, anonymizedAt: nowIso };
+      delete copy.email;
+      delete copy.userEmail;
+      delete copy.name;
+      delete copy.userName;
+      delete copy.customerName;
+      delete copy.customerEmail;
+      delete copy.phone;
+      delete copy.ip;
+      return copy;
+    };
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const validObjId = mongoose.Types.ObjectId.isValid(userId);
+        await Promise.all([
+          validObjId ? User.findByIdAndDelete(userId) : Promise.resolve(),
+          Resume.deleteMany({ userId }),
+          CoverLetter.deleteMany({ userId }),
+          Analysis.deleteMany({ userId }),
+          Order.updateMany(
+            { userId },
+            {
+              $set: {
+                userId: anonymizedUserId,
+                userEmail: anonymizedEmail,
+                recipientAddress: '',
+                'metadata.anonymized': true,
+                'metadata.anonymizedAt': nowIso,
+                updatedAt: new Date(),
+              },
+              $unset: {
+                'metadata.email': 1,
+                'metadata.userEmail': 1,
+                'metadata.name': 1,
+                'metadata.userName': 1,
+                'metadata.customerName': 1,
+                'metadata.customerEmail': 1,
+                'metadata.phone': 1,
+              },
+              $push: {
+                auditLog: {
+                  status: 'paid',
+                  timestamp: new Date(),
+                  note: 'Account deleted; personal identifiers anonymized for accounting retention',
+                  actor: 'account_delete',
+                },
+              },
+            }
+          ),
+          Payment.updateMany(
+            { userId },
+            {
+              $set: {
+                userId: anonymizedUserId,
+                userEmail: anonymizedEmail,
+                'metadata.anonymized': true,
+                'metadata.anonymizedAt': nowIso,
+                updatedAt: new Date(),
+              },
+              $unset: {
+                'metadata.email': 1,
+                'metadata.userEmail': 1,
+                'metadata.name': 1,
+                'metadata.userName': 1,
+                'metadata.customerName': 1,
+                'metadata.customerEmail': 1,
+                'metadata.phone': 1,
+              },
+            }
+          ),
+        ]);
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: {
+            context:
+              'MongoDB operation failed in deleteAccountAndAnonymizeBilling; falling back to local JSON datastore',
+          },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+
+    const resumesBefore = db.resumes.length;
+    db.resumes = db.resumes.filter((r) => r.userId !== userId);
+    const deletedResumes = resumesBefore - db.resumes.length;
+
+    const coverLettersList = db.coverLetters || [];
+    const coverLettersBefore = coverLettersList.length;
+    db.coverLetters = coverLettersList.filter((c) => c.userId !== userId);
+    const deletedCoverLetters = coverLettersBefore - db.coverLetters.length;
+
+    const analysesBefore = db.analyses.length;
+    db.analyses = db.analyses.filter((a) => a.userId !== userId);
+    const deletedAnalyses = analysesBefore - db.analyses.length;
+
+    let anonymizedOrders = 0;
+    if (Array.isArray(db.orders)) {
+      for (const order of db.orders) {
+        if (order.userId === userId) {
+          order.userId = anonymizedUserId;
+          order.userEmail = anonymizedEmail;
+          order.recipientAddress = '';
+          order.metadata = sanitizeMetadata(order.metadata);
+          order.updatedAt = nowIso;
+          order.auditLog = order.auditLog || [];
+          order.auditLog.push({
+            status: order.status,
+            timestamp: nowIso,
+            note: 'Account deleted; personal identifiers anonymized for accounting retention',
+            actor: 'account_delete',
+          });
+          anonymizedOrders++;
+        }
+      }
+    }
+
+    let anonymizedPayments = 0;
+    if (Array.isArray(db.payments)) {
+      for (const payment of db.payments) {
+        if (payment.userId === userId) {
+          payment.userId = anonymizedUserId;
+          payment.userEmail = anonymizedEmail;
+          payment.metadata = sanitizeMetadata(payment.metadata);
+          payment.updatedAt = nowIso;
+          anonymizedPayments++;
+        }
+      }
+    }
+
+    db.users = db.users.filter((u) => u.id !== userId);
+    writeLocalDb(db);
+
+    return {
+      deleted: true,
+      anonymizedUserId,
+      anonymizedEmail,
+      deletedCounts: {
+        resumes: deletedResumes,
+        coverLetters: deletedCoverLetters,
+        analyses: deletedAnalyses,
+      },
+      anonymizedCounts: {
+        orders: anonymizedOrders,
+        payments: anonymizedPayments,
+      },
+    };
   },
 
   // Resumes
@@ -1416,12 +1729,31 @@ export const DataStore = {
               planExpiresAt: rawExpiry,
               proExpiresAt: rawExpiry,
               paymentProvider: (u as any).paymentProvider || 'none',
-              providerCustomerId: (u as any).providerCustomerId || (u as any).stripeCustomerId || '',
-              providerSubscriptionId: (u as any).providerSubscriptionId || (u as any).stripeSubscriptionId || '',
+              providerCustomerId: (u as any).providerCustomerId || (u as any).lemonCustomerId || (u as any).stripeCustomerId || '',
+              providerSubscriptionId: (u as any).providerSubscriptionId || (u as any).lemonSubscriptionId || (u as any).stripeSubscriptionId || '',
               stripeCustomerId: (u as any).stripeCustomerId || ((u as any).paymentProvider === 'stripe' ? (u as any).providerCustomerId : '') || '',
               stripeSubscriptionId: (u as any).stripeSubscriptionId || ((u as any).paymentProvider === 'stripe' ? (u as any).providerSubscriptionId : '') || '',
+              lemonCustomerId: (u as any).lemonCustomerId || ((u as any).paymentProvider === 'lemonsqueezy' ? (u as any).providerCustomerId : '') || '',
+              lemonSubscriptionId: (u as any).lemonSubscriptionId || ((u as any).paymentProvider === 'lemonsqueezy' ? (u as any).providerSubscriptionId : '') || '',
               subscriptionStatus: currentSubStatus,
               paymentFailedAt: (u as any).paymentFailedAt || null,
+              emailVerified: (u as any).emailVerified
+                ? (u as any).emailVerified instanceof Date
+                  ? (u as any).emailVerified.toISOString()
+                  : (u as any).emailVerified
+                : null,
+              emailVerifyTokenHash: (u as any).emailVerifyTokenHash || null,
+              emailVerifyExpires: (u as any).emailVerifyExpires
+                ? (u as any).emailVerifyExpires instanceof Date
+                  ? (u as any).emailVerifyExpires.toISOString()
+                  : (u as any).emailVerifyExpires
+                : null,
+              termsAcceptedAt: (u as any).termsAcceptedAt
+                ? (u as any).termsAcceptedAt instanceof Date
+                  ? (u as any).termsAcceptedAt.toISOString()
+                  : (u as any).termsAcceptedAt
+                : null,
+              termsVersion: (u as any).termsVersion || null,
               resetPasswordToken: (u as any).resetPasswordToken || null,
               resetPasswordExpires: (u as any).resetPasswordExpires ? ((u as any).resetPasswordExpires instanceof Date ? (u as any).resetPasswordExpires.toISOString() : (u as any).resetPasswordExpires) : null,
               createdAt: (u as any).createdAt,
@@ -1464,12 +1796,19 @@ export const DataStore = {
         planExpiresAt: rawExpiry,
         proExpiresAt: rawExpiry,
         paymentProvider: u.paymentProvider || 'none',
-        providerCustomerId: u.providerCustomerId || u.stripeCustomerId || '',
-        providerSubscriptionId: u.providerSubscriptionId || u.stripeSubscriptionId || '',
+        providerCustomerId: u.providerCustomerId || u.lemonCustomerId || u.stripeCustomerId || '',
+        providerSubscriptionId: u.providerSubscriptionId || u.lemonSubscriptionId || u.stripeSubscriptionId || '',
         stripeCustomerId: u.stripeCustomerId || (u.paymentProvider === 'stripe' ? u.providerCustomerId : '') || '',
         stripeSubscriptionId: u.stripeSubscriptionId || (u.paymentProvider === 'stripe' ? u.providerSubscriptionId : '') || '',
+        lemonCustomerId: u.lemonCustomerId || (u.paymentProvider === 'lemonsqueezy' ? u.providerCustomerId : '') || '',
+        lemonSubscriptionId: u.lemonSubscriptionId || (u.paymentProvider === 'lemonsqueezy' ? u.providerSubscriptionId : '') || '',
         subscriptionStatus: u.subscriptionStatus || 'none',
         paymentFailedAt: u.paymentFailedAt || null,
+        emailVerified: u.emailVerified ?? null,
+        emailVerifyTokenHash: u.emailVerifyTokenHash || null,
+        emailVerifyExpires: u.emailVerifyExpires || null,
+        termsAcceptedAt: u.termsAcceptedAt || null,
+        termsVersion: u.termsVersion || null,
         resetPasswordToken: u.resetPasswordToken || null,
         resetPasswordExpires: u.resetPasswordExpires || null,
         createdAt: u.createdAt,
@@ -1498,12 +1837,25 @@ export const DataStore = {
             planExpiresAt: rawExpiry,
             proExpiresAt: rawExpiry,
             paymentProvider: (u as any).paymentProvider || 'none',
-            providerCustomerId: (u as any).providerCustomerId || (u as any).stripeCustomerId || '',
-            providerSubscriptionId: (u as any).providerSubscriptionId || (u as any).stripeSubscriptionId || '',
+            providerCustomerId: (u as any).providerCustomerId || (u as any).lemonCustomerId || (u as any).stripeCustomerId || '',
+            providerSubscriptionId: (u as any).providerSubscriptionId || (u as any).lemonSubscriptionId || (u as any).stripeSubscriptionId || '',
             stripeCustomerId: (u as any).stripeCustomerId || ((u as any).paymentProvider === 'stripe' ? (u as any).providerCustomerId : '') || '',
             stripeSubscriptionId: (u as any).stripeSubscriptionId || ((u as any).paymentProvider === 'stripe' ? (u as any).providerSubscriptionId : '') || '',
+            lemonCustomerId: (u as any).lemonCustomerId || ((u as any).paymentProvider === 'lemonsqueezy' ? (u as any).providerCustomerId : '') || '',
+            lemonSubscriptionId: (u as any).lemonSubscriptionId || ((u as any).paymentProvider === 'lemonsqueezy' ? (u as any).providerSubscriptionId : '') || '',
             subscriptionStatus: (u as any).subscriptionStatus || 'none',
             paymentFailedAt: (u as any).paymentFailedAt || null,
+            emailVerified: (u as any).emailVerified
+              ? (u as any).emailVerified instanceof Date
+                ? (u as any).emailVerified.toISOString()
+                : (u as any).emailVerified
+              : null,
+            emailVerifyTokenHash: (u as any).emailVerifyTokenHash || null,
+            emailVerifyExpires: (u as any).emailVerifyExpires
+              ? (u as any).emailVerifyExpires instanceof Date
+                ? (u as any).emailVerifyExpires.toISOString()
+                : (u as any).emailVerifyExpires
+              : null,
             resetPasswordToken: (u as any).resetPasswordToken || null,
             resetPasswordExpires: (u as any).resetPasswordExpires ? ((u as any).resetPasswordExpires instanceof Date ? (u as any).resetPasswordExpires.toISOString() : (u as any).resetPasswordExpires) : null,
           };
@@ -1533,12 +1885,19 @@ export const DataStore = {
         planExpiresAt: rawExpiry,
         proExpiresAt: rawExpiry,
         paymentProvider: u.paymentProvider || 'none',
-        providerCustomerId: u.providerCustomerId || u.stripeCustomerId || '',
-        providerSubscriptionId: u.providerSubscriptionId || u.stripeSubscriptionId || '',
+        providerCustomerId: u.providerCustomerId || u.lemonCustomerId || u.stripeCustomerId || '',
+        providerSubscriptionId: u.providerSubscriptionId || u.lemonSubscriptionId || u.stripeSubscriptionId || '',
         stripeCustomerId: u.stripeCustomerId || (u.paymentProvider === 'stripe' ? u.providerCustomerId : '') || '',
         stripeSubscriptionId: u.stripeSubscriptionId || (u.paymentProvider === 'stripe' ? u.providerSubscriptionId : '') || '',
+        lemonCustomerId: u.lemonCustomerId || (u.paymentProvider === 'lemonsqueezy' ? u.providerCustomerId : '') || '',
+        lemonSubscriptionId: u.lemonSubscriptionId || (u.paymentProvider === 'lemonsqueezy' ? u.providerSubscriptionId : '') || '',
         subscriptionStatus: u.subscriptionStatus || 'none',
         paymentFailedAt: u.paymentFailedAt || null,
+        emailVerified: u.emailVerified ?? null,
+        emailVerifyTokenHash: u.emailVerifyTokenHash || null,
+        emailVerifyExpires: u.emailVerifyExpires || null,
+        termsAcceptedAt: u.termsAcceptedAt || null,
+        termsVersion: u.termsVersion || null,
         resetPasswordToken: u.resetPasswordToken || null,
         resetPasswordExpires: u.resetPasswordExpires || null,
       };
@@ -1610,6 +1969,70 @@ export const DataStore = {
     return null;
   },
 
+  async findUserByLemonCustomerId(customerId: string) {
+    if (!customerId) return null;
+    const cleanId = customerId.trim();
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const u = await User.findOne({
+          $or: [{ lemonCustomerId: cleanId }, { providerCustomerId: cleanId }],
+        })
+          .select('-password')
+          .lean();
+        if (u) {
+          return this.findUserById((u as any)._id.toString());
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const u = db.users.find(
+      (user) => user.lemonCustomerId === cleanId || user.providerCustomerId === cleanId
+    );
+    if (u) {
+      return this.findUserById(u.id);
+    }
+    return null;
+  },
+
+  async findUserByLemonSubscriptionId(subscriptionId: string) {
+    if (!subscriptionId) return null;
+    const cleanId = subscriptionId.trim();
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const u = await User.findOne({
+          $or: [{ lemonSubscriptionId: cleanId }, { providerSubscriptionId: cleanId }],
+        })
+          .select('-password')
+          .lean();
+        if (u) {
+          return this.findUserById((u as any)._id.toString());
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const u = db.users.find(
+      (user) => user.lemonSubscriptionId === cleanId || user.providerSubscriptionId === cleanId
+    );
+    if (u) {
+      return this.findUserById(u.id);
+    }
+    return null;
+  },
+
   async createUserAccount(userData: {
     name: string;
     email: string;
@@ -1621,13 +2044,44 @@ export const DataStore = {
     billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
     planExpiresAt?: Date | string | null;
     proExpiresAt?: Date | string | null;
-    paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+    paymentProvider?: 'lemonsqueezy' | 'stripe' | 'paymob' | 'paddle' | 'none';
     providerCustomerId?: string;
     providerSubscriptionId?: string;
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
+    lemonCustomerId?: string;
+    lemonSubscriptionId?: string;
+    emailVerified?: Date | string | null;
+    emailVerifyTokenHash?: string | null;
+    emailVerifyExpires?: Date | string | null;
+    termsAcceptedAt?: Date | string | null;
+    termsVersion?: string | null;
   }) {
     const expiryVal = userData.proExpiresAt ?? userData.planExpiresAt ?? null;
+    const resolvedTermsAcceptedAt = userData.termsAcceptedAt ?? null;
+    const resolvedTermsAcceptedAtIso = resolvedTermsAcceptedAt
+      ? typeof resolvedTermsAcceptedAt === 'string'
+        ? resolvedTermsAcceptedAt
+        : resolvedTermsAcceptedAt.toISOString()
+      : null;
+    const resolvedTermsVersion = userData.termsVersion || null;
+    const resolvedEmailVerified =
+      userData.emailVerified !== undefined
+        ? userData.emailVerified
+        : userData.emailVerifyTokenHash
+        ? null
+        : new Date();
+    const resolvedEmailVerifiedIso = resolvedEmailVerified
+      ? typeof resolvedEmailVerified === 'string'
+        ? resolvedEmailVerified
+        : resolvedEmailVerified.toISOString()
+      : null;
+    const resolvedVerifyExpires = userData.emailVerifyExpires ?? null;
+    const resolvedVerifyExpiresIso = resolvedVerifyExpires
+      ? typeof resolvedVerifyExpires === 'string'
+        ? resolvedVerifyExpires
+        : resolvedVerifyExpires.toISOString()
+      : null;
     const stripeCust =
       userData.stripeCustomerId ||
       (userData.paymentProvider === 'stripe' ? userData.providerCustomerId : '') ||
@@ -1635,6 +2089,14 @@ export const DataStore = {
     const stripeSub =
       userData.stripeSubscriptionId ||
       (userData.paymentProvider === 'stripe' ? userData.providerSubscriptionId : '') ||
+      '';
+    const lemonCust =
+      userData.lemonCustomerId ||
+      (userData.paymentProvider === 'lemonsqueezy' ? userData.providerCustomerId : '') ||
+      '';
+    const lemonSub =
+      userData.lemonSubscriptionId ||
+      (userData.paymentProvider === 'lemonsqueezy' ? userData.providerSubscriptionId : '') ||
       '';
 
     const mongoUp = await isMongoAvailable();
@@ -1652,10 +2114,17 @@ export const DataStore = {
           planExpiresAt: expiryVal,
           proExpiresAt: expiryVal,
           paymentProvider: userData.paymentProvider || 'none',
-          providerCustomerId: userData.providerCustomerId || stripeCust,
-          providerSubscriptionId: userData.providerSubscriptionId || stripeSub,
+          providerCustomerId: userData.providerCustomerId || lemonCust || stripeCust,
+          providerSubscriptionId: userData.providerSubscriptionId || lemonSub || stripeSub,
           stripeCustomerId: stripeCust,
           stripeSubscriptionId: stripeSub,
+          lemonCustomerId: lemonCust,
+          lemonSubscriptionId: lemonSub,
+          emailVerified: resolvedEmailVerified ? new Date(resolvedEmailVerified) : null,
+          emailVerifyTokenHash: userData.emailVerifyTokenHash || null,
+          emailVerifyExpires: resolvedVerifyExpires ? new Date(resolvedVerifyExpires) : null,
+          termsAcceptedAt: resolvedTermsAcceptedAt ? new Date(resolvedTermsAcceptedAt) : null,
+          termsVersion: resolvedTermsVersion,
         });
         return {
           id: newUser._id.toString(),
@@ -1673,6 +2142,17 @@ export const DataStore = {
           providerSubscriptionId: newUser.providerSubscriptionId,
           stripeCustomerId: newUser.stripeCustomerId,
           stripeSubscriptionId: newUser.stripeSubscriptionId,
+          lemonCustomerId: newUser.lemonCustomerId,
+          lemonSubscriptionId: newUser.lemonSubscriptionId,
+          emailVerified: newUser.emailVerified ? newUser.emailVerified.toISOString() : null,
+          emailVerifyTokenHash: newUser.emailVerifyTokenHash || null,
+          emailVerifyExpires: newUser.emailVerifyExpires
+            ? newUser.emailVerifyExpires.toISOString()
+            : null,
+          termsAcceptedAt: newUser.termsAcceptedAt
+            ? newUser.termsAcceptedAt.toISOString()
+            : null,
+          termsVersion: newUser.termsVersion || null,
         };
       } catch (err) {
         Sentry.captureException(err, {
@@ -1701,10 +2181,17 @@ export const DataStore = {
       planExpiresAt: expiryIso,
       proExpiresAt: expiryIso,
       paymentProvider: userData.paymentProvider || 'none',
-      providerCustomerId: userData.providerCustomerId || stripeCust,
-      providerSubscriptionId: userData.providerSubscriptionId || stripeSub,
+      providerCustomerId: userData.providerCustomerId || lemonCust || stripeCust,
+      providerSubscriptionId: userData.providerSubscriptionId || lemonSub || stripeSub,
       stripeCustomerId: stripeCust,
       stripeSubscriptionId: stripeSub,
+      lemonCustomerId: lemonCust,
+      lemonSubscriptionId: lemonSub,
+      emailVerified: resolvedEmailVerifiedIso,
+      emailVerifyTokenHash: userData.emailVerifyTokenHash || null,
+      emailVerifyExpires: resolvedVerifyExpiresIso,
+      termsAcceptedAt: resolvedTermsAcceptedAtIso,
+      termsVersion: resolvedTermsVersion,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -1726,6 +2213,13 @@ export const DataStore = {
       providerSubscriptionId: newUser.providerSubscriptionId,
       stripeCustomerId: newUser.stripeCustomerId,
       stripeSubscriptionId: newUser.stripeSubscriptionId,
+      lemonCustomerId: newUser.lemonCustomerId,
+      lemonSubscriptionId: newUser.lemonSubscriptionId,
+      emailVerified: newUser.emailVerified ?? null,
+      emailVerifyTokenHash: newUser.emailVerifyTokenHash || null,
+      emailVerifyExpires: newUser.emailVerifyExpires || null,
+      termsAcceptedAt: newUser.termsAcceptedAt || null,
+      termsVersion: newUser.termsVersion || null,
     };
   },
 
@@ -1817,11 +2311,13 @@ export const DataStore = {
       billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
       planExpiresAt?: Date | string | null;
       proExpiresAt?: Date | string | null;
-      paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+      paymentProvider?: 'lemonsqueezy' | 'stripe' | 'paymob' | 'paddle' | 'none';
       providerCustomerId?: string;
       providerSubscriptionId?: string;
       stripeCustomerId?: string;
       stripeSubscriptionId?: string;
+      lemonCustomerId?: string;
+      lemonSubscriptionId?: string;
       subscriptionStatus?: 'active' | 'past_due' | 'canceled' | 'expired' | 'none';
       paymentFailedAt?: Date | string | null;
     }
@@ -1841,6 +2337,18 @@ export const DataStore = {
       planData.stripeSubscriptionId !== undefined
         ? planData.stripeSubscriptionId
         : planData.paymentProvider === 'stripe'
+        ? planData.providerSubscriptionId || ''
+        : undefined;
+    const lemonCust =
+      planData.lemonCustomerId !== undefined
+        ? planData.lemonCustomerId
+        : planData.paymentProvider === 'lemonsqueezy'
+        ? planData.providerCustomerId || ''
+        : undefined;
+    const lemonSub =
+      planData.lemonSubscriptionId !== undefined
+        ? planData.lemonSubscriptionId
+        : planData.paymentProvider === 'lemonsqueezy'
         ? planData.providerSubscriptionId || ''
         : undefined;
 
@@ -1872,6 +2380,18 @@ export const DataStore = {
           setFields.stripeSubscriptionId = stripeSub;
           if (!setFields.providerSubscriptionId && stripeSub) {
             setFields.providerSubscriptionId = stripeSub;
+          }
+        }
+        if (lemonCust !== undefined) {
+          setFields.lemonCustomerId = lemonCust;
+          if (!setFields.providerCustomerId && lemonCust) {
+            setFields.providerCustomerId = lemonCust;
+          }
+        }
+        if (lemonSub !== undefined) {
+          setFields.lemonSubscriptionId = lemonSub;
+          if (!setFields.providerSubscriptionId && lemonSub) {
+            setFields.providerSubscriptionId = lemonSub;
           }
         }
         if (planData.subscriptionStatus !== undefined) {
@@ -1921,6 +2441,18 @@ export const DataStore = {
         user.stripeSubscriptionId = stripeSub;
         if (!user.providerSubscriptionId && stripeSub) {
           user.providerSubscriptionId = stripeSub;
+        }
+      }
+      if (lemonCust !== undefined) {
+        user.lemonCustomerId = lemonCust;
+        if (!user.providerCustomerId && lemonCust) {
+          user.providerCustomerId = lemonCust;
+        }
+      }
+      if (lemonSub !== undefined) {
+        user.lemonSubscriptionId = lemonSub;
+        if (!user.providerSubscriptionId && lemonSub) {
+          user.providerSubscriptionId = lemonSub;
         }
       }
       if (planData.subscriptionStatus !== undefined) {
@@ -2017,7 +2549,7 @@ export const DataStore = {
 
   async recordPaymentEvent(eventData: {
     eventId: string;
-    provider: 'stripe' | 'paymob' | 'binance_pay' | 'test';
+    provider: 'lemonsqueezy' | 'stripe' | 'paymob' | 'test';
     eventType: string;
     status?: PaymentEventStatus;
     payload?: any;
@@ -2073,7 +2605,7 @@ export const DataStore = {
     userEmail?: string;
     amount: number;
     currency: string;
-    provider: 'stripe' | 'paymob' | 'test';
+    provider: 'lemonsqueezy' | 'stripe' | 'paymob' | 'test';
     providerPaymentId?: string;
     planId: string;
     billingCycle?: 'monthly' | 'annual' | 'none';
@@ -2213,6 +2745,124 @@ export const DataStore = {
       delete user.resetPasswordToken;
       delete user.resetPasswordExpires;
       user.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return true;
+    }
+    return false;
+  },
+
+  async setEmailVerifyToken(
+    userId: string,
+    tokenHash: string,
+    expires: Date
+  ): Promise<boolean> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
+      try {
+        await User.findByIdAndUpdate(userId, {
+          $set: {
+            emailVerifyTokenHash: tokenHash,
+            emailVerifyExpires: expires,
+          },
+        });
+        return true;
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const user = db.users.find((u) => u.id === userId);
+    if (user) {
+      user.emailVerifyTokenHash = tokenHash;
+      user.emailVerifyExpires = expires.toISOString();
+      user.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return true;
+    }
+    return false;
+  },
+
+  async findUserByEmailVerifyToken(tokenHash: string): Promise<StoredUser | null> {
+    if (!tokenHash || typeof tokenHash !== 'string') return null;
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const user = await User.findOne({
+          emailVerifyTokenHash: tokenHash,
+          emailVerifyExpires: { $gt: new Date() },
+        });
+        if (user) {
+          return {
+            id: user._id.toString(),
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isDemo: user.isDemo,
+            plan: user.plan,
+            aiCredits: user.aiCredits,
+            billingCycle: user.billingCycle,
+            planExpiresAt: user.planExpiresAt?.toISOString() || null,
+            emailVerified: user.emailVerified?.toISOString() || null,
+            emailVerifyTokenHash: user.emailVerifyTokenHash || null,
+            emailVerifyExpires: user.emailVerifyExpires?.toISOString() || null,
+            createdAt: user.createdAt.toISOString(),
+            updatedAt: user.updatedAt.toISOString(),
+          };
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const now = Date.now();
+    const user = db.users.find((u) => {
+      if (u.emailVerifyTokenHash !== tokenHash) return false;
+      if (!u.emailVerifyExpires) return false;
+      const expiry = new Date(u.emailVerifyExpires).getTime();
+      return expiry > now;
+    });
+
+    return user || null;
+  },
+
+  async verifyUserEmail(userId: string): Promise<boolean> {
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(userId)) {
+      try {
+        await User.findByIdAndUpdate(userId, {
+          $set: {
+            emailVerified: now,
+            emailVerifyTokenHash: null,
+            emailVerifyExpires: null,
+          },
+        });
+        return true;
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const user = db.users.find((u) => u.id === userId);
+    if (user) {
+      user.emailVerified = nowIso;
+      user.emailVerifyTokenHash = null;
+      user.emailVerifyExpires = null;
+      user.updatedAt = nowIso;
       writeLocalDb(db);
       return true;
     }
@@ -2481,7 +3131,7 @@ export const DataStore = {
     amount: number;
     currency?: OrderCurrency;
     method: PaymentMethodType;
-    network: CryptoNetwork;
+    network?: string | null;
     reference: string;
     recipientAddress?: string;
     expiresAt: Date | string;
@@ -2491,7 +3141,7 @@ export const DataStore = {
       typeof orderData.expiresAt === 'string'
         ? orderData.expiresAt
         : orderData.expiresAt.toISOString();
-    const orderCurrency: OrderCurrency = orderData.currency || 'USDT';
+    const orderCurrency: OrderCurrency = orderData.currency || 'USD';
 
     const orderRecord: StoredOrder = {
       id: `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -2503,7 +3153,6 @@ export const DataStore = {
       amount: orderData.amount,
       currency: orderCurrency,
       method: orderData.method,
-      network: orderData.network,
       status: 'awaiting_payment',
       reference: orderData.reference,
       recipientAddress: orderData.recipientAddress || '',
@@ -2513,7 +3162,7 @@ export const DataStore = {
         {
           status: 'awaiting_payment',
           timestamp: new Date().toISOString(),
-          note: `Order initialized for plan ${orderData.planId} (${orderData.amount} ${orderCurrency} on ${orderData.network})`,
+          note: `Order initialized for plan ${orderData.planId} (${orderData.amount} ${orderCurrency} via ${orderData.method})`,
           actor: 'system',
         },
       ],
@@ -2534,7 +3183,6 @@ export const DataStore = {
           amount: orderRecord.amount,
           currency: orderCurrency,
           method: orderRecord.method,
-          network: orderRecord.network,
           status: 'awaiting_payment',
           reference: orderRecord.reference,
           recipientAddress: orderRecord.recipientAddress,
@@ -2543,7 +3191,7 @@ export const DataStore = {
             {
               status: 'awaiting_payment',
               timestamp: new Date(),
-              note: `Order initialized for plan ${orderData.planId} (${orderData.amount} ${orderCurrency} on ${orderData.network})`,
+              note: `Order initialized for plan ${orderData.planId} (${orderData.amount} ${orderCurrency} via ${orderData.method})`,
               actor: 'system',
             },
           ],
@@ -2577,9 +3225,9 @@ export const DataStore = {
             billingCycle: order.billingCycle,
             baseAmount: order.baseAmount,
             amount: order.amount,
-            currency: (order.currency as OrderCurrency) || 'USDT',
+            currency: (order.currency as OrderCurrency) || 'USD',
             method: order.method,
-            network: order.network,
+            network: order.network || null,
             status: order.status,
             txid: order.txid || null,
             reference: order.reference,
@@ -2627,9 +3275,9 @@ export const DataStore = {
             billingCycle: order.billingCycle,
             baseAmount: order.baseAmount,
             amount: order.amount,
-            currency: (order.currency as OrderCurrency) || 'USDT',
+            currency: (order.currency as OrderCurrency) || 'USD',
             method: order.method,
-            network: order.network,
+            network: order.network || null,
             status: order.status,
             txid: order.txid || null,
             reference: order.reference,
@@ -2662,76 +3310,6 @@ export const DataStore = {
     return found || null;
   },
 
-  async findOrderByTxid(
-    txid: string,
-    network?: 'BEP20' | 'TRC20' | string
-  ): Promise<StoredOrder | null> {
-    if (!txid || typeof txid !== 'string') return null;
-    const cleanTxid = txid.trim().toLowerCase();
-
-    // Requirement 4: Validate TXID format (0x + 64 hex for BEP20, 64 hex for TRC20) without RegExp from user input
-    const isValidBep20 = /^0x[0-9a-f]{64}$/.test(cleanTxid);
-    const isValidTrc20 = /^[0-9a-f]{64}$/.test(cleanTxid);
-
-    if (network === 'BEP20' && !isValidBep20) {
-      return null;
-    }
-    if (network === 'TRC20' && !isValidTrc20) {
-      return null;
-    }
-    if (!isValidBep20 && !isValidTrc20) {
-      return null;
-    }
-
-    const mongoUp = await isMongoAvailable();
-    if (mongoUp) {
-      try {
-        // Direct equality lookup on normalized lowercase txid (never use new RegExp from user input)
-        const order = await Order.findOne({ txid: cleanTxid });
-        if (order) {
-          return {
-            id: order._id.toString(),
-            userId: order.userId,
-            userEmail: order.userEmail,
-            planId: order.planId,
-            billingCycle: order.billingCycle,
-            baseAmount: order.baseAmount,
-            amount: order.amount,
-            currency: (order.currency as OrderCurrency) || 'USDT',
-            method: order.method,
-            network: order.network,
-            status: order.status,
-            txid: order.txid || null,
-            reference: order.reference,
-            recipientAddress: order.recipientAddress,
-            expiresAt: order.expiresAt.toISOString(),
-            paidAt: order.paidAt?.toISOString() || null,
-            proExpiresAt: order.proExpiresAt?.toISOString() || null,
-            auditLog: (order.auditLog || []).map((l) => ({
-              status: l.status,
-              timestamp: l.timestamp ? new Date(l.timestamp).toISOString() : new Date().toISOString(),
-              note: l.note,
-              actor: l.actor,
-            })),
-            metadata: order.metadata || {},
-            createdAt: order.createdAt.toISOString(),
-            updatedAt: order.updatedAt.toISOString(),
-          };
-        }
-      } catch (err) {
-        Sentry.captureException(err, {
-          tags: { component: 'DataStore' },
-          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
-        });
-      }
-    }
-
-    const db = readLocalDb();
-    if (!db.orders) return null;
-    const found = db.orders.find((o) => o.txid && o.txid.trim().toLowerCase() === cleanTxid);
-    return found || null;
-  },
-
   async listOrders(filter?: {
     status?: string;
     userId?: string;
@@ -2757,9 +3335,9 @@ export const DataStore = {
           billingCycle: order.billingCycle,
           baseAmount: order.baseAmount,
           amount: order.amount,
-          currency: (order.currency as OrderCurrency) || 'USDT',
+          currency: (order.currency as OrderCurrency) || 'USD',
           method: order.method,
-          network: order.network,
+          network: order.network || null,
           status: order.status,
           txid: order.txid || null,
           reference: order.reference,
@@ -2797,64 +3375,10 @@ export const DataStore = {
     return orders.slice(0, limit);
   },
 
-  async claimOrderTxid(
-    orderId: string,
-    txid: string
-  ): Promise<{ success: boolean; error?: 'TXID_ALREADY_USED' }> {
-    const cleanTxid = txid.trim().toLowerCase();
-    if (!cleanTxid) return { success: false };
-
-    const mongoUp = await isMongoAvailable();
-    if (mongoUp) {
-      try {
-        const conflicting = await Order.findOne({
-          txid: cleanTxid,
-          ...(mongoose.Types.ObjectId.isValid(orderId) ? { _id: { $ne: orderId } } : {}),
-        }).lean();
-        if (conflicting && conflicting._id.toString() !== orderId) {
-          return { success: false, error: 'TXID_ALREADY_USED' };
-        }
-        if (mongoose.Types.ObjectId.isValid(orderId)) {
-          await Order.findOneAndUpdate(
-            { _id: orderId, $or: [{ txid: { $exists: false } }, { txid: null }, { txid: cleanTxid }] },
-            { $set: { txid: cleanTxid, updatedAt: new Date() } }
-          );
-        }
-      } catch (err: any) {
-        if (err?.code === 11000 || String(err?.message || '').includes('E11000')) {
-          return { success: false, error: 'TXID_ALREADY_USED' };
-        }
-      }
-    }
-
-    const db = readLocalDb();
-    if (!db.orders) db.orders = [];
-    const duplicate = db.orders.find(
-      (o) =>
-        o.id !== orderId &&
-        (o as any)._id !== orderId &&
-        o.txid &&
-        o.txid.trim().toLowerCase() === cleanTxid
-    );
-    if (duplicate) {
-      return { success: false, error: 'TXID_ALREADY_USED' };
-    }
-
-    const order = db.orders.find((o) => o.id === orderId || (o as any)._id === orderId);
-    if (order) {
-      order.txid = cleanTxid;
-      order.updatedAt = new Date().toISOString();
-      writeLocalDb(db);
-    }
-
-    return { success: true };
-  },
-
   async updateOrderStatus(
     orderId: string,
     status: OrderStatus,
     options?: {
-      txid?: string;
       note?: string;
       actor?: string;
       metadata?: any;
@@ -2863,7 +3387,6 @@ export const DataStore = {
     const timestamp = new Date().toISOString();
     const actor = options?.actor || 'system';
     const note = options?.note || `Status updated to ${status}`;
-    const normalizedTxid = options?.txid ? options.txid.trim().toLowerCase() : undefined;
 
     const mongoUp = await isMongoAvailable();
     if (mongoUp && mongoose.Types.ObjectId.isValid(orderId)) {
@@ -2882,15 +3405,6 @@ export const DataStore = {
             },
           },
         };
-        if (normalizedTxid) {
-          const conflicting = await Order.findOne({
-            txid: normalizedTxid,
-            _id: { $ne: orderId },
-          }).lean();
-          if (!conflicting) {
-            updateDoc.$set.txid = normalizedTxid;
-          }
-        }
         if (options?.metadata) {
           updateDoc.$set.metadata = options.metadata;
         }
@@ -2910,18 +3424,6 @@ export const DataStore = {
 
     order.status = status;
     order.updatedAt = timestamp;
-    if (normalizedTxid) {
-      const duplicate = db.orders.find(
-        (o) =>
-          o.id !== orderId &&
-          (o as any)._id !== orderId &&
-          o.txid &&
-          o.txid.trim().toLowerCase() === normalizedTxid
-      );
-      if (!duplicate) {
-        order.txid = normalizedTxid;
-      }
-    }
     if (options?.metadata) {
       order.metadata = { ...order.metadata, ...options.metadata };
     }
@@ -2940,56 +3442,22 @@ export const DataStore = {
   async completeOrder(
     orderId: string,
     options?: {
-      txid?: string;
       note?: string;
       actor?: string;
+      provider?: 'lemonsqueezy' | 'stripe' | 'paymob';
+      customerId?: string;
+      subscriptionId?: string;
     }
   ): Promise<{
     success: boolean;
     alreadyPaid?: boolean;
-    error?: 'TXID_ALREADY_USED' | 'ORDER_NOT_FOUND' | string;
+    error?: 'ORDER_NOT_FOUND' | string;
     order: StoredOrder | null;
   }> {
     return withOrderLock(async () => {
       const existing = await this.findOrderById(orderId);
       if (!existing) {
         return { success: false, error: 'ORDER_NOT_FOUND', order: null };
-      }
-
-      const rawTxid = options?.txid || existing.txid || undefined;
-      const txidToRecord = rawTxid ? String(rawTxid).trim().toLowerCase() : undefined;
-
-      // Requirement 3: Atomic TXID uniqueness check across both MongoDB and JSON fallback
-      if (txidToRecord) {
-        const mongoCheck = await isMongoAvailable();
-        if (mongoCheck) {
-          try {
-            const conflictingMongo = await Order.findOne({
-              txid: txidToRecord,
-              ...(mongoose.Types.ObjectId.isValid(orderId) ? { _id: { $ne: orderId } } : {}),
-            }).lean();
-            if (conflictingMongo && conflictingMongo._id.toString() !== orderId) {
-              return { success: false, error: 'TXID_ALREADY_USED', order: null };
-            }
-          } catch (err) {
-        Sentry.captureException(err, {
-          tags: { component: 'DataStore' },
-          extra: { context: 'MongoDB operation failed in DataStore; falling back to local JSON datastore' },
-        });
-      }
-        }
-
-        const dbPreCheck = readLocalDb();
-        const conflictingLocal = (dbPreCheck.orders || []).find(
-          (o) =>
-            o.id !== orderId &&
-            (o as any)._id !== orderId &&
-            o.txid &&
-            o.txid.trim().toLowerCase() === txidToRecord
-        );
-        if (conflictingLocal) {
-          return { success: false, error: 'TXID_ALREADY_USED', order: null };
-        }
       }
 
       // Idempotency: if already paid, do not re-process
@@ -2999,7 +3467,7 @@ export const DataStore = {
 
       const nowIso = new Date().toISOString();
       const actor = options?.actor || 'system';
-      const note = options?.note || `Payment verified successfully on ${existing.network}`;
+      const note = options?.note || `Payment verified successfully via ${existing.method}`;
 
       // Pre-compute proExpiresAt for Pro orders so it is stored on both Order and User
       let computedProExpiresAt: Date | null = null;
@@ -3018,64 +3486,41 @@ export const DataStore = {
       // 1. Atomic Update Order in MongoDB using findOneAndUpdate with { _id: orderId, status: { $ne: 'paid' } }
       const mongoUp = await isMongoAvailable();
       if (mongoUp && mongoose.Types.ObjectId.isValid(orderId)) {
-        try {
-          const updateDoc: any = {
-            $set: {
+        const updateDoc: any = {
+          $set: {
+            status: 'paid',
+            paidAt: new Date(),
+            proExpiresAt: computedProExpiresAt,
+            updatedAt: new Date(),
+          },
+          $push: {
+            auditLog: {
               status: 'paid',
-              paidAt: new Date(),
-              proExpiresAt: computedProExpiresAt,
-              updatedAt: new Date(),
+              timestamp: new Date(),
+              note,
+              actor,
             },
-            $push: {
-              auditLog: {
-                status: 'paid',
-                timestamp: new Date(),
-                note,
-                actor,
-              },
-            },
-          };
-          if (txidToRecord) {
-            updateDoc.$set.txid = txidToRecord;
-          }
+          },
+        };
 
-          const updatedMongoOrder = await Order.findOneAndUpdate(
-            { _id: orderId, status: { $ne: 'paid' } },
-            updateDoc,
-            { new: true }
-          );
+        const updatedMongoOrder = await Order.findOneAndUpdate(
+          { _id: orderId, status: { $ne: 'paid' } },
+          updateDoc,
+          { new: true }
+        );
 
-          if (!updatedMongoOrder) {
-            const latestOrder = await this.findOrderById(orderId);
-            if (latestOrder && latestOrder.status === 'paid') {
-              return { success: true, alreadyPaid: true, order: latestOrder };
-            }
-            return { success: false, error: 'ORDER_NOT_FOUND', order: null };
+        if (!updatedMongoOrder) {
+          const latestOrder = await this.findOrderById(orderId);
+          if (latestOrder && latestOrder.status === 'paid') {
+            return { success: true, alreadyPaid: true, order: latestOrder };
           }
-        } catch (err: any) {
-          if (err?.code === 11000 || String(err?.message || '').includes('E11000')) {
-            return { success: false, error: 'TXID_ALREADY_USED', order: null };
-          }
-          throw err;
+          return { success: false, error: 'ORDER_NOT_FOUND', order: null };
         }
       }
 
       // Atomic JSON fallback update inside the same lock/write critical section
       const db = readLocalDb();
       if (!db.orders) db.orders = [];
-
-      if (txidToRecord) {
-        const duplicateInDb = db.orders.find(
-          (o) =>
-            o.id !== orderId &&
-            (o as any)._id !== orderId &&
-            o.txid &&
-            o.txid.trim().toLowerCase() === txidToRecord
-        );
-        if (duplicateInDb) {
-          return { success: false, error: 'TXID_ALREADY_USED', order: null };
-        }
-      }
 
       let memoryOrder = db.orders.find((o) => o.id === orderId || (o as any)._id === orderId);
       if (!memoryOrder) {
@@ -3089,9 +3534,6 @@ export const DataStore = {
       memoryOrder.paidAt = nowIso;
       memoryOrder.proExpiresAt = computedProExpiresAt ? computedProExpiresAt.toISOString() : null;
       memoryOrder.updatedAt = nowIso;
-      if (txidToRecord) {
-        memoryOrder.txid = txidToRecord;
-      }
       memoryOrder.auditLog = memoryOrder.auditLog || [];
       memoryOrder.auditLog.push({
         status: 'paid',
@@ -3102,12 +3544,16 @@ export const DataStore = {
       writeLocalDb(db);
 
       // 2. Activate Entitlements using lib/plans.ts
-      const resolvedProvider: 'stripe' | 'paymob' | 'binance' =
-        existing.method === 'paymob'
+      const resolvedProvider: 'lemonsqueezy' | 'stripe' | 'paymob' =
+        options?.provider ||
+        (existing.method === 'lemonsqueezy'
+          ? 'lemonsqueezy'
+          : existing.method === 'paymob'
           ? 'paymob'
-          : existing.method === 'stripe'
-          ? 'stripe'
-          : 'binance';
+          : 'stripe');
+
+      const custId = options?.customerId || existing.userEmail;
+      const subId = options?.subscriptionId || existing.reference;
 
       if (existing.planId === 'pro' && computedProExpiresAt) {
         await this.upgradeUserPlan(existing.userId, {
@@ -3116,8 +3562,14 @@ export const DataStore = {
           planExpiresAt: computedProExpiresAt,
           proExpiresAt: computedProExpiresAt,
           paymentProvider: resolvedProvider,
-          providerCustomerId: existing.userEmail,
-          providerSubscriptionId: existing.reference,
+          providerCustomerId: custId,
+          providerSubscriptionId: subId,
+          ...(resolvedProvider === 'lemonsqueezy'
+            ? {
+                lemonCustomerId: options?.customerId || undefined,
+                lemonSubscriptionId: options?.subscriptionId || undefined,
+              }
+            : {}),
           subscriptionStatus: 'active',
           paymentFailedAt: null,
         });
@@ -3126,6 +3578,20 @@ export const DataStore = {
         if (typeof planCredits === 'number' && planCredits > 0) {
           await this.incrementUserCredits(existing.userId, planCredits);
         }
+        if (resolvedProvider === 'lemonsqueezy' && options?.customerId) {
+          const currentUser = await this.findUserById(existing.userId);
+          if (currentUser) {
+            await this.upgradeUserPlan(existing.userId, {
+              plan: ((currentUser as any).plan || 'free') as any,
+              billingCycle: (currentUser as any).billingCycle || 'none',
+              planExpiresAt: (currentUser as any).proExpiresAt || (currentUser as any).planExpiresAt || null,
+              proExpiresAt: (currentUser as any).proExpiresAt || (currentUser as any).planExpiresAt || null,
+              paymentProvider: 'lemonsqueezy',
+              providerCustomerId: options.customerId,
+              lemonCustomerId: options.customerId,
+            });
+          }
+        }
       }
 
       // 3. Record in unified Payment collection for accounting
@@ -3133,23 +3599,144 @@ export const DataStore = {
         userId: existing.userId,
         userEmail: existing.userEmail,
         amount: existing.amount,
-        currency: existing.currency || 'USDT',
-        provider:
-          existing.method === 'paymob'
-            ? 'paymob'
-            : existing.method === 'stripe'
-            ? 'stripe'
-            : 'test',
-        providerPaymentId: txidToRecord || existing.reference,
+        currency: existing.currency || 'USD',
+        provider: resolvedProvider,
+        providerPaymentId: existing.reference,
         planId: existing.planId,
         billingCycle: existing.billingCycle === 'annual' ? 'annual' : existing.billingCycle === 'monthly' ? 'monthly' : 'none',
         status: 'succeeded',
         metadata: {
           orderId: existing.id,
           reference: existing.reference,
-          network: existing.network,
           method: existing.method,
-          txid: txidToRecord,
+        },
+      });
+
+      const updated = await this.findOrderById(orderId);
+      return { success: true, order: updated || memoryOrder };
+    });
+  },
+
+  async refundOrder(
+    orderId: string,
+    options?: {
+      note?: string;
+      actor?: string;
+      eventId?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    alreadyRefunded?: boolean;
+    error?: 'ORDER_NOT_FOUND' | string;
+    order: StoredOrder | null;
+  }> {
+    return withOrderLock(async () => {
+      const existing = await this.findOrderById(orderId);
+      if (!existing) {
+        return { success: false, error: 'ORDER_NOT_FOUND', order: null };
+      }
+
+      if (existing.status === 'refunded') {
+        return { success: true, alreadyRefunded: true, order: existing };
+      }
+
+      const wasPaid = existing.status === 'paid';
+      const nowIso = new Date().toISOString();
+      const actor = options?.actor || 'system';
+      const note = options?.note || `Order refunded via ${existing.method}`;
+
+      const mongoUp = await isMongoAvailable();
+      if (mongoUp && mongoose.Types.ObjectId.isValid(orderId)) {
+        await Order.findOneAndUpdate(
+          { _id: orderId, status: { $ne: 'refunded' } },
+          {
+            $set: {
+              status: 'refunded',
+              updatedAt: new Date(),
+            },
+            $push: {
+              auditLog: {
+                status: 'refunded',
+                timestamp: new Date(),
+                note,
+                actor,
+              },
+            },
+          },
+          { new: true }
+        );
+      }
+
+      const db = readLocalDb();
+      if (!db.orders) db.orders = [];
+      let memoryOrder = db.orders.find((o) => o.id === orderId || (o as any)._id === orderId);
+      if (!memoryOrder) {
+        memoryOrder = { ...existing };
+        db.orders.push(memoryOrder);
+      } else if (memoryOrder.status === 'refunded') {
+        return { success: true, alreadyRefunded: true, order: memoryOrder };
+      }
+
+      memoryOrder.status = 'refunded';
+      memoryOrder.updatedAt = nowIso;
+      memoryOrder.auditLog = memoryOrder.auditLog || [];
+      memoryOrder.auditLog.push({
+        status: 'refunded',
+        timestamp: nowIso,
+        note,
+        actor,
+      });
+      writeLocalDb(db);
+
+      // Revoke entitlements if the order had been paid
+      if (wasPaid) {
+        if (existing.planId === 'pro') {
+          await this.upgradeUserPlan(existing.userId, {
+            plan: 'free',
+            billingCycle: 'none',
+            planExpiresAt: null,
+            proExpiresAt: null,
+            subscriptionStatus: 'canceled',
+          });
+        } else {
+          const planCredits = getPlanCredits(existing.planId);
+          if (typeof planCredits === 'number' && planCredits > 0) {
+            const user = await this.findUserById(existing.userId);
+            const currentCredits = typeof user?.aiCredits === 'number' ? user.aiCredits : 0;
+            const deductAmount = Math.min(currentCredits, planCredits);
+            if (deductAmount > 0) {
+              await this.decrementUserCredits(existing.userId, deductAmount, false);
+            }
+          }
+        }
+      }
+
+      const resolvedProvider: 'lemonsqueezy' | 'stripe' | 'paymob' =
+        existing.method === 'lemonsqueezy'
+          ? 'lemonsqueezy'
+          : existing.method === 'paymob'
+          ? 'paymob'
+          : 'stripe';
+
+      await this.recordPayment({
+        userId: existing.userId,
+        userEmail: existing.userEmail,
+        amount: existing.amount,
+        currency: existing.currency || 'USD',
+        provider: resolvedProvider,
+        providerPaymentId: options?.eventId || existing.reference,
+        planId: existing.planId,
+        billingCycle:
+          existing.billingCycle === 'annual'
+            ? 'annual'
+            : existing.billingCycle === 'monthly'
+            ? 'monthly'
+            : 'none',
+        status: 'refunded',
+        metadata: {
+          orderId: existing.id,
+          reference: existing.reference,
+          method: existing.method,
         },
       });
 
@@ -3214,6 +3801,493 @@ export const DataStore = {
     }
 
     return count;
+  },
+
+  // =========================================================================
+  // AI Usage Tracking & Cost Analytics (AiUsage Collection + Local Fallback)
+  // =========================================================================
+
+  async recordAiUsage(input: {
+    userId?: string | null;
+    endpoint: string;
+    tokens: number;
+    promptTokens?: number;
+    completionTokens?: number;
+    costUsd: number;
+    latencyMs: number;
+    status: AiUsageStatus;
+    fallbackReason?: string;
+    provider?: string;
+    model?: string;
+    createdAt?: Date | string;
+  }): Promise<StoredAiUsage> {
+    const nowIso = input.createdAt
+      ? new Date(input.createdAt).toISOString()
+      : new Date().toISOString();
+    const userId = (input.userId || 'anonymous').trim() || 'anonymous';
+    const endpoint = input.endpoint.trim();
+    const tokens = Math.max(0, Math.round(Number(input.tokens) || 0));
+    const promptTokens = Math.max(0, Math.round(Number(input.promptTokens) || 0));
+    const completionTokens = Math.max(0, Math.round(Number(input.completionTokens) || 0));
+    const costUsd = Math.max(0, Number(Number(input.costUsd || 0).toFixed(6)));
+    const latencyMs = Math.max(0, Math.round(Number(input.latencyMs) || 0));
+    const status: AiUsageStatus = input.status === 'hit' ? 'hit' : 'fallback';
+    const provider = input.provider || (status === 'hit' ? 'openai' : 'built-in-ats-fallback');
+    const model = input.model || 'gpt-4o-mini';
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const doc: any = await AiUsage.create({
+          userId,
+          endpoint,
+          tokens,
+          promptTokens,
+          completionTokens,
+          cost: costUsd,
+          costUsd,
+          latency: latencyMs,
+          latencyMs,
+          status,
+          fallbackReason: input.fallbackReason,
+          provider,
+          model,
+          createdAt: new Date(nowIso),
+        });
+        return {
+          id: doc._id.toString(),
+          userId: doc.userId,
+          endpoint: doc.endpoint,
+          tokens: doc.tokens,
+          promptTokens: doc.promptTokens || 0,
+          completionTokens: doc.completionTokens || 0,
+          cost: doc.cost,
+          costUsd: doc.costUsd,
+          latency: doc.latency,
+          latencyMs: doc.latencyMs,
+          status: doc.status,
+          fallbackReason: doc.fallbackReason,
+          provider: doc.provider || provider,
+          model: doc.model || model,
+          createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : nowIso,
+          updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : nowIso,
+        };
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore.recordAiUsage' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.aiUsage)) {
+        db.aiUsage = [];
+      }
+      const entry: StoredAiUsage = {
+        id: 'aiu_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        userId,
+        endpoint,
+        tokens,
+        promptTokens,
+        completionTokens,
+        cost: costUsd,
+        costUsd,
+        latency: latencyMs,
+        latencyMs,
+        status,
+        fallbackReason: input.fallbackReason,
+        provider,
+        model,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      db.aiUsage.unshift(entry);
+      if (db.aiUsage.length > 5000) {
+        db.aiUsage = db.aiUsage.slice(0, 5000);
+      }
+      writeLocalDb(db);
+      return entry;
+    });
+  },
+
+  async getUserDailyAiUsageCount(
+    userId: string,
+    referenceDate: Date = new Date()
+  ): Promise<{ total: number; hits: number; fallbacks: number; costUsd: number }> {
+    const cleanUserId = (userId || '').trim();
+    if (!cleanUserId || cleanUserId === 'anonymous') {
+      return { total: 0, hits: 0, fallbacks: 0, costUsd: 0 };
+    }
+
+    const startOfTodayUtc = new Date(
+      Date.UTC(
+        referenceDate.getUTCFullYear(),
+        referenceDate.getUTCMonth(),
+        referenceDate.getUTCDate(),
+        0,
+        0,
+        0,
+        0
+      )
+    );
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const docs = await AiUsage.find({
+          userId: cleanUserId,
+          createdAt: { $gte: startOfTodayUtc },
+        }).lean();
+        let hits = 0;
+        let fallbacks = 0;
+        let costUsd = 0;
+        for (const d of docs) {
+          if (d.status === 'hit') hits++;
+          else fallbacks++;
+          costUsd += Number(d.costUsd ?? d.cost ?? 0);
+        }
+        return {
+          total: docs.length,
+          hits,
+          fallbacks,
+          costUsd: Number(costUsd.toFixed(6)),
+        };
+      } catch (err) {
+        Sentry.captureException(err, { tags: { component: 'DataStore.getUserDailyAiUsageCount' } });
+      }
+    }
+
+    const db = readLocalDb();
+    const list = Array.isArray(db.aiUsage) ? db.aiUsage : [];
+    const startMs = startOfTodayUtc.getTime();
+    let total = 0;
+    let hits = 0;
+    let fallbacks = 0;
+    let costUsd = 0;
+
+    for (const item of list) {
+      if (item.userId === cleanUserId && new Date(item.createdAt).getTime() >= startMs) {
+        total++;
+        if (item.status === 'hit') hits++;
+        else fallbacks++;
+        costUsd += Number(item.costUsd ?? item.cost ?? 0);
+      }
+    }
+
+    return {
+      total,
+      hits,
+      fallbacks,
+      costUsd: Number(costUsd.toFixed(6)),
+    };
+  },
+
+  async getProjectDailyAiSpend(
+    referenceDate: Date = new Date()
+  ): Promise<{
+    totalCostUsd: number;
+    totalRequests: number;
+    hits: number;
+    fallbacks: number;
+    totalTokens: number;
+  }> {
+    const startOfTodayUtc = new Date(
+      Date.UTC(
+        referenceDate.getUTCFullYear(),
+        referenceDate.getUTCMonth(),
+        referenceDate.getUTCDate(),
+        0,
+        0,
+        0,
+        0
+      )
+    );
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const docs = await AiUsage.find({
+          createdAt: { $gte: startOfTodayUtc },
+        }).lean();
+        let totalCostUsd = 0;
+        let hits = 0;
+        let fallbacks = 0;
+        let totalTokens = 0;
+        for (const d of docs) {
+          totalCostUsd += Number(d.costUsd ?? d.cost ?? 0);
+          totalTokens += Number(d.tokens || 0);
+          if (d.status === 'hit') hits++;
+          else fallbacks++;
+        }
+        return {
+          totalCostUsd: Number(totalCostUsd.toFixed(6)),
+          totalRequests: docs.length,
+          hits,
+          fallbacks,
+          totalTokens,
+        };
+      } catch (err) {
+        Sentry.captureException(err, { tags: { component: 'DataStore.getProjectDailyAiSpend' } });
+      }
+    }
+
+    const db = readLocalDb();
+    const list = Array.isArray(db.aiUsage) ? db.aiUsage : [];
+    const startMs = startOfTodayUtc.getTime();
+    let totalCostUsd = 0;
+    let totalRequests = 0;
+    let hits = 0;
+    let fallbacks = 0;
+    let totalTokens = 0;
+
+    for (const item of list) {
+      if (new Date(item.createdAt).getTime() >= startMs) {
+        totalRequests++;
+        totalCostUsd += Number(item.costUsd ?? item.cost ?? 0);
+        totalTokens += Number(item.tokens || 0);
+        if (item.status === 'hit') hits++;
+        else fallbacks++;
+      }
+    }
+
+    return {
+      totalCostUsd: Number(totalCostUsd.toFixed(6)),
+      totalRequests,
+      hits,
+      fallbacks,
+      totalTokens,
+    };
+  },
+
+  async getAiUsageStats(referenceDate: Date = new Date()) {
+    const startOfTodayUtc = new Date(
+      Date.UTC(
+        referenceDate.getUTCFullYear(),
+        referenceDate.getUTCMonth(),
+        referenceDate.getUTCDate(),
+        0,
+        0,
+        0,
+        0
+      )
+    );
+    const startOfWeekUtc = new Date(startOfTodayUtc.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    let records: StoredAiUsage[] = [];
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const docs = await AiUsage.find({
+          createdAt: { $gte: startOfWeekUtc },
+        })
+          .sort({ createdAt: -1 })
+          .lean();
+        records = docs.map((d: any) => ({
+          id: d._id.toString(),
+          userId: d.userId,
+          endpoint: d.endpoint,
+          tokens: d.tokens || 0,
+          promptTokens: d.promptTokens || 0,
+          completionTokens: d.completionTokens || 0,
+          cost: Number(d.cost ?? d.costUsd ?? 0),
+          costUsd: Number(d.costUsd ?? d.cost ?? 0),
+          latency: Number(d.latency ?? d.latencyMs ?? 0),
+          latencyMs: Number(d.latencyMs ?? d.latency ?? 0),
+          status: d.status === 'hit' ? 'hit' : 'fallback',
+          fallbackReason: d.fallbackReason,
+          provider: d.provider || 'built-in-ats-engine',
+          model: d.model || 'gpt-4o-mini',
+          createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : String(d.createdAt),
+          updatedAt: d.updatedAt instanceof Date ? d.updatedAt.toISOString() : String(d.updatedAt || d.createdAt),
+        }));
+      } catch (err) {
+        Sentry.captureException(err, { tags: { component: 'DataStore.getAiUsageStats' } });
+      }
+    }
+
+    if (records.length === 0) {
+      const db = readLocalDb();
+      const allLocal = Array.isArray(db.aiUsage) ? db.aiUsage : [];
+      const weekMs = startOfWeekUtc.getTime();
+      records = allLocal.filter((r) => new Date(r.createdAt).getTime() >= weekMs);
+    }
+
+    const todayMs = startOfTodayUtc.getTime();
+
+    const knownEndpoints = [
+      '/api/resume/generate',
+      '/api/cover-letter/generate',
+      '/api/cover-letter/extract-keywords',
+      '/api/jobs/extract-profile',
+      '/api/analyses',
+    ];
+
+    const endpointMap = new Map<
+      string,
+      {
+        endpoint: string;
+        todayCostUsd: number;
+        todayRequests: number;
+        todayTokens: number;
+        todayHits: number;
+        todayFallbacks: number;
+        weekCostUsd: number;
+        weekRequests: number;
+        weekTokens: number;
+        weekHits: number;
+        weekFallbacks: number;
+        totalLatencyMs: number;
+      }
+    >();
+
+    for (const ep of knownEndpoints) {
+      endpointMap.set(ep, {
+        endpoint: ep,
+        todayCostUsd: 0,
+        todayRequests: 0,
+        todayTokens: 0,
+        todayHits: 0,
+        todayFallbacks: 0,
+        weekCostUsd: 0,
+        weekRequests: 0,
+        weekTokens: 0,
+        weekHits: 0,
+        weekFallbacks: 0,
+        totalLatencyMs: 0,
+      });
+    }
+
+    let todayCostUsd = 0;
+    let todayRequests = 0;
+    let todayTokens = 0;
+    let todayHits = 0;
+    let todayFallbacks = 0;
+    let todayLatencySum = 0;
+
+    let weekCostUsd = 0;
+    let weekRequests = 0;
+    let weekTokens = 0;
+    let weekHits = 0;
+    let weekFallbacks = 0;
+    let weekLatencySum = 0;
+
+    for (const rec of records) {
+      const createdMs = new Date(rec.createdAt).getTime();
+      const isToday = createdMs >= todayMs;
+      const cost = Number(rec.costUsd ?? rec.cost ?? 0);
+      const tokens = Number(rec.tokens || 0);
+      const latency = Number(rec.latencyMs ?? rec.latency ?? 0);
+      const isHit = rec.status === 'hit';
+
+      weekCostUsd += cost;
+      weekRequests += 1;
+      weekTokens += tokens;
+      weekLatencySum += latency;
+      if (isHit) weekHits += 1;
+      else weekFallbacks += 1;
+
+      if (isToday) {
+        todayCostUsd += cost;
+        todayRequests += 1;
+        todayTokens += tokens;
+        todayLatencySum += latency;
+        if (isHit) todayHits += 1;
+        else todayFallbacks += 1;
+      }
+
+      const epKey = rec.endpoint || 'unknown';
+      if (!endpointMap.has(epKey)) {
+        endpointMap.set(epKey, {
+          endpoint: epKey,
+          todayCostUsd: 0,
+          todayRequests: 0,
+          todayTokens: 0,
+          todayHits: 0,
+          todayFallbacks: 0,
+          weekCostUsd: 0,
+          weekRequests: 0,
+          weekTokens: 0,
+          weekHits: 0,
+          weekFallbacks: 0,
+          totalLatencyMs: 0,
+        });
+      }
+
+      const epStats = endpointMap.get(epKey)!;
+      epStats.weekCostUsd += cost;
+      epStats.weekRequests += 1;
+      epStats.weekTokens += tokens;
+      epStats.totalLatencyMs += latency;
+      if (isHit) epStats.weekHits += 1;
+      else epStats.weekFallbacks += 1;
+
+      if (isToday) {
+        epStats.todayCostUsd += cost;
+        epStats.todayRequests += 1;
+        epStats.todayTokens += tokens;
+        if (isHit) epStats.todayHits += 1;
+        else epStats.todayFallbacks += 1;
+      }
+    }
+
+    const rawBudget = parseFloat(process.env.AI_DAILY_BUDGET_USD || '10');
+    const dailyBudgetUsd = Number.isFinite(rawBudget) && rawBudget >= 0 ? rawBudget : 10;
+
+    const endpoints = Array.from(endpointMap.values()).map((ep) => ({
+      endpoint: ep.endpoint,
+      todayCostUsd: Number(ep.todayCostUsd.toFixed(6)),
+      todayRequests: ep.todayRequests,
+      todayTokens: ep.todayTokens,
+      todayHits: ep.todayHits,
+      todayFallbacks: ep.todayFallbacks,
+      weekCostUsd: Number(ep.weekCostUsd.toFixed(6)),
+      weekRequests: ep.weekRequests,
+      weekTokens: ep.weekTokens,
+      weekHits: ep.weekHits,
+      weekFallbacks: ep.weekFallbacks,
+      avgLatencyMs: ep.weekRequests > 0 ? Math.round(ep.totalLatencyMs / ep.weekRequests) : 0,
+    }));
+
+    return {
+      today: {
+        costUsd: Number(todayCostUsd.toFixed(6)),
+        requests: todayRequests,
+        tokens: todayTokens,
+        hits: todayHits,
+        fallbacks: todayFallbacks,
+        avgLatencyMs: todayRequests > 0 ? Math.round(todayLatencySum / todayRequests) : 0,
+      },
+      week: {
+        costUsd: Number(weekCostUsd.toFixed(6)),
+        requests: weekRequests,
+        tokens: weekTokens,
+        hits: weekHits,
+        fallbacks: weekFallbacks,
+        avgLatencyMs: weekRequests > 0 ? Math.round(weekLatencySum / weekRequests) : 0,
+      },
+      dailyBudgetUsd,
+      budgetRemainingUsd: Number(Math.max(0, dailyBudgetUsd - todayCostUsd).toFixed(6)),
+      budgetExceeded: todayCostUsd >= dailyBudgetUsd,
+      endpoints,
+      recentLogs: records.slice(0, 30),
+    };
+  },
+
+  async clearAiUsageForTesting(): Promise<void> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        await AiUsage.deleteMany({});
+      } catch {
+        // ignore in local fallback mode
+      }
+    }
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      db.aiUsage = [];
+      writeLocalDb(db);
+    });
   },
 };
 

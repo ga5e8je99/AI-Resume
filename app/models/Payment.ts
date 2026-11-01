@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type PaymentStatus = 'succeeded' | 'pending' | 'failed' | 'refunded';
-export type PaymentProviderType = 'stripe' | 'paymob' | 'test';
+export type PaymentProviderType = 'lemonsqueezy' | 'stripe' | 'paymob' | 'test';
 
 export interface IPayment extends Document {
   userId: string;
@@ -40,7 +40,7 @@ const PaymentSchema = new Schema<IPayment>(
     },
     provider: {
       type: String,
-      enum: ['stripe', 'paymob', 'test'],
+      enum: ['lemonsqueezy', 'stripe', 'paymob', 'test'],
       required: [true, 'Payment provider is required'],
       index: true,
     },

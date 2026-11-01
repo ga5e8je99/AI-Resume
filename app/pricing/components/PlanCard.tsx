@@ -4,24 +4,26 @@ import React from 'react';
 import {
   PlanConfig,
   CurrencyCode,
+  DisplayCurrencyCode,
   BillingCycle,
   formatPrice,
+  formatDisplayPrice,
   getLocalized,
 } from '@/lib/plans';
 import { useLanguage } from '@/app/context/LanguageContext';
 import { Button } from '@/components/ui/Button';
-import { Check, X, ArrowRight } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 
 export interface PlanCardProps {
   plan: PlanConfig;
   currency: CurrencyCode;
+  displayCurrency?: DisplayCurrencyCode;
   billingCycle: BillingCycle;
   isCurrentPlan: boolean;
   isProUser: boolean;
   isExpiringSoon: boolean;
   hasStripeBilling: boolean;
   isMainLoading: boolean;
-  isCryptoLoading: boolean;
   isPortalLoading: boolean;
   isAnyBusy: boolean;
   onSelectPlan: (plan: PlanConfig, overrideCurrency?: CurrencyCode) => void;
@@ -31,18 +33,19 @@ export interface PlanCardProps {
 export function PlanCard({
   plan,
   currency,
+  displayCurrency,
   billingCycle,
   isCurrentPlan,
   isExpiringSoon,
   hasStripeBilling,
   isMainLoading,
-  isCryptoLoading,
   isPortalLoading,
   isAnyBusy,
   onSelectPlan,
   onManageSubscription,
 }: PlanCardProps) {
   const { language, t } = useLanguage();
+  const effectiveDisplayCurrency: DisplayCurrencyCode = displayCurrency || currency;
 
   const isFree = plan.id === 'free';
   const isPro = plan.id === 'pro';
@@ -51,32 +54,89 @@ export function PlanCard({
   let displayPrice = '$0';
   let priceSubtext = '';
   let annualNote = '';
+  let providerBilledNote = '';
 
   if (isFree) {
-    displayPrice = formatPrice(0, currency, language);
+    const freeFormatted = formatDisplayPrice(0, 0, effectiveDisplayCurrency, currency, language);
+    displayPrice = freeFormatted.formattedDisplay;
     priceSubtext = t('pricing_plan_forever');
   } else if (isPro) {
-    const currKey = currency === 'EGP' ? 'EGP' : 'USD';
     if (billingCycle === 'annual') {
-      const annualMonthly = plan.pricing[currKey].annualMonthly ?? 0;
-      const annualTotal = plan.pricing[currKey].annualTotal ?? 0;
+      const usdAnnualMonthly = plan.pricing.USD.annualMonthly ?? 0;
+      const egpAnnualMonthly = plan.pricing.EGP.annualMonthly ?? 0;
+      const usdAnnualTotal = plan.pricing.USD.annualTotal ?? 0;
+      const egpAnnualTotal = plan.pricing.EGP.annualTotal ?? 0;
 
-      displayPrice = formatPrice(annualMonthly, currency, language);
+      const monthlyFormatted = formatDisplayPrice(
+        usdAnnualMonthly,
+        egpAnnualMonthly,
+        effectiveDisplayCurrency,
+        currency,
+        language
+      );
+      const totalFormatted = formatDisplayPrice(
+        usdAnnualTotal,
+        egpAnnualTotal,
+        effectiveDisplayCurrency,
+        currency,
+        language
+      );
+
+      displayPrice = monthlyFormatted.formattedDisplay;
       priceSubtext = t('pricing_plan_per_month');
       annualNote = t('pricing_billed_annually_note').replace(
         '{amount}',
-        formatPrice(annualTotal, currency, language)
+        totalFormatted.formattedDisplay
       );
+      if (totalFormatted.isDisplayOnlyConversion) {
+        providerBilledNote = t('pricing_card_billed_in_provider')
+          .replace(
+            '{amount}',
+            formatPrice(totalFormatted.providerBillingAmount, currency, language)
+          )
+          .replace('{currency}', currency);
+      }
     } else {
-      const monthlyPrice = plan.pricing[currKey].monthly ?? 0;
-      displayPrice = formatPrice(monthlyPrice, currency, language);
+      const usdMonthly = plan.pricing.USD.monthly ?? 0;
+      const egpMonthly = plan.pricing.EGP.monthly ?? 0;
+      const monthlyFormatted = formatDisplayPrice(
+        usdMonthly,
+        egpMonthly,
+        effectiveDisplayCurrency,
+        currency,
+        language
+      );
+      displayPrice = monthlyFormatted.formattedDisplay;
       priceSubtext = t('pricing_plan_per_month');
+      if (monthlyFormatted.isDisplayOnlyConversion) {
+        providerBilledNote = t('pricing_card_billed_in_provider')
+          .replace(
+            '{amount}',
+            formatPrice(monthlyFormatted.providerBillingAmount, currency, language)
+          )
+          .replace('{currency}', currency);
+      }
     }
   } else if (isPayg) {
-    const currKey = currency === 'EGP' ? 'EGP' : 'USD';
-    const packPrice = plan.pricing[currKey].oneTime ?? 0;
-    displayPrice = formatPrice(packPrice, currency, language);
+    const usdOneTime = plan.pricing.USD.oneTime ?? 0;
+    const egpOneTime = plan.pricing.EGP.oneTime ?? 0;
+    const packFormatted = formatDisplayPrice(
+      usdOneTime,
+      egpOneTime,
+      effectiveDisplayCurrency,
+      currency,
+      language
+    );
+    displayPrice = packFormatted.formattedDisplay;
     priceSubtext = t('pricing_plan_one_time');
+    if (packFormatted.isDisplayOnlyConversion) {
+      providerBilledNote = t('pricing_card_billed_in_provider')
+        .replace(
+          '{amount}',
+          formatPrice(packFormatted.providerBillingAmount, currency, language)
+        )
+        .replace('{currency}', currency);
+    }
   }
 
   return (
@@ -118,6 +178,14 @@ export function PlanCard({
           </div>
           {annualNote && (
             <p className="text-[11px] text-ink-2 mt-1 font-mono">{annualNote}</p>
+          )}
+          {providerBilledNote && (
+            <p
+              data-testid="card-provider-billing-note"
+              className="text-[11px] text-accent font-mono mt-1.5 bg-surface-2 px-2 py-0.5 rounded inline-block border border-line"
+            >
+              {providerBilledNote}
+            </p>
           )}
         </div>
 
@@ -170,7 +238,7 @@ export function PlanCard({
               size="md"
               fullWidth
               loading={isMainLoading}
-              loadingText={t('common_loading')}
+              loadingText={t('pricing_checkout_loading')}
               disabled={isAnyBusy && !isMainLoading}
               aria-busy={isMainLoading}
               onClick={() => onSelectPlan(plan)}
@@ -188,29 +256,12 @@ export function PlanCard({
             size="md"
             fullWidth
             loading={isMainLoading}
-            loadingText={t('common_loading')}
+            loadingText={t('pricing_checkout_loading')}
             disabled={isAnyBusy && !isMainLoading}
             aria-busy={isMainLoading}
             onClick={() => onSelectPlan(plan)}
           >
             {getLocalized(plan.cta, language)}
-          </Button>
-        )}
-
-        {!isFree && !isCurrentPlan && currency !== 'USDT' && (
-          <Button
-            variant="ghost"
-            size="sm"
-            fullWidth
-            loading={isCryptoLoading}
-            loadingText={t('common_loading')}
-            disabled={isAnyBusy && !isCryptoLoading}
-            aria-busy={isCryptoLoading}
-            rightIcon={<ArrowRight className="w-3 h-3 rtl:-scale-x-100" />}
-            onClick={() => onSelectPlan(plan, 'USDT')}
-            className="text-[11px] font-mono text-ink-2 hover:text-accent"
-          >
-            {t('pricing_or_pay_crypto')}
           </Button>
         )}
       </div>
@@ -219,4 +270,3 @@ export function PlanCard({
 }
 
 export default PlanCard;
-

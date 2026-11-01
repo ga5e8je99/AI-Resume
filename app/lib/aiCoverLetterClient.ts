@@ -5,14 +5,31 @@ import {
   CoverLetterTone,
 } from '../cover-letter/types';
 import { CoverLetterService } from './coverLetterService';
+import {
+  evaluateAiPreCallGuard,
+  logAiUsageAndCheckBudget,
+  recordCircuitSuccess,
+  recordCircuitFailure,
+  getCircuitBreakerState,
+  resetCircuitBreaker,
+  estimateTokensFromText,
+  estimateAiCostUsd,
+  CircuitBreakerSnapshot,
+} from './aiGovernance';
 
 export interface AIClientConfig {
   apiKey: string;
   model: string;
   baseUrl: string;
   timeoutMs: number;
+  maxTokens: number;
   maxRetries: number;
   enabled: boolean;
+}
+
+export interface AICoverLetterRequestOptions {
+  userId?: string | null;
+  endpoint?: string;
 }
 
 export interface AICoverLetterResult {
@@ -20,29 +37,45 @@ export interface AICoverLetterResult {
   provider: string;
   aiGenerated: boolean;
   fallbackReason?: string;
+  tokens?: number;
+  costUsd?: number;
   latencyMs: number;
 }
 
 export class AICoverLetterClient {
   /**
    * Resolve environment settings safely at runtime
+   * Enforces timeout, max_tokens, and 1 retry by default.
    */
   static getConfig(): AIClientConfig {
     const apiKey = (process.env.OPENAI_API_KEY || '').trim();
     const model = (process.env.OPENAI_MODEL || 'gpt-4o-mini').trim();
     const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
     const timeoutMs = parseInt(process.env.AI_REQUEST_TIMEOUT_MS || '15000', 10);
-    const maxRetries = parseInt(process.env.AI_MAX_RETRIES || '2', 10);
+    const maxTokens = parseInt(
+      process.env.AI_COVER_LETTER_MAX_TOKENS || process.env.AI_MAX_TOKENS || '1500',
+      10
+    );
+    const maxRetries = parseInt(process.env.AI_MAX_RETRIES || '1', 10);
     const enabled = process.env.AI_PROVIDER_ENABLED !== 'false' && apiKey.length > 0;
 
     return {
       apiKey,
       model,
       baseUrl,
-      timeoutMs: isNaN(timeoutMs) || timeoutMs < 1000 ? 15000 : timeoutMs,
-      maxRetries: isNaN(maxRetries) || maxRetries < 0 ? 2 : Math.min(maxRetries, 5),
+      timeoutMs: isNaN(timeoutMs) || timeoutMs < 100 ? 15000 : timeoutMs,
+      maxTokens: isNaN(maxTokens) || maxTokens < 100 ? 1500 : Math.min(maxTokens, 4096),
+      maxRetries: isNaN(maxRetries) || maxRetries < 0 ? 1 : Math.min(maxRetries, 3),
       enabled,
     };
+  }
+
+  static getCircuitBreakerState(now?: number): CircuitBreakerSnapshot {
+    return getCircuitBreakerState(now);
+  }
+
+  static resetCircuitBreaker(): void {
+    resetCircuitBreaker();
   }
 
   /**
@@ -54,18 +87,80 @@ export class AICoverLetterClient {
 
   /**
    * Main entry point: Generates a tailored cover letter using external AI (LLM) if available,
-   * with automatic, graceful fallback to the robust algorithmic ATS generator on any error or timeout.
+   * enforcing circuit breaker, daily user quota (lib/plans.ts), and daily project budget (AI_DAILY_BUDGET_USD),
+   * and logging every request in the AiUsage collection.
    */
   static async generateCoverLetter(
     req: GenerateCoverLetterRequest,
-    resumeData?: any
+    resumeData?: any,
+    options?: AICoverLetterRequestOptions
   ): Promise<AICoverLetterResult> {
     const startTime = Date.now();
     const config = this.getConfig();
+    const userId = options?.userId || (req as any)?.userId || 'anonymous';
+    const endpoint = options?.endpoint || '/api/cover-letter/generate';
 
-    // 1. If AI is not configured or disabled, smoothly use domain-driven fallback
+    const { systemPrompt, userPrompt } = this.buildPrompts(req, resumeData);
+    const approxPromptTokens = estimateTokensFromText(systemPrompt + '\n' + userPrompt);
+
+    // 1. Check Circuit Breaker, Global Daily Budget (AI_DAILY_BUDGET_USD), and Per-User Daily Limit (from plans.ts)
+    const guard = await evaluateAiPreCallGuard({ userId, endpoint });
+    if (!guard.allowExternalCall) {
+      const fallbackLetter = CoverLetterService.generateCoverLetter(req, resumeData);
+      const approxCompletionTokens = estimateTokensFromText(fallbackLetter.content?.fullText || '');
+      const totalTokens = approxPromptTokens + approxCompletionTokens;
+      const latencyMs = Date.now() - startTime;
+
+      await logAiUsageAndCheckBudget({
+        userId,
+        endpoint,
+        tokens: totalTokens,
+        promptTokens: approxPromptTokens,
+        completionTokens: approxCompletionTokens,
+        costUsd: 0,
+        latencyMs,
+        status: 'fallback',
+        fallbackReason: guard.fallbackReason,
+        provider: 'built-in-ats-fallback',
+        model: config.model,
+      });
+
+      return {
+        coverLetter: {
+          ...fallbackLetter,
+          provider: 'built-in-ats-fallback',
+          aiGenerated: false,
+        },
+        provider: 'built-in-ats-fallback',
+        aiGenerated: false,
+        fallbackReason: guard.fallbackReason,
+        tokens: totalTokens,
+        costUsd: 0,
+        latencyMs,
+      };
+    }
+
+    // 2. If AI is not configured or disabled, smoothly use domain-driven fallback and log usage
     if (!config.enabled) {
       const fallbackLetter = CoverLetterService.generateCoverLetter(req, resumeData);
+      const approxCompletionTokens = estimateTokensFromText(fallbackLetter.content?.fullText || '');
+      const totalTokens = approxPromptTokens + approxCompletionTokens;
+      const latencyMs = Date.now() - startTime;
+
+      await logAiUsageAndCheckBudget({
+        userId,
+        endpoint,
+        tokens: totalTokens,
+        promptTokens: approxPromptTokens,
+        completionTokens: approxCompletionTokens,
+        costUsd: 0,
+        latencyMs,
+        status: 'fallback',
+        fallbackReason: 'provider_not_configured',
+        provider: 'built-in-ats-engine',
+        model: config.model,
+      });
+
       return {
         coverLetter: {
           ...fallbackLetter,
@@ -74,13 +169,41 @@ export class AICoverLetterClient {
         },
         provider: 'built-in-ats-engine',
         aiGenerated: false,
-        latencyMs: Date.now() - startTime,
+        fallbackReason: 'provider_not_configured',
+        tokens: totalTokens,
+        costUsd: 0,
+        latencyMs,
       };
     }
 
-    // 2. Attempt generation via external AI Provider with retries and timeout
+    // 3. Attempt generation via external AI Provider with single retry and timeout
     try {
-      const aiResult = await this.callAIWithRetry(req, resumeData, config);
+      const { coverLetter: aiResult, promptTokens, completionTokens } = await this.callAIWithRetry(
+        req,
+        config,
+        systemPrompt,
+        userPrompt,
+        approxPromptTokens
+      );
+      recordCircuitSuccess();
+
+      const totalTokens = promptTokens + completionTokens;
+      const costUsd = estimateAiCostUsd(promptTokens, completionTokens, config.model);
+      const latencyMs = Date.now() - startTime;
+
+      await logAiUsageAndCheckBudget({
+        userId,
+        endpoint,
+        tokens: totalTokens,
+        promptTokens,
+        completionTokens,
+        costUsd,
+        latencyMs,
+        status: 'hit',
+        provider: config.model,
+        model: config.model,
+      });
+
       return {
         coverLetter: {
           ...aiResult,
@@ -89,16 +212,37 @@ export class AICoverLetterClient {
         },
         provider: config.model,
         aiGenerated: true,
-        latencyMs: Date.now() - startTime,
+        tokens: totalTokens,
+        costUsd,
+        latencyMs,
       };
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown external AI error';
+      recordCircuitFailure(errorMsg);
       console.warn(
         `[AICoverLetterClient] External AI provider failed (${errorMsg}). Switching smoothly to built-in ATS fallback.`
       );
 
-      // 3. Fallback safely without crashing or leaking server details
+      // 4. Fallback safely without crashing or leaking server details and log in AiUsage
       const fallbackLetter = CoverLetterService.generateCoverLetter(req, resumeData);
+      const approxCompletionTokens = estimateTokensFromText(fallbackLetter.content?.fullText || '');
+      const totalTokens = approxPromptTokens + approxCompletionTokens;
+      const latencyMs = Date.now() - startTime;
+
+      await logAiUsageAndCheckBudget({
+        userId,
+        endpoint,
+        tokens: totalTokens,
+        promptTokens: approxPromptTokens,
+        completionTokens: approxCompletionTokens,
+        costUsd: 0,
+        latencyMs,
+        status: 'fallback',
+        fallbackReason: errorMsg,
+        provider: 'built-in-ats-fallback',
+        model: config.model,
+      });
+
       return {
         coverLetter: {
           ...fallbackLetter,
@@ -108,20 +252,23 @@ export class AICoverLetterClient {
         provider: 'built-in-ats-fallback',
         aiGenerated: false,
         fallbackReason: errorMsg,
-        latencyMs: Date.now() - startTime,
+        tokens: totalTokens,
+        costUsd: 0,
+        latencyMs,
       };
     }
   }
 
   /**
-   * Execute API call to OpenAI-compatible Chat Completion endpoint with bounded retries and timeout
+   * Execute API call to OpenAI-compatible Chat Completion endpoint with bounded retry (1 retry) and timeout
    */
   private static async callAIWithRetry(
     req: GenerateCoverLetterRequest,
-    resumeData: any,
-    config: AIClientConfig
-  ): Promise<CoverLetterData> {
-    const { systemPrompt, userPrompt } = this.buildPrompts(req, resumeData);
+    config: AIClientConfig,
+    systemPrompt: string,
+    userPrompt: string,
+    approxPromptTokens: number
+  ): Promise<{ coverLetter: CoverLetterData; promptTokens: number; completionTokens: number }> {
     let attempt = 0;
     let lastError: Error | null = null;
 
@@ -144,7 +291,7 @@ export class AICoverLetterClient {
               { role: 'user', content: userPrompt },
             ],
             temperature: 0.7,
-            max_tokens: 1500,
+            max_tokens: config.maxTokens,
             response_format: { type: 'json_object' },
           }),
           signal: controller.signal,
@@ -163,7 +310,7 @@ export class AICoverLetterClient {
 
           // Transient errors (429 Rate Limit, 500, 502, 503, 504) -> retry if attempts remaining
           if (attempt <= config.maxRetries) {
-            const delay = attempt * 800 + Math.floor(Math.random() * 200);
+            const delay = attempt * 300 + Math.floor(Math.random() * 100);
             await new Promise((res) => setTimeout(res, delay));
             continue;
           }
@@ -178,7 +325,17 @@ export class AICoverLetterClient {
           throw new Error('AI Provider returned empty or invalid completion payload');
         }
 
-        return this.parseAndValidateAIResponse(rawContent, req);
+        const coverLetter = this.parseAndValidateAIResponse(rawContent, req);
+        const promptTokens =
+          typeof data?.usage?.prompt_tokens === 'number' && data.usage.prompt_tokens > 0
+            ? data.usage.prompt_tokens
+            : approxPromptTokens;
+        const completionTokens =
+          typeof data?.usage?.completion_tokens === 'number' && data.usage.completion_tokens > 0
+            ? data.usage.completion_tokens
+            : estimateTokensFromText(rawContent);
+
+        return { coverLetter, promptTokens, completionTokens };
       } catch (err: unknown) {
         clearTimeout(timeoutHandle);
         lastError = err instanceof Error ? err : new Error(String(err));
@@ -188,7 +345,7 @@ export class AICoverLetterClient {
         const isNetworkErr = errObj?.code === 'ECONNRESET' || errObj?.code === 'ETIMEDOUT' || isAbort;
 
         if (isNetworkErr && attempt <= config.maxRetries) {
-          const delay = attempt * 1000;
+          const delay = attempt * 300;
           await new Promise((res) => setTimeout(res, delay));
           continue;
         }

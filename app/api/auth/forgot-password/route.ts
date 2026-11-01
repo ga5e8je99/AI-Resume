@@ -58,13 +58,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const userLang = (
+      ['en', 'ar', 'fr', 'de', 'es', 'tr'].includes(language) ? language : 'en'
+    ) as 'en' | 'ar' | 'fr' | 'de' | 'es' | 'tr';
+
+    const genericMessages: Record<string, string> = {
+      en: 'If an account exists with this email address, a password reset link has been sent.',
+      ar: 'إذا كان هذا البريد مسجلاً لدينا، فستصلك رسالة تحتوي على رابط لإعادة تعيين كلمة المرور.',
+      fr: 'Si un compte existe avec cette adresse e-mail, un lien de réinitialisation a été envoyé.',
+      de: 'Wenn ein Konto mit dieser E-Mail-Adresse existiert, wurde ein Link zum Zurücksetzen des Passworts gesendet.',
+      es: 'Si existe una cuenta con este correo electrónico, se ha enviado un enlace para restablecer la contraseña.',
+      tr: 'Bu e-posta adresiyle kayıtlı bir hesap varsa, şifre sıfırlama bağlantısı gönderilmiştir.',
+    };
+
     // Always return this generic response to prevent user enumeration
     const genericResponse = {
       success: true,
-      message:
-        language === 'ar'
-          ? 'إذا كان هذا البريد مسجلاً لدينا، فستصلك رسالة تحتوي على رابط لإعادة تعيين كلمة المرور.'
-          : 'If an account exists with this email address, a password reset link has been sent.',
+      message: genericMessages[userLang] || genericMessages.en,
     };
 
     const user = await DataStore.findUserByEmail(cleanEmail);
@@ -92,7 +102,6 @@ export async function POST(req: NextRequest) {
     await DataStore.setResetPasswordToken(user.id, tokenHash, expires);
 
     // Send transactional email non-blocking (never fail the response)
-    const userLang = (['en', 'ar', 'fr', 'de', 'es', 'tr'].includes(language) ? language : 'en') as 'en' | 'ar' | 'fr' | 'de' | 'es' | 'tr';
     const resetSubjects: Record<string, string> = {
       en: 'Reset Your Password - JobMatch AI',
       ar: 'إعادة تعيين كلمة المرور - JobMatch AI',

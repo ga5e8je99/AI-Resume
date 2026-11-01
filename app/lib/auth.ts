@@ -39,10 +39,26 @@ export function signToken(payload: AuthTokenPayload): string {
   });
 }
 
+const revokedUserIds = new Set<string>();
+
+export function revokeUserSessions(userId: string): void {
+  if (userId) {
+    revokedUserIds.add(userId);
+  }
+}
+
+export function isUserSessionRevoked(userId: string): boolean {
+  return Boolean(userId && revokedUserIds.has(userId));
+}
+
 // Verify JWT token
 export function verifyToken(token: string): AuthTokenPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    if (decoded?.userId && revokedUserIds.has(decoded.userId)) {
+      return null;
+    }
+    return decoded;
   } catch (err) {
     return null;
   }

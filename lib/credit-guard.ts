@@ -46,6 +46,16 @@ export interface CreditGuardHandlerContext {
 }
 
 /**
+ * Checks whether a user's email address is verified.
+ * Demo accounts and admin accounts are exempt; regular users require a non-null `emailVerified` date.
+ */
+export function isUserEmailVerified(user: any): boolean {
+  if (!user) return false;
+  if (user.isDemo === true || user.role === 'admin') return true;
+  return Boolean(user.emailVerified);
+}
+
+/**
  * Checks whether the given user has sufficient AI generation credits or an active Pro plan.
  *
  * Rules:
@@ -149,6 +159,26 @@ export async function requireCredits(
       isDemo: true,
       unlimited: true,
       creditsLeft: Infinity,
+    };
+  }
+
+  // 2b. Email Verification Guard: Unverified users can sign in and use the basic CV builder,
+  //     but are blocked from Free/Paid Job Search and AI generation until verified.
+  if (!isUserEmailVerified(user)) {
+    return {
+      allowed: false,
+      isDemo: false,
+      unlimited: false,
+      creditsLeft: 0,
+      errorResponse: NextResponse.json(
+        {
+          error: 'EMAIL_NOT_VERIFIED',
+          message:
+            'Please verify your email address before using AI generation or job search. Check your inbox or resend the verification email.',
+          resendUrl: '/api/auth/resend-verification',
+        },
+        { status: 403 }
+      ),
     };
   }
 

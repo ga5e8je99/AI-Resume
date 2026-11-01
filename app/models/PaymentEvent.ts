@@ -3,29 +3,27 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export type PaymentEventStatus = 'processed' | 'rejected';
 
 export interface IPaymentEvent extends Document {
+  _id: mongoose.Types.ObjectId;
   eventId: string;
-  provider: 'stripe' | 'paymob' | 'binance_pay' | 'test';
+  provider: 'lemonsqueezy' | 'stripe' | 'paymob' | 'test';
   eventType: string;
   status: PaymentEventStatus;
   processedAt: Date;
   payload?: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 const PaymentEventSchema = new Schema<IPaymentEvent>(
   {
     eventId: {
       type: String,
-      required: [true, 'eventId is required for idempotency'],
+      required: true,
       unique: true,
       index: true,
     },
     provider: {
       type: String,
-      enum: ['stripe', 'paymob', 'binance_pay', 'test'],
+      enum: ['lemonsqueezy', 'stripe', 'paymob', 'test'],
       required: true,
-      index: true,
     },
     eventType: {
       type: String,

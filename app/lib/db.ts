@@ -16,6 +16,8 @@ if (!global.mongooseCache) {
   global.mongooseCache = cached;
 }
 
+let localFallbackLogged = false;
+
 /**
  * Serverless-Safe MongoDB Connection
  * Reuses active Mongoose connections across warm serverless function invocations (Vercel Lambdas)
@@ -36,14 +38,15 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   // 3. Obtain connection URI
   const env = getEnv();
   const uri = env.MONGODB_URI;
+  const isLocalUri = /^mongodb:\/\/(127\.0\.0\.1|localhost)(:|\/)/i.test(uri);
 
   // 4. Initiate or join existing connection promise
   if (!cached.promise) {
     const opts: mongoose.ConnectOptions = {
-      bufferCommands: false,           // Fail fast instead of buffering operations if disconnected
-      maxPoolSize: 10,                 // Bounded connection pool for serverless lambdas
-      serverSelectionTimeoutMS: 10000, // 10 seconds for initial TLS/DNS handshake on Atlas cold starts
-      socketTimeoutMS: 45000,          // 45 seconds socket keep-alive
+      bufferCommands: false,                        // Fail fast instead of buffering operations if disconnected
+      maxPoolSize: 10,                              // Bounded connection pool for serverless lambdas
+      serverSelectionTimeoutMS: isLocalUri ? 800 : 10000, // Fast 800ms check for local loopback; 10s for remote Atlas
+      socketTimeoutMS: 45000,                       // 45 seconds socket keep-alive
     };
 
     cached.promise = mongoose.connect(uri, opts).then((m) => {
@@ -57,7 +60,14 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   } catch (e) {
     cached.promise = null; // Clear promise on error so subsequent requests can re-attempt
     cached.conn = null;
-    console.error('❌ MongoDB connection error:', e);
+    if (isLocalUri) {
+      if (!localFallbackLogged) {
+        localFallbackLogged = true;
+        console.info('ℹ️ Local MongoDB (127.0.0.1:27017) is not running — using local JSON datastore (.data/db.json).');
+      }
+    } else {
+      console.error('❌ MongoDB connection error:', e);
+    }
     throw e;
   }
 

@@ -1,90 +1,237 @@
 import { ResumeData } from '../builder/types';
 import { GenerateResumeRequest, ResumeService, GeneratedResumeResult } from './resumeService';
+import {
+  evaluateAiPreCallGuard,
+  logAiUsageAndCheckBudget,
+  recordCircuitSuccess,
+  recordCircuitFailure,
+  getCircuitBreakerState,
+  resetCircuitBreaker,
+  estimateTokensFromText,
+  estimateAiCostUsd,
+  CircuitBreakerSnapshot,
+} from './aiGovernance';
 
 export interface AIResumeClientConfig {
   apiKey: string;
   model: string;
   baseUrl: string;
   timeoutMs: number;
+  maxTokens: number;
   maxRetries: number;
   enabled: boolean;
+}
+
+export interface AIResumeRequestOptions {
+  userId?: string | null;
+  endpoint?: string;
 }
 
 export class AIResumeClient {
   /**
    * Safely resolve environment settings at runtime
+   * Enforces timeout, max_tokens, and 1 retry by default.
    */
   static getConfig(): AIResumeClientConfig {
     const apiKey = (process.env.OPENAI_API_KEY || '').trim();
     const model = (process.env.OPENAI_MODEL || 'gpt-4o-mini').trim();
     const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
-    const timeoutMs = parseInt(process.env.AI_REQUEST_TIMEOUT_MS || '18000', 10);
-    const maxRetries = parseInt(process.env.AI_MAX_RETRIES || '2', 10);
+    const timeoutMs = parseInt(process.env.AI_REQUEST_TIMEOUT_MS || '15000', 10);
+    const maxTokens = parseInt(
+      process.env.AI_RESUME_MAX_TOKENS || process.env.AI_MAX_TOKENS || '2500',
+      10
+    );
+    const maxRetries = parseInt(process.env.AI_MAX_RETRIES || '1', 10);
     const enabled = process.env.AI_PROVIDER_ENABLED !== 'false' && apiKey.length > 0;
 
     return {
       apiKey,
       model,
       baseUrl,
-      timeoutMs: isNaN(timeoutMs) || timeoutMs < 1000 ? 18000 : timeoutMs,
-      maxRetries: isNaN(maxRetries) || maxRetries < 0 ? 2 : Math.min(maxRetries, 5),
+      timeoutMs: isNaN(timeoutMs) || timeoutMs < 100 ? 15000 : timeoutMs,
+      maxTokens: isNaN(maxTokens) || maxTokens < 100 ? 2500 : Math.min(maxTokens, 4096),
+      maxRetries: isNaN(maxRetries) || maxRetries < 0 ? 1 : Math.min(maxRetries, 3),
       enabled,
     };
   }
 
+  static getCircuitBreakerState(now?: number): CircuitBreakerSnapshot {
+    return getCircuitBreakerState(now);
+  }
+
+  static resetCircuitBreaker(): void {
+    resetCircuitBreaker();
+  }
+
   /**
    * Main entry point: Generates structured ATS Resume or CV JSON via external AI (LLM) if available,
-   * falling back smoothly to the algorithmic resume generator with zero hallucinations.
+   * enforcing circuit breaker, daily user quota (lib/plans.ts), and daily project budget (AI_DAILY_BUDGET_USD),
+   * and logging every request in the AiUsage collection.
    */
-  static async generateResume(req: GenerateResumeRequest): Promise<GeneratedResumeResult> {
+  static async generateResume(
+    req: GenerateResumeRequest,
+    options?: AIResumeRequestOptions
+  ): Promise<GeneratedResumeResult> {
     const startTime = Date.now();
     const config = this.getConfig();
     const docType = req.documentType || 'resume';
     const outputLang = req.outputLanguage || 'en';
+    const userId = options?.userId || (req as any)?.userId || 'anonymous';
+    const endpoint = options?.endpoint || '/api/resume/generate';
 
-    // 1. If AI is not configured or disabled, smoothly use domain-driven fallback
-    if (!config.enabled) {
+    const { systemPrompt, userPrompt } = this.buildPrompts(req);
+    const approxPromptTokens = estimateTokensFromText(systemPrompt + '\n' + userPrompt);
+
+    // 1. Check Circuit Breaker, Global Daily Budget (AI_DAILY_BUDGET_USD), and Per-User Daily Limit (from plans.ts)
+    const guard = await evaluateAiPreCallGuard({ userId, endpoint });
+    if (!guard.allowExternalCall) {
       const fallbackResume = ResumeService.generateResume(req);
       const coverage = ResumeService.analyzeKeywordCoverage(req.jobDescription || '', fallbackResume);
-      return {
-        resume: fallbackResume,
-        keywordCoverage: coverage,
-        provider: 'built-in-ats-engine',
-        aiGenerated: false,
-        latencyMs: Date.now() - startTime,
-        documentType: docType,
-        outputLanguage: outputLang,
-      };
-    }
+      const approxCompletionTokens = estimateTokensFromText(JSON.stringify(fallbackResume));
+      const totalTokens = approxPromptTokens + approxCompletionTokens;
+      const latencyMs = Date.now() - startTime;
 
-    // 2. Attempt generation via external AI Provider with retries and timeout
-    try {
-      const aiResume = await this.callAIWithRetry(req, config);
-      const coverage = ResumeService.analyzeKeywordCoverage(req.jobDescription || '', aiResume);
-      return {
-        resume: aiResume,
-        keywordCoverage: coverage,
-        provider: config.model,
-        aiGenerated: true,
-        latencyMs: Date.now() - startTime,
-        documentType: docType,
-        outputLanguage: outputLang,
-      };
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown external AI error';
-      console.warn(
-        `[AIResumeClient] External AI provider failed (${errorMsg}). Switching smoothly to built-in ATS fallback.`
-      );
+      await logAiUsageAndCheckBudget({
+        userId,
+        endpoint,
+        tokens: totalTokens,
+        promptTokens: approxPromptTokens,
+        completionTokens: approxCompletionTokens,
+        costUsd: 0,
+        latencyMs,
+        status: 'fallback',
+        fallbackReason: guard.fallbackReason,
+        provider: 'built-in-ats-fallback',
+        model: config.model,
+      });
 
-      // 3. Fallback safely without crashing
-      const fallbackResume = ResumeService.generateResume(req);
-      const coverage = ResumeService.analyzeKeywordCoverage(req.jobDescription || '', fallbackResume);
       return {
         resume: fallbackResume,
         keywordCoverage: coverage,
         provider: 'built-in-ats-fallback',
         aiGenerated: false,
-        latencyMs: Date.now() - startTime,
+        fallbackReason: guard.fallbackReason,
+        tokens: totalTokens,
+        costUsd: 0,
+        latencyMs,
+        documentType: docType,
+        outputLanguage: outputLang,
+      };
+    }
+
+    // 2. If AI is not configured or disabled, smoothly use domain-driven fallback and log usage
+    if (!config.enabled) {
+      const fallbackResume = ResumeService.generateResume(req);
+      const coverage = ResumeService.analyzeKeywordCoverage(req.jobDescription || '', fallbackResume);
+      const approxCompletionTokens = estimateTokensFromText(JSON.stringify(fallbackResume));
+      const totalTokens = approxPromptTokens + approxCompletionTokens;
+      const latencyMs = Date.now() - startTime;
+
+      await logAiUsageAndCheckBudget({
+        userId,
+        endpoint,
+        tokens: totalTokens,
+        promptTokens: approxPromptTokens,
+        completionTokens: approxCompletionTokens,
+        costUsd: 0,
+        latencyMs,
+        status: 'fallback',
+        fallbackReason: 'provider_not_configured',
+        provider: 'built-in-ats-engine',
+        model: config.model,
+      });
+
+      return {
+        resume: fallbackResume,
+        keywordCoverage: coverage,
+        provider: 'built-in-ats-engine',
+        aiGenerated: false,
+        fallbackReason: 'provider_not_configured',
+        tokens: totalTokens,
+        costUsd: 0,
+        latencyMs,
+        documentType: docType,
+        outputLanguage: outputLang,
+      };
+    }
+
+    // 3. Attempt generation via external AI Provider with single retry and timeout
+    try {
+      const { resume: aiResume, promptTokens, completionTokens } = await this.callAIWithRetry(
+        req,
+        config,
+        systemPrompt,
+        userPrompt,
+        approxPromptTokens
+      );
+      recordCircuitSuccess();
+
+      const coverage = ResumeService.analyzeKeywordCoverage(req.jobDescription || '', aiResume);
+      const totalTokens = promptTokens + completionTokens;
+      const costUsd = estimateAiCostUsd(promptTokens, completionTokens, config.model);
+      const latencyMs = Date.now() - startTime;
+
+      await logAiUsageAndCheckBudget({
+        userId,
+        endpoint,
+        tokens: totalTokens,
+        promptTokens,
+        completionTokens,
+        costUsd,
+        latencyMs,
+        status: 'hit',
+        provider: config.model,
+        model: config.model,
+      });
+
+      return {
+        resume: aiResume,
+        keywordCoverage: coverage,
+        provider: config.model,
+        aiGenerated: true,
+        tokens: totalTokens,
+        costUsd,
+        latencyMs,
+        documentType: docType,
+        outputLanguage: outputLang,
+      };
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown external AI error';
+      recordCircuitFailure(errorMsg);
+      console.warn(
+        `[AIResumeClient] External AI provider failed (${errorMsg}). Switching smoothly to built-in ATS fallback.`
+      );
+
+      // 4. Fallback safely without crashing and log fallback in AiUsage
+      const fallbackResume = ResumeService.generateResume(req);
+      const coverage = ResumeService.analyzeKeywordCoverage(req.jobDescription || '', fallbackResume);
+      const approxCompletionTokens = estimateTokensFromText(JSON.stringify(fallbackResume));
+      const totalTokens = approxPromptTokens + approxCompletionTokens;
+      const latencyMs = Date.now() - startTime;
+
+      await logAiUsageAndCheckBudget({
+        userId,
+        endpoint,
+        tokens: totalTokens,
+        promptTokens: approxPromptTokens,
+        completionTokens: approxCompletionTokens,
+        costUsd: 0,
+        latencyMs,
+        status: 'fallback',
+        fallbackReason: errorMsg,
+        provider: 'built-in-ats-fallback',
+        model: config.model,
+      });
+
+      return {
+        resume: fallbackResume,
+        keywordCoverage: coverage,
+        provider: 'built-in-ats-fallback',
+        aiGenerated: false,
+        fallbackReason: errorMsg,
+        tokens: totalTokens,
+        costUsd: 0,
+        latencyMs,
         documentType: docType,
         outputLanguage: outputLang,
       };
@@ -92,13 +239,15 @@ export class AIResumeClient {
   }
 
   /**
-   * Execute API call to OpenAI-compatible Chat Completion endpoint with bounded retries and timeout
+   * Execute API call to OpenAI-compatible Chat Completion endpoint with bounded retry (1 retry) and timeout
    */
   private static async callAIWithRetry(
     req: GenerateResumeRequest,
-    config: AIResumeClientConfig
-  ): Promise<ResumeData> {
-    const { systemPrompt, userPrompt } = this.buildPrompts(req);
+    config: AIResumeClientConfig,
+    systemPrompt: string,
+    userPrompt: string,
+    approxPromptTokens: number
+  ): Promise<{ resume: ResumeData; promptTokens: number; completionTokens: number }> {
     let attempt = 0;
     let lastError: Error | null = null;
 
@@ -121,7 +270,7 @@ export class AIResumeClient {
               { role: 'user', content: userPrompt },
             ],
             temperature: 0.65,
-            max_tokens: 3000,
+            max_tokens: config.maxTokens,
             response_format: { type: 'json_object' },
           }),
           signal: controller.signal,
@@ -138,7 +287,7 @@ export class AIResumeClient {
           }
 
           if (attempt <= config.maxRetries) {
-            const delay = attempt * 800 + Math.floor(Math.random() * 200);
+            const delay = attempt * 300 + Math.floor(Math.random() * 100);
             await new Promise((res) => setTimeout(res, delay));
             continue;
           }
@@ -153,7 +302,17 @@ export class AIResumeClient {
           throw new Error('AI Provider returned empty completion payload');
         }
 
-        return this.parseAndValidateAIResponse(rawContent, req);
+        const resume = this.parseAndValidateAIResponse(rawContent, req);
+        const promptTokens =
+          typeof data?.usage?.prompt_tokens === 'number' && data.usage.prompt_tokens > 0
+            ? data.usage.prompt_tokens
+            : approxPromptTokens;
+        const completionTokens =
+          typeof data?.usage?.completion_tokens === 'number' && data.usage.completion_tokens > 0
+            ? data.usage.completion_tokens
+            : estimateTokensFromText(rawContent);
+
+        return { resume, promptTokens, completionTokens };
       } catch (err: unknown) {
         clearTimeout(timeoutHandle);
         lastError = err instanceof Error ? err : new Error(String(err));
@@ -163,7 +322,7 @@ export class AIResumeClient {
         const isNetworkErr = errObj?.code === 'ECONNRESET' || errObj?.code === 'ETIMEDOUT' || isAbort;
 
         if (isNetworkErr && attempt <= config.maxRetries) {
-          const delay = attempt * 1000;
+          const delay = attempt * 300;
           await new Promise((res) => setTimeout(res, delay));
           continue;
         }

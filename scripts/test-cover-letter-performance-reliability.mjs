@@ -241,7 +241,9 @@ async function runSuite() {
         method: 'DELETE',
         headers: authHeaders,
       });
-    } catch (_) {}
+    } catch {
+      // Best-effort cleanup of benchmark cover letter record
+    }
   }
 
   // -------------------------------------------------------------

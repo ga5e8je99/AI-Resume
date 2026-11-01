@@ -1,6 +1,6 @@
 import { LanguageCode } from '@/app/lib/translations/types';
 
-export type CurrencyCode = 'USD' | 'EGP' | 'USDT';
+export type CurrencyCode = 'USD' | 'EGP';
 export type BillingCycle = 'monthly' | 'annual';
 export type PlanType = 'free' | 'subscription' | 'one_time';
 export type PlanId = 'free' | 'pro' | 'payg';
@@ -19,6 +19,13 @@ export const JOB_MATCH_FREE_QUOTA = 3;
  * Number of credits consumed per Job Match search on Pay-As-You-Go (after JOB_MATCH_FREE_QUOTA free searches)
  */
 export const JOB_MATCH_CREDIT_COST = 1;
+
+/**
+ * Daily AI request limits per user plan tier (Fair-Use & Cost Protection)
+ */
+export const FREE_DAILY_AI_LIMIT = 5;
+export const PAYG_DAILY_AI_LIMIT = 25;
+export const PRO_DAILY_AI_LIMIT = 50;
 
 export interface LocalizedString {
   en: string;
@@ -49,6 +56,7 @@ export interface PlanConfig {
   popular?: boolean;
   badge?: LocalizedString;
   credits: number | 'unlimited';
+  dailyAiLimit: number;
   pricing: {
     USD: {
       monthly?: number;
@@ -99,6 +107,7 @@ export const PLANS: PlanConfig[] = [
     type: 'free',
     popular: false,
     credits: 3,
+    dailyAiLimit: FREE_DAILY_AI_LIMIT,
     pricing: {
       USD: {
         monthly: 0,
@@ -260,6 +269,7 @@ export const PLANS: PlanConfig[] = [
       tr: 'En Popüler',
     },
     credits: 'unlimited',
+    dailyAiLimit: PRO_DAILY_AI_LIMIT,
     pricing: {
       USD: {
         monthly: 9,
@@ -406,6 +416,7 @@ export const PLANS: PlanConfig[] = [
     type: 'one_time',
     popular: false,
     credits: 15,
+    dailyAiLimit: PAYG_DAILY_AI_LIMIT,
     pricing: {
       USD: {
         oneTime: 5,
@@ -572,14 +583,32 @@ export function getPaygCredits(): number {
   return credits;
 }
 
+/**
+ * Resolves the canonical daily AI request limit for a user plan from PLANS in lib/plans.ts.
+ * Supports optional environment variable overrides for operational tuning.
+ */
+export function getPlanDailyAiLimit(planId: PlanId | string): number {
+  const normalized = (planId || 'free').toLowerCase();
+  if (normalized === 'pro' || normalized === 'enterprise') {
+    const envOverride = Number(process.env.AI_DAILY_LIMIT_PRO);
+    if (Number.isFinite(envOverride) && envOverride > 0) return envOverride;
+    return getPlanById('pro')?.dailyAiLimit ?? PRO_DAILY_AI_LIMIT;
+  }
+  if (normalized === 'payg') {
+    const envOverride = Number(process.env.AI_DAILY_LIMIT_PAYG);
+    if (Number.isFinite(envOverride) && envOverride > 0) return envOverride;
+    return getPlanById('payg')?.dailyAiLimit ?? PAYG_DAILY_AI_LIMIT;
+  }
+  const envOverride = Number(process.env.AI_DAILY_LIMIT_FREE);
+  if (Number.isFinite(envOverride) && envOverride > 0) return envOverride;
+  return getPlanById('free')?.dailyAiLimit ?? FREE_DAILY_AI_LIMIT;
+}
+
 export function formatPrice(
   amount: number,
   currency: CurrencyCode,
   lang: LanguageCode | string = 'en'
 ): string {
-  if (currency === 'USDT') {
-    return `${amount} USDT`;
-  }
   if (currency === 'USD') {
     return `$${amount}`;
   }
@@ -588,6 +617,420 @@ export function formatPrice(
     return `${amount} ج.م`;
   }
   return `${amount} EGP`;
+}
+
+export type DisplayCurrencyCode = 'USD' | 'EGP' | 'EUR' | 'GBP' | 'SAR' | 'AED' | 'TRY';
+
+export interface DisplayCurrencyMeta {
+  code: DisplayCurrencyCode;
+  symbol: string;
+  rateFromUsd: number;
+  labelEn: string;
+  labelAr: string;
+}
+
+export const DISPLAY_CURRENCIES: DisplayCurrencyMeta[] = [
+  { code: 'USD', symbol: '$', rateFromUsd: 1, labelEn: 'USD ($)', labelAr: 'دولار (USD $)' },
+  { code: 'EGP', symbol: 'EGP', rateFromUsd: 49, labelEn: 'EGP (ج.م)', labelAr: 'جنيه مصري (EGP)' },
+  { code: 'EUR', symbol: '€', rateFromUsd: 0.92, labelEn: 'EUR (€)', labelAr: 'يورو (EUR €)' },
+  { code: 'GBP', symbol: '£', rateFromUsd: 0.79, labelEn: 'GBP (£)', labelAr: 'جنيه إسترليني (GBP £)' },
+  { code: 'SAR', symbol: 'SAR', rateFromUsd: 3.75, labelEn: 'SAR (ر.س)', labelAr: 'ريال سعودي (SAR)' },
+  { code: 'AED', symbol: 'AED', rateFromUsd: 3.67, labelEn: 'AED (د.إ)', labelAr: 'درهم إماراتي (AED)' },
+  { code: 'TRY', symbol: '₺', rateFromUsd: 34, labelEn: 'TRY (₺)', labelAr: 'ليرة تركية (TRY ₺)' },
+];
+
+/**
+ * Detects a user's preferred local display currency from timezone or language when available.
+ * Used for display reference only; actual checkout billing always uses the provider's currency.
+ */
+export function detectUserDisplayCurrency(
+  lang: string = 'en',
+  timeZone?: string
+): DisplayCurrencyCode {
+  const tz = (
+    timeZone ||
+    (typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : '') ||
+    ''
+  ).toLowerCase();
+
+  if (tz.includes('cairo') || tz.includes('egypt')) return 'EGP';
+  if (tz.includes('riyadh') || tz.includes('saudi')) return 'SAR';
+  if (tz.includes('dubai') || tz.includes('muscat') || tz.includes('kuwait') || tz.includes('qatar')) return 'AED';
+  if (tz.includes('istanbul') || tz.includes('turkey')) return 'TRY';
+  if (tz.includes('london') || tz.includes('belfast')) return 'GBP';
+  if (
+    tz.includes('paris') ||
+    tz.includes('berlin') ||
+    tz.includes('madrid') ||
+    tz.includes('rome') ||
+    tz.includes('amsterdam') ||
+    tz.includes('brussels') ||
+    tz.includes('vienna')
+  ) {
+    return 'EUR';
+  }
+
+  const normalizedLang = (lang || 'en').toLowerCase();
+  if (normalizedLang === 'tr') return 'TRY';
+  if (normalizedLang === 'fr' || normalizedLang === 'de' || normalizedLang === 'es') return 'EUR';
+  return 'USD';
+}
+
+/**
+ * Formats a plan amount in the user's selected/detected display currency while also
+ * returning the authoritative provider billing currency and amount.
+ */
+export function formatDisplayPrice(
+  usdAmount: number,
+  egpAmount: number | undefined,
+  displayCurrency: DisplayCurrencyCode,
+  providerBillingCurrency: CurrencyCode = 'USD',
+  lang: LanguageCode | string = 'en'
+): {
+  formattedDisplay: string;
+  providerBillingAmount: number;
+  providerBillingCurrency: CurrencyCode;
+  isDisplayOnlyConversion: boolean;
+} {
+  const providerBillingAmount =
+    providerBillingCurrency === 'EGP' && typeof egpAmount === 'number'
+      ? egpAmount
+      : usdAmount;
+
+  if (usdAmount === 0) {
+    const zeroDisplay =
+      displayCurrency === 'EGP'
+        ? formatPrice(0, 'EGP', lang)
+        : displayCurrency === 'EUR'
+        ? '€0'
+        : displayCurrency === 'GBP'
+        ? '£0'
+        : displayCurrency === 'TRY'
+        ? '₺0'
+        : displayCurrency === 'SAR'
+        ? lang === 'ar'
+          ? '0 ر.س'
+          : '0 SAR'
+        : displayCurrency === 'AED'
+        ? lang === 'ar'
+          ? '0 د.إ'
+          : '0 AED'
+        : '$0';
+    return {
+      formattedDisplay: zeroDisplay,
+      providerBillingAmount: 0,
+      providerBillingCurrency,
+      isDisplayOnlyConversion: false,
+    };
+  }
+
+  let formattedDisplay = `$${usdAmount}`;
+  if (displayCurrency === 'USD') {
+    formattedDisplay = `$${usdAmount}`;
+  } else if (displayCurrency === 'EGP') {
+    const amt = typeof egpAmount === 'number' ? egpAmount : Math.round(usdAmount * 49);
+    formattedDisplay = formatPrice(amt, 'EGP', lang);
+  } else {
+    const meta = DISPLAY_CURRENCIES.find((c) => c.code === displayCurrency);
+    const rate = meta ? meta.rateFromUsd : 1;
+    const converted = Math.max(1, Math.round(usdAmount * rate));
+    if (displayCurrency === 'EUR') formattedDisplay = `€${converted}`;
+    else if (displayCurrency === 'GBP') formattedDisplay = `£${converted}`;
+    else if (displayCurrency === 'TRY') formattedDisplay = `₺${converted}`;
+    else if (displayCurrency === 'SAR') {
+      formattedDisplay = lang === 'ar' ? `${converted} ر.س` : `${converted} SAR`;
+    } else if (displayCurrency === 'AED') {
+      formattedDisplay = lang === 'ar' ? `${converted} د.إ` : `${converted} AED`;
+    }
+  }
+
+  return {
+    formattedDisplay,
+    providerBillingAmount,
+    providerBillingCurrency,
+    isDisplayOnlyConversion: displayCurrency !== providerBillingCurrency,
+  };
+}
+
+export interface PlanComparisonRow {
+  id: string;
+  feature: string;
+  free: string;
+  payg: string;
+  pro: string;
+}
+
+/**
+ * Generates the Free / PAYG / Pro comparison rows dynamically from the real constants in lib/plans.ts.
+ */
+export function getPlanComparisonRows(lang: LanguageCode | string = 'en'): PlanComparisonRow[] {
+  const freeCredits = getPlanCredits('free');
+  const paygCredits = getPaygCredits();
+  const freeDaily = getPlanDailyAiLimit('free');
+  const paygDaily = getPlanDailyAiLimit('payg');
+  const proDaily = getPlanDailyAiLimit('pro');
+
+  const rows: Array<{
+    id: string;
+    feature: LocalizedString;
+    free: LocalizedString;
+    payg: LocalizedString;
+    pro: LocalizedString;
+  }> = [
+    {
+      id: 'credits',
+      feature: {
+        en: 'Included AI Credits',
+        ar: 'رصيد نقاط الذكاء الاصطناعي',
+        fr: 'Crédits IA inclus',
+        de: 'Enthaltene KI-Credits',
+        es: 'Créditos de IA incluidos',
+        tr: 'Dahil Edilen Yapay Zeka Kredisi',
+      },
+      free: {
+        en: `${freeCredits} starter credits`,
+        ar: `${freeCredits} نقاط ترحيبية مجانية`,
+        fr: `${freeCredits} crédits de départ`,
+        de: `${freeCredits} Start-Credits`,
+        es: `${freeCredits} créditos iniciales`,
+        tr: `${freeCredits} başlangıç kredisi`,
+      },
+      payg: {
+        en: `${paygCredits} credits (never expire)`,
+        ar: `${paygCredits} نقطة (لا تنتهي صلاحيتها أبداً)`,
+        fr: `${paygCredits} crédits (sans expiration)`,
+        de: `${paygCredits} Credits (verfallen nie)`,
+        es: `${paygCredits} créditos (nunca caducan)`,
+        tr: `${paygCredits} kredi (süresi asla dolmaz)`,
+      },
+      pro: {
+        en: 'Unlimited during subscription',
+        ar: 'غير محدود طوال فترة الاشتراك',
+        fr: 'Illimité pendant l’abonnement',
+        de: 'Unbegrenzt während des Abos',
+        es: 'Ilimitado durante la suscripción',
+        tr: 'Abonelik boyunca sınırsız',
+      },
+    },
+    {
+      id: 'daily_ai_limit',
+      feature: {
+        en: 'Daily AI Fair-Use Cap',
+        ar: 'الحد اليومي لطلبات الذكاء الاصطناعي',
+        fr: 'Limite quotidienne d’requêtes IA',
+        de: 'Tägliches KI-Fair-Use-Limit',
+        es: 'Límite diario de uso justo de IA',
+        tr: 'Günlük Yapay Zeka Kullanım Limiti',
+      },
+      free: {
+        en: `${freeDaily} AI requests / day`,
+        ar: `${freeDaily} طلبات ذكاء اصطناعي / يومياً`,
+        fr: `${freeDaily} requêtes IA / jour`,
+        de: `${freeDaily} KI-Anfragen / Tag`,
+        es: `${freeDaily} solicitudes IA / día`,
+        tr: `Günde ${freeDaily} YZ isteği`,
+      },
+      payg: {
+        en: `${paygDaily} AI requests / day`,
+        ar: `${paygDaily} طلب ذكاء اصطناعي / يومياً`,
+        fr: `${paygDaily} requêtes IA / jour`,
+        de: `${paygDaily} KI-Anfragen / Tag`,
+        es: `${paygDaily} solicitudes IA / día`,
+        tr: `Günde ${paygDaily} YZ isteği`,
+      },
+      pro: {
+        en: `${proDaily} AI requests / day (Priority)`,
+        ar: `${proDaily} طلب ذكاء اصطناعي / يومياً (أولوية قصوى)`,
+        fr: `${proDaily} requêtes IA / jour (Prioritaire)`,
+        de: `${proDaily} KI-Anfragen / Tag (Priorität)`,
+        es: `${proDaily} solicitudes IA / día (Prioridad)`,
+        tr: `Günde ${proDaily} YZ isteği (Öncelikli)`,
+      },
+    },
+    {
+      id: 'ai_resume',
+      feature: {
+        en: 'AI Resume & CV Generation',
+        ar: 'توليد السيرة الذاتية وCV بالذكاء الاصطناعي',
+        fr: 'Génération de CV par IA',
+        de: 'KI-Lebenslauf- & CV-Generierung',
+        es: 'Generación de CV con IA',
+        tr: 'Yapay Zeka Özgeçmiş & CV Üretimi',
+      },
+      free: {
+        en: '1 free generation (trial)',
+        ar: 'توليد مجاني لمرة واحدة (تجربة)',
+        fr: '1 génération gratuite (essai)',
+        de: '1 kostenlose Generierung (Test)',
+        es: '1 generación gratuita (prueba)',
+        tr: '1 ücretsiz üretim (deneme)',
+      },
+      payg: {
+        en: `${RESUME_GENERATION_CREDIT_COST} credits / document`,
+        ar: `${RESUME_GENERATION_CREDIT_COST} نقطة لكل مستند`,
+        fr: `${RESUME_GENERATION_CREDIT_COST} crédits / document`,
+        de: `${RESUME_GENERATION_CREDIT_COST} Credits / Dokument`,
+        es: `${RESUME_GENERATION_CREDIT_COST} créditos / documento`,
+        tr: `Belge başına ${RESUME_GENERATION_CREDIT_COST} kredi`,
+      },
+      pro: {
+        en: 'Unlimited generations & tailoring',
+        ar: 'توليد وتخصيص غير محدود',
+        fr: 'Générations et adaptations illimitées',
+        de: 'Unbegrenzte Generierungen',
+        es: 'Generaciones ilimitadas',
+        tr: 'Sınırsız üretim ve uyarlama',
+      },
+    },
+    {
+      id: 'job_match',
+      feature: {
+        en: 'Smart Job Match Searches',
+        ar: 'عمليات البحث في مطابقة الوظائف',
+        fr: 'Recherches d’emplois Job Match',
+        de: 'Intelligente Job-Match-Suchen',
+        es: 'Búsquedas de empleo Job Match',
+        tr: 'Akıllı İş Eşleştirme Aramaları',
+      },
+      free: {
+        en: `${JOB_MATCH_FREE_QUOTA} free searches included`,
+        ar: `${JOB_MATCH_FREE_QUOTA} عمليات بحث مجانية`,
+        fr: `${JOB_MATCH_FREE_QUOTA} recherches gratuites incluses`,
+        de: `${JOB_MATCH_FREE_QUOTA} kostenlose Suchen inklusive`,
+        es: `${JOB_MATCH_FREE_QUOTA} búsquedas gratuitas incluidas`,
+        tr: `${JOB_MATCH_FREE_QUOTA} ücretsiz arama dahil`,
+      },
+      payg: {
+        en: `${JOB_MATCH_CREDIT_COST} credit / search (after ${JOB_MATCH_FREE_QUOTA} free)`,
+        ar: `${JOB_MATCH_CREDIT_COST} نقطة لكل بحث (بعد الـ ${JOB_MATCH_FREE_QUOTA} المجانية)`,
+        fr: `${JOB_MATCH_CREDIT_COST} crédit / recherche (après les ${JOB_MATCH_FREE_QUOTA} gratuites)`,
+        de: `${JOB_MATCH_CREDIT_COST} Credit / Suche (nach ${JOB_MATCH_FREE_QUOTA} kostenlosen)`,
+        es: `${JOB_MATCH_CREDIT_COST} crédito / búsqueda (tras ${JOB_MATCH_FREE_QUOTA} gratis)`,
+        tr: `Arama başına ${JOB_MATCH_CREDIT_COST} kredi (${JOB_MATCH_FREE_QUOTA} ücretsizden sonra)`,
+      },
+      pro: {
+        en: 'Unlimited Job Match searches',
+        ar: 'بحث غير محدود في مطابقة الوظائف',
+        fr: 'Recherches Job Match illimitées',
+        de: 'Unbegrenzte Job-Match-Suchen',
+        es: 'Búsquedas Job Match ilimitadas',
+        tr: 'Sınırsız Job Match araması',
+      },
+    },
+    {
+      id: 'cover_letters',
+      feature: {
+        en: 'AI Cover Letters',
+        ar: 'خطابات التقديم بالذكاء الاصطناعي',
+        fr: 'Lettres de motivation IA',
+        de: 'KI-Anschreiben',
+        es: 'Cartas de presentación con IA',
+        tr: 'Yapay Zeka Ön Yazıları',
+      },
+      free: {
+        en: 'Up to 3 drafts (using starter credits)',
+        ar: 'حتى 3 خطابات (باستخدام الرصيد الترحيبي)',
+        fr: 'Jusqu’à 3 brouillons',
+        de: 'Bis zu 3 Entwürfe',
+        es: 'Hasta 3 borradores',
+        tr: '3 taslağa kadar',
+      },
+      payg: {
+        en: `1 credit / letter (up to ${paygCredits} letters)`,
+        ar: `نقطة واحدة لكل خطاب (حتى ${paygCredits} خطاباً)`,
+        fr: `1 crédit / lettre (jusqu’à ${paygCredits})`,
+        de: `1 Credit / Anschreiben (bis zu ${paygCredits})`,
+        es: `1 crédito / carta (hasta ${paygCredits})`,
+        tr: `Mektup başına 1 kredi (${paygCredits} adede kadar)`,
+      },
+      pro: {
+        en: 'Unlimited cover letters & revisions',
+        ar: 'توليد وتعديل غير محدود لخطابات التقديم',
+        fr: 'Lettres et révisions illimitées',
+        de: 'Unbegrenzte Anschreiben & Revisionen',
+        es: 'Cartas y revisiones ilimitadas',
+        tr: 'Sınırsız ön yazı ve revizyon',
+      },
+    },
+    {
+      id: 'ats_scans',
+      feature: {
+        en: 'ATS Score & Keyword Audit',
+        ar: 'فحص التوافق مع ATS وتحليل الكلمات المفتاحية',
+        fr: 'Audit ATS et analyse de mots-clés',
+        de: 'ATS-Score & Keyword-Prüfung',
+        es: 'Escaneo ATS y auditoría de palabras clave',
+        tr: 'ATS Puanı ve Anahtar Kelime Analizi',
+      },
+      free: {
+        en: 'Unlimited instant scans + 3 quick fixes',
+        ar: 'فحص فوري غير محدود + 3 تحسينات سريعة',
+        fr: 'Scans illimités + 3 corrections rapides',
+        de: 'Unbegrenzte Scans + 3 Schnellkorrekturen',
+        es: 'Escaneos ilimitados + 3 mejoras rápidas',
+        tr: 'Sınırsız tarama + 3 hızlı iyileştirme',
+      },
+      payg: {
+        en: 'Unlimited scans + full keyword audit',
+        ar: 'فحص غير محدود + تدقيق كامل للكلمات المفتاحية',
+        fr: 'Scans illimités + audit complet',
+        de: 'Unbegrenzte Scans + Voll-Audit',
+        es: 'Escaneos ilimitados + auditoría completa',
+        tr: 'Sınırsız tarama + tam anahtar kelime denetimi',
+      },
+      pro: {
+        en: 'Unlimited deep ATS diagnostic & JD match',
+        ar: 'تشخيص ATS عميق وغير محدود ومطابقة الوصف الوظيفي',
+        fr: 'Diagnostic ATS approfondi illimité',
+        de: 'Unbegrenzte Tiefen-ATS-Diagnose',
+        es: 'Diagnóstico ATS profundo ilimitado',
+        tr: 'Sınırsız derin ATS teşhisi ve ilan eşleştirme',
+      },
+    },
+    {
+      id: 'templates_exports',
+      feature: {
+        en: 'Templates & Export Formats',
+        ar: 'القوالب وصيغ التصدير المتاحة',
+        fr: 'Modèles et formats d’export',
+        de: 'Vorlagen & Exportformate',
+        es: 'Plantillas y formatos de exportación',
+        tr: 'Şablonlar ve Dışa Aktarma Formatları',
+      },
+      free: {
+        en: 'Basic ATS templates • Standard PDF & TXT',
+        ar: 'قوالب أساسية • تصدير PDF قياسي وTXT',
+        fr: 'Modèles de base • PDF standard & TXT',
+        de: 'Basisvorlagen • Standard-PDF & TXT',
+        es: 'Plantillas básicas • PDF estándar y TXT',
+        tr: 'Temel şablonlar • Standart PDF ve TXT',
+      },
+      payg: {
+        en: 'All 5 templates • Clean Word (.docx) & PDF',
+        ar: 'جميع القوالب الـ 5 • تصدير Word (.docx) وPDF',
+        fr: 'Les 5 modèles • Word (.docx) & PDF',
+        de: 'Alle 5 Vorlagen • Word (.docx) & PDF',
+        es: 'Las 5 plantillas • Word (.docx) y PDF',
+        tr: 'Tüm 5 şablon • Filigransız Word (.docx) ve PDF',
+      },
+      pro: {
+        en: 'All 5 templates • Unrestricted Word (.docx) & Vector PDF',
+        ar: 'جميع القوالب الـ 5 • تصدير مفتوح Word (.docx) وVector PDF بدون علامة مائية',
+        fr: 'Les 5 modèles • Word (.docx) & PDF vectoriel illimités',
+        de: 'Alle 5 Vorlagen • Unbegrenzter Word (.docx) & Vektor-PDF-Export',
+        es: 'Las 5 plantillas • Word (.docx) y PDF vectorial sin límites',
+        tr: 'Tüm 5 şablon • Sınırsız Word (.docx) ve Vektörel PDF',
+      },
+    },
+  ];
+
+  return rows.map((r) => ({
+    id: r.id,
+    feature: getLocalized(r.feature, lang),
+    free: getLocalized(r.free, lang),
+    payg: getLocalized(r.payg, lang),
+    pro: getLocalized(r.pro, lang),
+  }));
 }
 
 export default PLANS;

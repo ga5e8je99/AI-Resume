@@ -1,22 +1,101 @@
-import { CurrencyCode, BillingCycle, getPlanById } from '../plans';
+import { CurrencyCode, BillingCycle, getPlanById, getPlanPrice } from '../plans';
 import {
-  createStripeCheckoutSession,
   ProviderNotConfiguredError,
   isMockPaymentsAllowed,
-} from './stripe';
-import { createPaymobCheckoutSession } from './paymob';
-import { isBinancePayConfigured, createBinancePayOrder } from './binance-pay';
+  isStripeConfigured,
+  stripeProvider,
+} from './providers/stripe';
+import { isPaymobConfigured, paymobProvider } from './providers/paymob';
 import {
-  getPlanPriceUsdt,
-  calculateUniqueCryptoAmount,
-  generateOrderReference,
-  getReceivingWalletAddress,
-  ORDER_EXPIRY_MINUTES,
-} from './crypto-utils';
+  lemonSqueezyProvider,
+  isLemonSqueezyConfigured,
+} from './providers/lemonsqueezy';
+import { PaymentProvider, PaymentProviderName } from './providers/types';
 import DataStore from '@/app/lib/datastore';
-import { CryptoNetwork } from '@/app/models/Order';
 
-export type ExtendedCurrencyCode = CurrencyCode | 'USDT';
+export type ExtendedCurrencyCode = CurrencyCode;
+
+export interface EnabledProviderInfo {
+  id: PaymentProviderName;
+  name: string;
+  currencies: CurrencyCode[];
+  enabled: boolean;
+}
+
+const PROVIDERS_MAP: Record<PaymentProviderName, PaymentProvider> = {
+  lemonsqueezy: lemonSqueezyProvider,
+  stripe: stripeProvider,
+  paymob: paymobProvider,
+};
+
+export function getPaymentProvider(name: PaymentProviderName): PaymentProvider {
+  const provider = PROVIDERS_MAP[name];
+  if (!provider) {
+    throw new Error(`Unknown payment provider: "${name}".`);
+  }
+  return provider;
+}
+
+/**
+ * Returns the currently enabled payment providers and currencies based on
+ * environment configuration.
+ * Optional providers (Stripe, Paymob) are strictly hidden from the UI unless
+ * their credentials are explicitly configured in process.env.
+ */
+export function getEnabledProviders(): {
+  providers: EnabledProviderInfo[];
+  enabledProviders: PaymentProviderName[];
+  currencies: CurrencyCode[];
+  defaultCurrency: CurrencyCode;
+  mockMode: boolean;
+} {
+  const mockMode = isMockPaymentsAllowed();
+  const lsEnabled = isLemonSqueezyConfigured() || mockMode;
+  const stripeEnabled = isStripeConfigured();
+  const paymobEnabled = isPaymobConfigured();
+
+  const allProviders: EnabledProviderInfo[] = [
+    {
+      id: 'lemonsqueezy',
+      name: 'Lemon Squeezy',
+      currencies: ['USD'],
+      enabled: lsEnabled,
+    },
+    {
+      id: 'stripe',
+      name: 'Stripe',
+      currencies: ['USD'],
+      enabled: stripeEnabled,
+    },
+    {
+      id: 'paymob',
+      name: 'Paymob',
+      currencies: ['EGP'],
+      enabled: paymobEnabled,
+    },
+  ];
+
+  const enabledList = allProviders.filter((p) => p.enabled);
+  const enabledIds = enabledList.map((p) => p.id);
+
+  const currencies: CurrencyCode[] = [];
+  if (lsEnabled || stripeEnabled) {
+    currencies.push('USD');
+  }
+  if (paymobEnabled) {
+    currencies.push('EGP');
+  }
+
+  const defaultCurrency: CurrencyCode = currencies[0] || 'USD';
+
+  return {
+    providers: enabledList,
+    enabledProviders: enabledIds,
+    currencies,
+    defaultCurrency,
+    mockMode,
+  };
+}
 
 export interface CreateCheckoutParams {
   user: {
@@ -24,35 +103,33 @@ export interface CreateCheckoutParams {
     email: string;
     name?: string;
     stripeCustomerId?: string;
+    lemonCustomerId?: string;
   };
   planId: string;
-  currency?: ExtendedCurrencyCode;
+  currency?: CurrencyCode;
   billingCycle?: BillingCycle;
-  method?: 'card' | 'binance' | 'manual_crypto' | 'auto';
-  network?: CryptoNetwork;
+  method?: 'lemonsqueezy' | 'stripe' | 'paymob' | 'card' | 'auto';
+  provider?: PaymentProviderName;
   successUrl?: string;
   cancelUrl?: string;
 }
 
 export interface CheckoutResult {
   url: string;
-  provider: 'stripe' | 'paymob' | 'binance_pay' | 'manual_crypto';
+  provider: PaymentProviderName;
   sessionId?: string;
   orderId?: string | number;
   reference?: string;
   amount?: number;
-  network?: CryptoNetwork;
 }
 
 /**
- * Universal checkout dispatcher supporting:
- * 1. USDT / Crypto:
- *    - Method A: Binance Pay Merchant API (if credentials exist)
- *    - Method B: Direct manual crypto transfer to personal Binance wallet with on-chain verification
- * 2. EGP -> Paymob (Egypt local channels)
- * 3. USD -> Stripe (Cards)
+ * Universal checkout dispatcher behind the unified PaymentProvider interface:
+ * 1. USD -> Lemon Squeezy (primary) or Stripe (optional when configured/requested)
+ * 2. EGP -> Paymob (optional when configured/requested)
  *
- * Throws clear errors (including ProviderNotConfiguredError) instead of returning fake success.
+ * Persists a canonical Order in DataStore (with prices from lib/plans.ts)
+ * and delegates checkout URL generation to provider.createCheckout(order, user).
  */
 export async function createCheckout({
   user,
@@ -60,7 +137,7 @@ export async function createCheckout({
   currency = 'USD',
   billingCycle = 'monthly',
   method = 'auto',
-  network = 'BEP20',
+  provider,
   successUrl,
   cancelUrl,
 }: CreateCheckoutParams): Promise<CheckoutResult> {
@@ -77,175 +154,177 @@ export async function createCheckout({
     throw new Error('Free plan does not require checkout.');
   }
 
-  if (currency !== 'USD' && currency !== 'EGP' && currency !== 'USDT') {
+  if (currency !== 'USD' && currency !== 'EGP') {
     throw new Error(`Unsupported checkout currency: "${currency}".`);
   }
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const requestedProvider: PaymentProviderName | undefined =
+    provider ||
+    (method === 'lemonsqueezy' || method === 'stripe' || method === 'paymob'
+      ? method
+      : undefined);
 
-  // Crypto / Binance Route (Method A or Method B)
-  if (currency === 'USDT' || method === 'binance' || method === 'manual_crypto') {
-    const basePrice = getPlanPriceUsdt(
+  let selectedProviderName: PaymentProviderName;
+  let targetCurrency: CurrencyCode = currency;
+
+  if (currency === 'EGP' || requestedProvider === 'paymob') {
+    selectedProviderName = 'paymob';
+    targetCurrency = 'EGP';
+  } else if (requestedProvider === 'stripe') {
+    selectedProviderName = 'stripe';
+    targetCurrency = 'USD';
+  } else if (requestedProvider === 'lemonsqueezy') {
+    selectedProviderName = 'lemonsqueezy';
+    targetCurrency = 'USD';
+  } else if (
+    isLemonSqueezyConfigured(
       plan.id as 'pro' | 'payg',
-      billingCycle === 'annual' ? 'annual' : 'monthly'
-    );
-
-    const recipientAddress = getReceivingWalletAddress(network);
-    const binanceConfigured = isBinancePayConfigured();
-
-    // Ensure at least one crypto provider is configured (unless mock mode is explicitly allowed)
-    if (method === 'manual_crypto' && !recipientAddress && !isMockPaymentsAllowed()) {
-      throw new ProviderNotConfiguredError(
-        'manual_crypto',
-        `Crypto wallet for network "${network}" is not configured (missing PAYMENT_WALLET_${network}).`
-      );
-    }
-
-    if (method !== 'manual_crypto' && !binanceConfigured && !recipientAddress && !isMockPaymentsAllowed()) {
-      throw new ProviderNotConfiguredError(
-        'binance_pay',
-        `Crypto payment provider is not configured (missing Binance Pay credentials and PAYMENT_WALLET_${network}).`
-      );
-    }
-
-    // Fetch existing active orders to guarantee a unique cents suffix
-    const activeOrders = await DataStore.listOrders({ status: 'awaiting_payment' });
-    const activeAmounts = activeOrders.map((o) => o.amount);
-    const { amount, centsSuffix } = calculateUniqueCryptoAmount(basePrice, activeAmounts);
-
-    const reference = generateOrderReference();
-    const expiresAt = new Date(Date.now() + ORDER_EXPIRY_MINUTES * 60 * 1000);
-
-    // Method A: Binance Pay Merchant API (if credentials exist and not forced manual)
-    if (binanceConfigured && method !== 'manual_crypto') {
-      const binanceOrder = await createBinancePayOrder({
-        merchantTradeNo: reference,
-        orderAmount: amount,
-        planId: plan.id as 'pro' | 'payg',
-        planName: plan.name.en,
-        returnUrl: successUrl || `${appUrl}/payment/success?reference=${reference}&provider=binance_pay`,
-        cancelUrl: cancelUrl || `${appUrl}/payment/cancelled?reference=${reference}&provider=binance_pay`,
-        webhookUrl: `${appUrl}/api/webhooks/binance-pay`,
-      });
-
-      const checkoutUrl = binanceOrder.checkoutUrl || binanceOrder.universalUrl;
-      if (!binanceOrder.success || !checkoutUrl) {
-        if (!recipientAddress) {
-          throw new Error(
-            binanceOrder.errorMessage || 'Binance Pay failed to create a checkout session.'
-          );
-        }
-      } else {
-        await DataStore.createOrder({
-          userId: user.id,
-          userEmail: user.email,
-          planId: plan.id as 'pro' | 'payg',
-          billingCycle: plan.id === 'payg' ? 'once' : billingCycle,
-          baseAmount: basePrice,
-          amount,
-          currency: 'USDT',
-          method: 'binance_pay',
-          network: 'binance',
-          reference,
-          expiresAt,
-          metadata: {
-            prepayId: binanceOrder.prepayId,
-            checkoutUrl,
-          },
-        });
-
-        return {
-          url: checkoutUrl,
-          provider: 'binance_pay',
-          orderId: reference,
-          reference,
-          amount,
-        };
-      }
-    }
-
-    // Method B: Manual Crypto Payment (Personal Binance deposit address)
-    if (!recipientAddress && !isMockPaymentsAllowed()) {
-      throw new ProviderNotConfiguredError(
-        'manual_crypto',
-        `Crypto wallet for network "${network}" is not configured (missing PAYMENT_WALLET_${network}).`
-      );
-    }
-
-    const storedOrder = await DataStore.createOrder({
-      userId: user.id,
-      userEmail: user.email,
-      planId: plan.id as 'pro' | 'payg',
-      billingCycle: plan.id === 'payg' ? 'once' : billingCycle,
-      baseAmount: basePrice,
-      amount,
-      currency: 'USDT',
-      method: 'manual_crypto',
-      network,
-      reference,
-      recipientAddress,
-      expiresAt,
-      metadata: {
-        centsSuffix,
-      },
-    });
-
-    const paymentPageUrl = `${appUrl}/payment/crypto?reference=${storedOrder.reference}`;
-    return {
-      url: paymentPageUrl,
-      provider: 'manual_crypto',
-      orderId: storedOrder.id,
-      reference: storedOrder.reference,
-      amount: storedOrder.amount,
-      network,
-    };
+      plan.id === 'payg' ? 'once' : billingCycle
+    )
+  ) {
+    selectedProviderName = 'lemonsqueezy';
+    targetCurrency = 'USD';
+  } else if (
+    isStripeConfigured(
+      plan.id as 'pro' | 'payg',
+      plan.id === 'payg' ? 'once' : billingCycle
+    )
+  ) {
+    selectedProviderName = 'stripe';
+    targetCurrency = 'USD';
+  } else {
+    selectedProviderName = 'lemonsqueezy';
+    targetCurrency = 'USD';
   }
 
-  // Local Egyptian payment options (Paymob)
-  if (currency === 'EGP') {
-    const paymobSession = await createPaymobCheckoutSession({
-      user,
-      planId: plan.id,
-      billingCycle,
+  const selectedProvider = getPaymentProvider(selectedProviderName);
+  const canonicalPrice = getPlanPrice(plan.id, targetCurrency, billingCycle);
+  const refPrefix =
+    selectedProviderName === 'paymob'
+      ? 'jm'
+      : selectedProviderName === 'stripe'
+      ? 'stripe'
+      : 'ls';
+  const orderRef = `${refPrefix}_${user.id}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  const storedOrder = await DataStore.createOrder({
+    userId: user.id,
+    userEmail: user.email,
+    planId: plan.id as 'pro' | 'payg',
+    billingCycle: plan.id === 'payg' ? 'once' : billingCycle,
+    baseAmount: canonicalPrice,
+    amount: canonicalPrice,
+    currency: targetCurrency,
+    method: selectedProviderName,
+    reference: orderRef,
+    expiresAt,
+  });
+
+  const session = await selectedProvider.createCheckout(
+    {
+      id: storedOrder.id,
+      reference: storedOrder.reference,
+      planId: storedOrder.planId,
+      billingCycle: storedOrder.billingCycle,
+      amount: storedOrder.amount,
+      currency: targetCurrency,
       successUrl,
       cancelUrl,
-    });
-    if (!paymobSession.url) {
-      throw new Error('Paymob checkout failed to return a redirect URL.');
-    }
-    return {
-      url: paymobSession.url,
-      provider: 'paymob',
-      orderId: paymobSession.orderId,
-      reference: paymobSession.reference,
-    };
-  }
+    },
+    user
+  );
 
-  // Default to Stripe for international USD card checkouts
-  const stripeSession = await createStripeCheckoutSession({
-    user,
-    planId: plan.id,
-    billingCycle,
-    successUrl,
-    cancelUrl,
-  });
-  if (!stripeSession.url) {
-    throw new Error('Stripe checkout failed to return a redirect URL.');
+  if (!session.url) {
+    throw new Error(`Payment provider "${selectedProviderName}" failed to return a checkout URL.`);
   }
 
   return {
-    url: stripeSession.url,
-    provider: 'stripe',
-    sessionId: stripeSession.sessionId,
-    reference: stripeSession.reference,
+    url: session.url,
+    provider: selectedProviderName,
+    sessionId: session.externalId,
+    orderId: storedOrder.id,
+    reference: storedOrder.reference,
+    amount: storedOrder.amount,
   };
 }
 
+/**
+ * Cancels any active subscription at the user's configured payment provider (Lemon Squeezy, Stripe, or Paymob)
+ * before permanent account deletion.
+ */
+export async function cancelUserActiveSubscription(user: {
+  id: string;
+  plan?: string;
+  subscriptionStatus?: string;
+  paymentProvider?: string;
+  lemonSubscriptionId?: string;
+  stripeSubscriptionId?: string;
+  providerSubscriptionId?: string;
+}): Promise<{
+  hadActiveSubscription: boolean;
+  canceled: boolean;
+  provider?: 'lemonsqueezy' | 'stripe' | 'paymob';
+  subscriptionId?: string;
+  mode?: 'live' | 'mock';
+}> {
+  const lemonSubId =
+    user.lemonSubscriptionId ||
+    (user.paymentProvider === 'lemonsqueezy' ? user.providerSubscriptionId : '') ||
+    '';
+  const stripeSubId =
+    user.stripeSubscriptionId ||
+    (user.paymentProvider === 'stripe' ? user.providerSubscriptionId : '') ||
+    '';
+  const hasActiveStatus =
+    user.subscriptionStatus === 'active' ||
+    user.subscriptionStatus === 'past_due' ||
+    user.plan === 'pro' ||
+    Boolean(lemonSubId) ||
+    Boolean(stripeSubId);
+
+  if (!hasActiveStatus) {
+    return { hadActiveSubscription: false, canceled: false };
+  }
+
+  if (lemonSubId) {
+    const { cancelLemonSqueezySubscription } = await import('./providers/lemonsqueezy');
+    const res = await cancelLemonSqueezySubscription(lemonSubId);
+    return {
+      hadActiveSubscription: true,
+      canceled: res.canceled,
+      provider: 'lemonsqueezy',
+      subscriptionId: res.subscriptionId,
+      mode: res.mode,
+    };
+  }
+
+  if (stripeSubId) {
+    const { cancelStripeSubscription } = await import('./providers/stripe');
+    const res = await cancelStripeSubscription(stripeSubId);
+    return {
+      hadActiveSubscription: true,
+      canceled: res.canceled,
+      provider: 'stripe',
+      subscriptionId: res.subscriptionId,
+      mode: res.mode,
+    };
+  }
+
+  // Paymob or non-recurring Pro plan
+  return {
+    hadActiveSubscription: true,
+    canceled: true,
+    provider: (user.paymentProvider as any) || 'paymob',
+    subscriptionId: user.providerSubscriptionId || `local_sub_${user.id}`,
+    mode: 'mock',
+  };
+}
+
+export * from './providers/types';
+export * from './providers/lemonsqueezy';
+export * from './providers/stripe';
+export * from './providers/paymob';
 export * from './stripe';
 export * from './paymob';
-export * from './binance-pay';
-export * from './manual-crypto';
-export * from './crypto-utils';
 export default createCheckout;

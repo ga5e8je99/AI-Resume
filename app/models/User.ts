@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type UserPlan = 'free' | 'pro' | 'enterprise';
 export type BillingCycle = 'monthly' | 'annual' | 'lifetime' | 'none';
-export type PaymentProvider = 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+export type PaymentProvider = 'lemonsqueezy' | 'stripe' | 'paymob' | 'paddle' | 'none';
 export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'expired' | 'none';
 
 export interface IUser extends Document {
@@ -25,8 +25,15 @@ export interface IUser extends Document {
   providerSubscriptionId: string;
   stripeCustomerId: string;
   stripeSubscriptionId: string;
+  lemonCustomerId: string;
+  lemonSubscriptionId: string;
   subscriptionStatus?: SubscriptionStatus;
   paymentFailedAt?: Date | null;
+  emailVerified?: Date | null;
+  emailVerifyTokenHash?: string | null;
+  emailVerifyExpires?: Date | null;
+  termsAcceptedAt?: Date | null;
+  termsVersion?: string | null;
   resetPasswordToken?: string | null;
   resetPasswordExpires?: Date | null;
   createdAt: Date;
@@ -100,7 +107,7 @@ const UserSchema = new Schema<IUser>(
     },
     paymentProvider: {
       type: String,
-      enum: ['stripe', 'paymob', 'paddle', 'binance', 'none'],
+      enum: ['lemonsqueezy', 'stripe', 'paymob', 'paddle', 'none'],
       default: 'none',
     },
     providerCustomerId: {
@@ -121,6 +128,16 @@ const UserSchema = new Schema<IUser>(
       default: '',
       index: true,
     },
+    lemonCustomerId: {
+      type: String,
+      default: '',
+      index: true,
+    },
+    lemonSubscriptionId: {
+      type: String,
+      default: '',
+      index: true,
+    },
     subscriptionStatus: {
       type: String,
       enum: ['active', 'past_due', 'canceled', 'expired', 'none'],
@@ -128,6 +145,27 @@ const UserSchema = new Schema<IUser>(
     },
     paymentFailedAt: {
       type: Date,
+      default: null,
+    },
+    emailVerified: {
+      type: Date,
+      default: null,
+    },
+    emailVerifyTokenHash: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    emailVerifyExpires: {
+      type: Date,
+      default: null,
+    },
+    termsAcceptedAt: {
+      type: Date,
+      default: null,
+    },
+    termsVersion: {
+      type: String,
       default: null,
     },
     resetPasswordToken: {

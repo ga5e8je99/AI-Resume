@@ -16,7 +16,6 @@ const PAGES = [
   { name: 'home', path: '/' },
   { name: 'jobs', path: '/jobs' },
   { name: 'pricing', path: '/pricing' },
-  { name: 'payment-crypto', path: '/payment/crypto' },
   { name: 'dashboard', path: '/dashboard' },
   { name: 'builder', path: '/builder' },
 ];
@@ -48,7 +47,9 @@ async function ensureServer() {
   if (fs.existsSync(lockFile)) {
     try {
       fs.unlinkSync(lockFile);
-    } catch {}
+    } catch {
+      // Ignore if lock file was already removed or is held by an active OS handle
+    }
   }
 
   const port = 3100;
@@ -188,7 +189,9 @@ async function main() {
           window.localStorage.setItem('jobmatch-lang', locale);
           window.localStorage.setItem('jobmatch_first_visit_splash_seen_v1', 'true');
           document.cookie = `jobmatch_user_language=${locale}; path=/; SameSite=Lax`;
-        } catch {}
+        } catch {
+          // Ignore storage access restrictions on initial blank frame before navigation
+        }
       }, lang);
 
       const page = await context.newPage();
@@ -203,8 +206,6 @@ async function main() {
         });
         if (pageDef.name === 'dashboard') {
           await page.waitForSelector('[data-testid="app-sidebar"]', { state: 'attached', timeout: 30000 });
-        } else if (pageDef.name === 'payment-crypto') {
-          await page.waitForSelector('[data-testid="copy-wallet-address-btn"]', { state: 'visible', timeout: 30000 });
         }
         await page.waitForTimeout(1000);
 
@@ -275,21 +276,6 @@ async function main() {
               assert(
                 shellMetrics.sidebarVisible && !shellMetrics.triggerVisible,
                 `[${pageDef.name}] [${lang}] @ ${width}px (>=lg): Desktop Sidebar is visible`
-              );
-            }
-          }
-
-          // Verify Copy button feedback on /payment/crypto at 375px
-          if (pageDef.name === 'payment-crypto' && width === 375) {
-            const copyBtn = page.locator('[data-testid="copy-wallet-address-btn"]');
-            if ((await copyBtn.count()) > 0) {
-              await copyBtn.click();
-              await page.waitForTimeout(300);
-              const btnText = (await copyBtn.innerText()).trim();
-              const expectedSub = lang === 'ar' ? 'تم النسخ' : 'Copied';
-              assert(
-                btnText.includes(expectedSub),
-                `[payment-crypto] [${lang}] @ 375px Copy Wallet button shows "${expectedSub}" feedback (got "${btnText}")`
               );
             }
           }

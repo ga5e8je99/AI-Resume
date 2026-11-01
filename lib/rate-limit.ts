@@ -22,6 +22,7 @@ export interface RateLimitCheckResult {
   allowed: boolean;
   remaining: number;
   resetMs: number;
+  backend?: 'upstash' | 'mongo_ttl' | 'local';
 }
 
 export interface RateLimitResponse {
@@ -31,9 +32,10 @@ export interface RateLimitResponse {
   response?: NextResponse;
 }
 
-interface IRateLimitDoc extends Document {
+export interface IRateLimitDoc extends Document {
   key: string;
   count: number;
+  timestamps: number[];
   resetAt: Date;
 }
 
@@ -50,6 +52,10 @@ const RateLimitSchema = new Schema<IRateLimitDoc>(
       required: true,
       default: 1,
     },
+    timestamps: {
+      type: [Number],
+      default: [],
+    },
     resetAt: {
       type: Date,
       required: true,
@@ -63,21 +69,29 @@ const RateLimitSchema = new Schema<IRateLimitDoc>(
   }
 );
 
-const RateLimitModel: Model<IRateLimitDoc> =
+export const RateLimitModel: Model<IRateLimitDoc> =
   mongoose.models.RateLimit ||
   mongoose.model<IRateLimitDoc>('RateLimit', RateLimitSchema);
 
-// Local fallback store used only when neither Upstash Redis nor MongoDB is reachable
-const fallbackStore = new Map<string, { count: number; resetAt: number }>();
+// Sliding-window local fallback store used ONLY outside production when neither Upstash nor MongoDB is configured
+const fallbackStore = new Map<string, { timestamps: number[]; resetAt: number }>();
 
-function isUpstashConfigured(): { url: string; token: string } | null {
+let prodUpstashWarningLogged = false;
+
+export function resetProdUpstashWarningFlag(): void {
+  prodUpstashWarningLogged = false;
+}
+
+export function isUpstashConfigured(): { url: string; token: string } | null {
   const url = (process.env.UPSTASH_REDIS_REST_URL || '').trim().replace(/\/+$/, '');
   const token = (process.env.UPSTASH_REDIS_REST_TOKEN || '').trim();
   if (
     !url ||
     !token ||
     url.includes('replace_with_') ||
-    token.includes('replace_with_')
+    token.includes('replace_with_') ||
+    url.includes('your_') ||
+    token.includes('your_')
   ) {
     return null;
   }
@@ -116,47 +130,66 @@ function resolvePrefix(config: RateLimitConfig): string {
   return config.keyPrefix ?? config.prefix ?? 'rl';
 }
 
-function checkLocalFallback(key: string, config: RateLimitConfig): RateLimitCheckResult {
+/**
+ * Sliding window check on local fallback store (used only in non-production dev/test).
+ */
+function checkLocalSlidingWindow(key: string, config: RateLimitConfig): RateLimitCheckResult {
   const maxLimit = resolveMaxLimit(config);
   const now = Date.now();
+  const windowStart = now - config.windowMs;
   const record = fallbackStore.get(key);
 
-  if (!record || now > record.resetAt) {
-    fallbackStore.set(key, {
-      count: 1,
-      resetAt: now + config.windowMs,
-    });
-    return {
-      allowed: true,
-      remaining: Math.max(0, maxLimit - 1),
-      resetMs: config.windowMs,
-    };
-  }
+  const validTimestamps = record
+    ? record.timestamps.filter((ts) => ts > windowStart)
+    : [];
 
-  if (record.count >= maxLimit) {
+  if (validTimestamps.length >= maxLimit) {
+    const oldestTs = validTimestamps[0] || now;
+    const resetMs = Math.max(1000, oldestTs + config.windowMs - now);
+    fallbackStore.set(key, {
+      timestamps: validTimestamps,
+      resetAt: oldestTs + config.windowMs,
+    });
     return {
       allowed: false,
       remaining: 0,
-      resetMs: Math.max(0, record.resetAt - now),
+      resetMs,
+      backend: 'local',
     };
   }
 
-  record.count += 1;
+  validTimestamps.push(now);
+  const oldestTs = validTimestamps[0] || now;
+  const resetMs = Math.max(1000, oldestTs + config.windowMs - now);
+  fallbackStore.set(key, {
+    timestamps: validTimestamps,
+    resetAt: now + config.windowMs,
+  });
+
   return {
     allowed: true,
-    remaining: Math.max(0, maxLimit - record.count),
-    resetMs: Math.max(0, record.resetAt - now),
+    remaining: Math.max(0, maxLimit - validTimestamps.length),
+    resetMs,
+    backend: 'local',
   };
 }
 
-async function checkUpstashRateLimit(
+/**
+ * Upstash Redis REST API Sliding Window rate limiter.
+ * Uses a sorted set (`ZREMRANGEBYSCORE`, `ZADD`, `ZCARD`, `ZRANGE`, `PEXPIRE`) in a single pipeline.
+ */
+export async function checkUpstashRateLimit(
   key: string,
   config: RateLimitConfig,
   upstash: { url: string; token: string }
 ): Promise<RateLimitCheckResult | null> {
   try {
     const maxLimit = resolveMaxLimit(config);
-    const redisKey = `rl:${key}`;
+    const now = Date.now();
+    const windowStart = now - config.windowMs;
+    const redisKey = `rl:sw:${key}`;
+    const member = `${now}:${Math.random().toString(36).slice(2, 8)}`;
+
     const res = await fetch(`${upstash.url}/pipeline`, {
       method: 'POST',
       headers: {
@@ -164,48 +197,57 @@ async function checkUpstashRateLimit(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify([
-        ['INCR', redisKey],
-        ['PTTL', redisKey],
+        ['ZREMRANGEBYSCORE', redisKey, '-inf', String(windowStart)],
+        ['ZADD', redisKey, String(now), member],
+        ['ZCARD', redisKey],
+        ['ZRANGE', redisKey, '0', '0', 'WITHSCORES'],
+        ['PEXPIRE', redisKey, String(config.windowMs)],
       ]),
     });
 
     if (!res.ok) return null;
     const data = await res.json();
-    const count = Number(data?.[0]?.result ?? 1);
-    let pttl = Number(data?.[1]?.result ?? -1);
 
-    if (count === 1 || pttl < 0) {
-      await fetch(`${upstash.url}/pipeline`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${upstash.token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([['PEXPIRE', redisKey, config.windowMs]]),
-      });
-      pttl = config.windowMs;
+    // Support both 5-command sliding window pipeline response and legacy 2-command mock response
+    const isSlidingPipeline = Array.isArray(data) && data.length >= 3 && data[2]?.result !== undefined;
+    const count = isSlidingPipeline
+      ? Number(data[2]?.result ?? 1)
+      : Number(data?.[0]?.result ?? 1);
+
+    let resetMs = config.windowMs;
+    if (isSlidingPipeline && Array.isArray(data[3]?.result) && data[3].result.length >= 2) {
+      const oldestScore = Number(data[3].result[1]);
+      if (Number.isFinite(oldestScore) && oldestScore > 0) {
+        resetMs = Math.max(1000, oldestScore + config.windowMs - now);
+      }
+    } else if (!isSlidingPipeline) {
+      const pttl = Number(data?.[1]?.result ?? config.windowMs);
+      resetMs = pttl > 0 ? pttl : config.windowMs;
     }
 
     const allowed = count <= maxLimit;
     return {
       allowed,
       remaining: allowed ? Math.max(0, maxLimit - count) : 0,
-      resetMs: pttl > 0 ? pttl : config.windowMs,
+      resetMs,
+      backend: 'upstash',
     };
   } catch {
-    // Intentionally ignored: fall back to MongoDB or in-memory store if Upstash is unreachable
     return null;
   }
 }
 
-async function checkMongoRateLimit(
+/**
+ * MongoDB TTL Collection (`RateLimitModel`) Sliding Window rate limiter.
+ * Used as the primary fallback in production when Upstash Redis is not configured.
+ */
+export async function checkMongoRateLimit(
   key: string,
   config: RateLimitConfig
 ): Promise<RateLimitCheckResult | null> {
   try {
     const maxLimit = resolveMaxLimit(config);
     if ((mongoose.connection.readyState as number) !== 1) {
-      // Only attempt connection if MONGODB_URI is explicitly configured
       if (!process.env.MONGODB_URI) {
         return null;
       }
@@ -215,54 +257,91 @@ async function checkMongoRateLimit(
       }
     }
 
-    const now = new Date();
-    const nextReset = new Date(now.getTime() + config.windowMs);
+    const nowMs = Date.now();
+    const now = new Date(nowMs);
+    const windowStart = nowMs - config.windowMs;
+    const nextReset = new Date(nowMs + config.windowMs);
 
-    // First try incrementing an active window document
-    const activeDoc = await RateLimitModel.findOneAndUpdate(
-      { key, resetAt: { $gt: now } },
-      { $inc: { count: 1 } },
-      { new: true }
-    );
+    const existingDoc = await RateLimitModel.findOne({ key });
 
-    if (activeDoc) {
-      const resetMs = Math.max(0, activeDoc.resetAt.getTime() - now.getTime());
-      const allowed = activeDoc.count <= maxLimit;
+    if (existingDoc) {
+      const activeTimestamps = Array.isArray(existingDoc.timestamps) && existingDoc.timestamps.length > 0
+        ? existingDoc.timestamps.filter((ts) => ts > windowStart)
+        : existingDoc.resetAt && existingDoc.resetAt.getTime() > nowMs
+          ? Array.from({ length: existingDoc.count }, () => existingDoc.resetAt.getTime() - config.windowMs)
+          : [];
+
+      if (activeTimestamps.length >= maxLimit) {
+        const oldestTs = activeTimestamps[0] || nowMs;
+        const resetMs = Math.max(1000, oldestTs + config.windowMs - nowMs);
+        await RateLimitModel.updateOne(
+          { key },
+          {
+            $set: {
+              count: activeTimestamps.length,
+              timestamps: activeTimestamps,
+              resetAt: new Date(oldestTs + config.windowMs),
+            },
+          }
+        );
+        return {
+          allowed: false,
+          remaining: 0,
+          resetMs,
+          backend: 'mongo_ttl',
+        };
+      }
+
+      activeTimestamps.push(nowMs);
+      const oldestTs = activeTimestamps[0] || nowMs;
+      const resetMs = Math.max(1000, oldestTs + config.windowMs - nowMs);
+      await RateLimitModel.updateOne(
+        { key },
+        {
+          $set: {
+            count: activeTimestamps.length,
+            timestamps: activeTimestamps,
+            resetAt: nextReset,
+          },
+        }
+      );
+
       return {
-        allowed,
-        remaining: allowed ? Math.max(0, maxLimit - activeDoc.count) : 0,
+        allowed: true,
+        remaining: Math.max(0, maxLimit - activeTimestamps.length),
         resetMs,
+        backend: 'mongo_ttl',
       };
     }
 
-    // Otherwise reset / upsert a new window
-    const freshDoc = await RateLimitModel.findOneAndUpdate(
+    await RateLimitModel.findOneAndUpdate(
       { key },
-      { $set: { count: 1, resetAt: nextReset } },
+      {
+        $set: {
+          count: 1,
+          timestamps: [nowMs],
+          resetAt: nextReset,
+        },
+      },
       { upsert: true, new: true }
     );
 
-    const count = freshDoc?.count ?? 1;
-    const resetMs = freshDoc
-      ? Math.max(0, freshDoc.resetAt.getTime() - now.getTime())
-      : config.windowMs;
-    const allowed = count <= maxLimit;
     return {
-      allowed,
-      remaining: allowed ? Math.max(0, maxLimit - count) : 0,
-      resetMs,
+      allowed: true,
+      remaining: Math.max(0, maxLimit - 1),
+      resetMs: config.windowMs,
+      backend: 'mongo_ttl',
     };
   } catch {
-    // Intentionally ignored: fall back to in-memory store if MongoDB rate-limit query fails
     return null;
   }
 }
 
 /**
  * Shared distributed rate limit check:
- * 1. Upstash Redis REST API (if UPSTASH_REDIS_REST_URL is configured)
- * 2. MongoDB TTL collection (RateLimitModel)
- * 3. Local fallback when offline
+ * 1. Upstash Redis REST API with Sliding Window (if UPSTASH_REDIS_REST_URL & UPSTASH_REDIS_REST_TOKEN are set)
+ * 2. If in production and Upstash is not configured -> log warning and fall back to MongoDB TTL collection (RateLimitModel)
+ * 3. Local sliding-window store only outside production when neither Upstash nor MongoDB is available
  */
 export async function checkRateLimitAsync(
   key: string,
@@ -276,19 +355,32 @@ export async function checkRateLimitAsync(
     }
   }
 
+  if (process.env.NODE_ENV === 'production' && !upstash) {
+    if (!prodUpstashWarningLogged) {
+      prodUpstashWarningLogged = true;
+      console.warn(
+        '[RateLimit] WARNING: UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not configured in production. Falling back to MongoDB TTL collection (RateLimit).'
+      );
+    }
+    const mongoResult = await checkMongoRateLimit(key, config);
+    if (mongoResult) {
+      return mongoResult;
+    }
+  }
+
   const mongoResult = await checkMongoRateLimit(key, config);
   if (mongoResult) {
     return mongoResult;
   }
 
-  return checkLocalFallback(key, config);
+  return checkLocalSlidingWindow(key, config);
 }
 
 export function checkRateLimit(
   key: string,
   config: RateLimitConfig
 ): RateLimitCheckResult {
-  return checkLocalFallback(key, config);
+  return checkLocalSlidingWindow(key, config);
 }
 
 function combineRateLimitResults(
@@ -303,7 +395,12 @@ function combineRateLimitResults(
   } else if (!ipResult.allowed && userResult.allowed) {
     resetMs = ipResult.resetMs;
   }
-  return { allowed, remaining, resetMs };
+  return {
+    allowed,
+    remaining,
+    resetMs,
+    backend: userResult.backend || ipResult.backend,
+  };
 }
 
 function buildRateLimitResponse(
@@ -346,7 +443,7 @@ function buildRateLimitResponse(
 /**
  * Universal rate limiter for Next.js Route Handlers.
  * Enforces both per-user (when userId/identifier is present) AND per-IP limits,
- * and returns standard RateLimit + Retry-After headers on 429 responses.
+ * and returns HTTP 429 with standard RateLimit + Retry-After headers when exceeded.
  */
 export function applyRateLimit(
   req: NextRequest,
@@ -374,15 +471,15 @@ export function applyRateLimit(
   const getSync = (): RateLimitResponse => {
     if (!syncResolved) {
       if (hasUser) {
-        const userRes = checkLocalFallback(userKey, userConfig);
-        const ipRes = checkLocalFallback(ipKey, ipConfig);
+        const userRes = checkLocalSlidingWindow(userKey, userConfig);
+        const ipRes = checkLocalSlidingWindow(ipKey, ipConfig);
         syncResolved = buildRateLimitResponse(
           combineRateLimitResults(userRes, ipRes),
           config
         );
       } else {
         syncResolved = buildRateLimitResponse(
-          checkLocalFallback(ipKey, ipConfig),
+          checkLocalSlidingWindow(ipKey, ipConfig),
           config
         );
       }

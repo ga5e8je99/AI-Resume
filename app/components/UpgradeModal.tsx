@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Sparkles, Crown, CheckCircle2, X, ArrowRight, Zap } from 'lucide-react';
-import { trackCreditsExhausted } from '@/lib/analytics';
+import { trackCreditsExhausted, trackFreeQuotaExhausted } from '@/lib/analytics';
 import { useLanguage } from '../context/LanguageContext';
 
 interface UpgradeModalProps {
@@ -32,6 +32,10 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   useEffect(() => {
     if (isOpen) {
       trackCreditsExhausted();
+      trackFreeQuotaExhausted({
+        feature: 'upgrade_modal',
+        reason: 'insufficient_credits',
+      });
     }
   }, [isOpen]);
 
@@ -170,16 +174,6 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             >
               {t('upgrade_modal_maybe_later')}
             </button>
-          </div>
-
-          <div className="text-center pt-1">
-            <Link
-              href="/pricing?currency=USDT"
-              onClick={onClose}
-              className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-3 hover:text-accent transition-colors"
-            >
-              <span>{isRtl ? 'أو الدفع عبر Binance / Crypto (USDT) ←' : 'Or pay with Binance / Crypto (USDT) →'}</span>
-            </Link>
           </div>
         </div>
       </div>

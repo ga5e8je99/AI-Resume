@@ -64,7 +64,9 @@ async function run() {
           try {
             window.localStorage.setItem('jobmatch-theme', theme);
             window.localStorage.setItem('jobmatch-lang', lang);
-          } catch (e) {}
+          } catch {
+            // Ignore localStorage access restrictions on initial about:blank origin
+          }
         }, { theme: mode.theme, lang: mode.lang });
 
         const page = await context.newPage();

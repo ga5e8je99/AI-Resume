@@ -38,7 +38,11 @@ const UpgradeModal = dynamic(() => import('../components/UpgradeModal'), {
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { extractTextFromFile } from '../lib/pdfExtractor';
 import { CoverLetterService } from '../lib/coverLetterService';
-import { trackAiGenerationUsed, trackCreditsExhausted } from '@/lib/analytics';
+import {
+  trackAiGenerationUsed,
+  trackCreditsExhausted,
+  trackFreeQuotaExhausted,
+} from '@/lib/analytics';
 import {
   Sparkles,
   Building,
@@ -464,6 +468,10 @@ export default function CoverLetterPage() {
       // Paywall / Credit Exhaustion Check (HTTP 402)
       if (res.status === 402 || data.error === 'NO_CREDITS') {
         trackCreditsExhausted();
+        trackFreeQuotaExhausted({
+          feature: 'cover_letter',
+          reason: 'insufficient_credits',
+        });
         setActiveView('input');
         setMobileTab('form');
         setShowUpgradeModal(true);

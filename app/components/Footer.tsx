@@ -6,11 +6,12 @@ import Logo from './Logo';
 import { useLanguage } from '../context/LanguageContext';
 import ThemeToggle from './ThemeToggle';
 import LanguageSelector from './LanguageSelector';
-import { Github, Mail, Shield } from 'lucide-react';
+import { openCookiePreferences } from '@/lib/analytics';
+import { Github, Mail, Shield, Cookie } from 'lucide-react';
 
 export default function Footer() {
   const { t } = useLanguage();
-  const contactEmail = 'contact@jobmatch-ai.org';
+  const contactEmail = 'support@jobmatch.ai';
   const githubUrl = 'https://github.com/Tariq-dev01/AI-Resume';
 
   return (
@@ -65,20 +66,25 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Col 3: Resources */}
+        {/* Col 3: Company & Resources */}
         <div className="space-y-2.5">
           <p className="font-mono uppercase font-semibold text-ink text-[11px] tracking-wider">
             {t('footer_col_resources')}
           </p>
           <ul className="space-y-2">
             <li>
-              <Link href="/#how-it-works" className="text-ink-2 hover:text-brand hover:underline underline-offset-4 transition-colors">
-                {t('how_it_works_tag')}
+              <Link href="/about" className="text-ink-2 hover:text-brand hover:underline underline-offset-4 transition-colors">
+                {t('footer_about')}
               </Link>
             </li>
             <li>
-              <Link href="/#features" className="text-ink-2 hover:text-brand hover:underline underline-offset-4 transition-colors">
-                {t('features_tag')}
+              <Link href="/contact" className="text-ink-2 hover:text-brand hover:underline underline-offset-4 transition-colors">
+                {t('footer_contact')}
+              </Link>
+            </li>
+            <li>
+              <Link href="/#how-it-works" className="text-ink-2 hover:text-brand hover:underline underline-offset-4 transition-colors">
+                {t('how_it_works_tag')}
               </Link>
             </li>
             <li>
@@ -98,7 +104,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Col 4: Legal & GitHub */}
+        {/* Col 4: Legal & Privacy */}
         <div className="space-y-2.5">
           <p className="font-mono uppercase font-semibold text-ink text-[11px] tracking-wider">
             {t('footer_col_legal')}
@@ -113,6 +119,21 @@ export default function Footer() {
               <Link href="/terms" className="text-ink-2 hover:text-brand hover:underline underline-offset-4 transition-colors">
                 {t('footer_terms')}
               </Link>
+            </li>
+            <li>
+              <Link href="/refund" className="text-ink-2 hover:text-brand hover:underline underline-offset-4 transition-colors">
+                {t('footer_refund')}
+              </Link>
+            </li>
+            <li>
+              <button
+                type="button"
+                onClick={openCookiePreferences}
+                className="inline-flex items-center gap-1.5 text-ink-2 hover:text-brand hover:underline underline-offset-4 transition-colors cursor-pointer"
+              >
+                <Cookie className="w-3.5 h-3.5 text-ink-2" />
+                <span>{t('footer_cookie_settings')}</span>
+              </button>
             </li>
             <li>
               <a

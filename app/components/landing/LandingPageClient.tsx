@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Footer from '../Footer';
 import HeroSection from '../HeroSection';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { trackLandingView, trackResumeUploaded } from '@/lib/analytics';
 import { DropzoneState } from '@/components/ui';
 import TrustStrip from './TrustStrip';
 import HowItWorks from './HowItWorks';
@@ -17,14 +18,39 @@ import CtaBand from './CtaBand';
 
 export default function LandingPageClient() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { loginDemo } = useAuth();
+  const hasTrackedLandingRef = useRef(false);
 
   // ATS Dropzone state
   const [dropzoneState, setDropzoneState] = useState<DropzoneState>('idle');
   const [dropzoneError, setDropzoneError] = useState<string | undefined>();
   const [uploadedFileName, setUploadedFileName] = useState<string | undefined>();
   const [isDemoLoading, setIsDemoLoading] = useState(false);
+
+  useEffect(() => {
+    if (!hasTrackedLandingRef.current) {
+      const sent = trackLandingView({ locale: language, path: '/' });
+      if (sent) {
+        hasTrackedLandingRef.current = true;
+      }
+    }
+
+    const handleConsentChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ status: 'granted' | 'denied' }>;
+      if (customEvent.detail?.status === 'granted' && !hasTrackedLandingRef.current) {
+        const sent = trackLandingView({ locale: language, path: '/' });
+        if (sent) {
+          hasTrackedLandingRef.current = true;
+        }
+      }
+    };
+
+    window.addEventListener('jobmatch_consent_changed', handleConsentChange);
+    return () => {
+      window.removeEventListener('jobmatch_consent_changed', handleConsentChange);
+    };
+  }, [language]);
 
   const handleFileDrop = async (file: File) => {
     setDropzoneState('parsing');
@@ -42,6 +68,9 @@ export default function LandingPageClient() {
         sessionStorage.setItem('jobmatch_resume_text', text);
         sessionStorage.setItem('jobmatch_resume_filename', file.name);
       }
+
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+      trackResumeUploaded({ fileType: ext, source: 'landing' });
 
       setDropzoneState('success');
       setTimeout(() => {

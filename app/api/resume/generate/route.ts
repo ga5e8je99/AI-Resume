@@ -111,7 +111,10 @@ export async function POST(req: NextRequest) {
       templateChoice: body.templateChoice || 'compact',
     };
 
-    const aiResult = await AIResumeClient.generateResume(synthesizedReq);
+    const aiResult = await AIResumeClient.generateResume(synthesizedReq, {
+      userId: authUser.userId,
+      endpoint: '/api/resume/generate',
+    });
 
     // 8. Persist as a regular resume in DataStore so user can immediately edit, preview, and export in Builder
     const docTypeLabel = synthesizedReq.documentType === 'cv' ? 'CV' : 'Resume';

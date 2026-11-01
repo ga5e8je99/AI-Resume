@@ -148,7 +148,9 @@ async function runTests() {
         process.platform === 'win32'
           ? spawn('taskkill', ['/pid', serverProcess.pid.toString(), '/T', '/F'])
           : serverProcess.kill('SIGTERM');
-      } catch (e) {}
+      } catch {
+        // Ignore process termination error if child server process already exited
+      }
     }
   }
 }

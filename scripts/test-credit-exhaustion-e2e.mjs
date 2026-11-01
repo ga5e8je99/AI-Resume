@@ -148,7 +148,9 @@ async function run() {
         const data = JSON.parse(raw);
         data.users = data.users.filter((u) => u.id !== testUserId);
         fs.writeFileSync(localDbPath, JSON.stringify(data, null, 2), 'utf-8');
-      } catch {}
+      } catch {
+        // Best-effort cleanup of temporary test user from local JSON store
+      }
     }
 
     console.log('\n============================================================');

@@ -4,7 +4,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
-  deploymentId: process.env.NODE_ENV !== 'production' ? 'dev-v3' : undefined,
 
   // Drastically reduce client JS bundle size by treeshaking icon and utility barrel files
   experimental: {
@@ -48,14 +47,6 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: [
-          ...(isDev
-            ? [
-                {
-                  key: 'Clear-Site-Data',
-                  value: '"cache"',
-                },
-              ]
-            : []),
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import DataStore from '@/app/lib/datastore';
 import {
-  verifyStripeWebhookSignature,
-  isUnconfiguredEnvValue,
-} from '@/lib/payments/stripe';
-import { verifyPaymobHmac } from '@/lib/payments/paymob';
+  ProviderNotConfiguredError,
+  stripeProvider,
+} from '@/lib/payments/providers/stripe';
+import { paymobProvider } from '@/lib/payments/providers/paymob';
+import { WebhookSignatureError } from '@/lib/payments/providers/types';
 import {
   sendEmail,
   getPaymentReceiptEmailHtml,
@@ -12,6 +13,10 @@ import {
 } from '@/lib/email';
 import { getPlanCredits, getPlanPrice } from '@/lib/plans';
 import { applyRateLimit } from '@/lib/rate-limit';
+import {
+  trackServerPaymentSucceeded,
+  trackServerSubscriptionCancelled,
+} from '@/lib/analytics';
 
 async function resolveStripeUser({
   userId,
@@ -37,19 +42,44 @@ async function resolveStripeUser({
   return null;
 }
 
+async function resolveStoredOrder({
+  orderId,
+  orderReference,
+}: {
+  orderId?: string;
+  orderReference?: string;
+}) {
+  if (orderId) {
+    const byId = await DataStore.findOrderById(orderId);
+    if (byId) return byId;
+  }
+  if (orderReference) {
+    const byRef = await DataStore.findOrderByReference(orderReference);
+    if (byRef) return byRef;
+  }
+  if (orderId) {
+    const byRefFallback = await DataStore.findOrderByReference(orderId);
+    if (byRefFallback) return byRefFallback;
+  }
+  return null;
+}
+
 /**
  * POST /api/webhooks/payment
- * Universal webhook endpoint handling separated Stripe and Paymob payment notifications.
+ * Universal webhook endpoint handling separated Stripe and Paymob payment notifications
+ * via the unified PaymentProvider interface (stripeProvider & paymobProvider).
+ *
  * Security & Integrity Guarantees:
- * - Stripe branch: Uses stripe.webhooks.constructEvent with raw body & signature; handles checkout.session.completed (no duplicate payment_intent.succeeded activation).
- * - Paymob branch: Enforces PAYMOB_HMAC_SECRET (500 if missing in production) and timing-safe HMAC verification (401 if missing/invalid).
- * - Order-bound verification: Never trusts userId/planId from query or body; looks up stored Order by merchant_order_id/reference, verifies amount_cents & currency, and activates idempotently via DataStore.completeOrder.
+ * - Mandatory HMAC / Signature verification (500 if secret missing, 401 if invalid/missing signature).
+ * - Order-bound activation only: Never trusts userId/planId/amount from unverified query or body;
+ *   looks up stored Order in DataStore, verifies amount_cents & currency, and activates idempotently
+ *   via DataStore.completeOrder(order.id).
  */
 export async function POST(req: NextRequest) {
   try {
     const rateLimit = await applyRateLimit(req, {
-      limit: 120,
-      ipLimit: 120,
+      limit: 300,
+      ipLimit: 300,
       windowMs: 60 * 1000,
       keyPrefix: 'webhook_payment',
     });
@@ -65,183 +95,287 @@ export async function POST(req: NextRequest) {
     const testHeader = req.headers.get('x-test-webhook');
 
     // ==========================================
-    // 1. STRIPE WEBHOOK HANDLER
+    // 1. STRIPE WEBHOOK HANDLER (via stripeProvider)
     // ==========================================
     if (stripeSignature) {
-      const webhookSecret = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
-      if (!webhookSecret || isUnconfiguredEnvValue(webhookSecret)) {
-        console.error('CRITICAL: STRIPE_WEBHOOK_SECRET is not configured.');
-        return NextResponse.json(
-          {
-            error: 'CONFIGURATION_ERROR',
-            message: 'Stripe webhook secret is not configured.',
-          },
-          { status: 500 }
-        );
-      }
-
-      let event: any;
+      let normalized;
       try {
-        event = verifyStripeWebhookSignature(rawBody, stripeSignature, webhookSecret);
+        normalized = await stripeProvider.handleWebhook(rawBody, req.headers);
       } catch (err: any) {
-        console.error('Stripe webhook signature verification failed:', err.message);
+        if (err instanceof ProviderNotConfiguredError) {
+          console.error('CRITICAL: STRIPE_WEBHOOK_SECRET is not configured.');
+          return NextResponse.json(
+            {
+              error: 'CONFIGURATION_ERROR',
+              message: err.message,
+            },
+            { status: 500 }
+          );
+        }
+        if (err instanceof WebhookSignatureError) {
+          console.error('Stripe webhook signature verification failed:', err.message);
+          return NextResponse.json(
+            { error: 'INVALID_SIGNATURE', message: err.message },
+            { status: 401 }
+          );
+        }
         return NextResponse.json(
-          { error: 'INVALID_SIGNATURE', message: err.message },
+          { error: 'INVALID_WEBHOOK_PAYLOAD', message: err?.message || 'Invalid payload' },
           { status: 400 }
         );
       }
 
-      const eventId = event.id;
-      const eventType = event.type;
+      const { eventId, eventType, action } = normalized;
 
       // Idempotency check: ignore duplicate events
       if (await DataStore.isEventProcessed(eventId)) {
         return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
       }
 
-      // Handle checkout.session.completed ONLY for checkout activation (payment_intent.succeeded removed to prevent duplicate activation)
-      if (eventType === 'checkout.session.completed') {
-        const session = event.data?.object || {};
-        const metadata = session.metadata || {};
-        const userId = metadata.userId || session.client_reference_id;
-        const planId = metadata.planId || (session.mode === 'subscription' ? 'pro' : 'payg');
-        const billingCycle = (metadata.billingCycle || 'monthly') as 'monthly' | 'annual';
-        const amount = (session.amount_total ?? session.amount ?? 0) / 100;
-        const currency = (session.currency || 'USD').toUpperCase();
-        const customerId =
-          typeof session.customer === 'string'
-            ? session.customer
-            : session.customer?.id || '';
-        const subscriptionId =
-          typeof session.subscription === 'string'
-            ? session.subscription
-            : session.subscription?.id || '';
+      // 1A. Order-bound activation on checkout.session.completed
+      if (action === 'activate_order') {
+        if (!normalized.orderId && !normalized.orderReference) {
+          return NextResponse.json(
+            {
+              error: 'MISSING_ORDER_REFERENCE',
+              message: 'Stripe checkout session is missing orderId/reference in metadata.',
+            },
+            { status: 400 }
+          );
+        }
 
-        const user = await resolveStripeUser({ userId, subscriptionId, customerId });
-        if (user) {
-          if (planId === 'pro') {
-            const now = Date.now();
-            const existingRaw = (user as any).proExpiresAt || (user as any).planExpiresAt;
-            const existingExpiry = existingRaw ? new Date(existingRaw).getTime() : 0;
-            const baseTime = existingExpiry > now ? existingExpiry : now;
-            const extensionDays = billingCycle === 'annual' ? 365 : 30;
-            const proExpiresAt = new Date(baseTime + extensionDays * 24 * 60 * 60 * 1000);
+        const order = await resolveStoredOrder({
+          orderId: normalized.orderId,
+          orderReference: normalized.orderReference,
+        });
 
-            await DataStore.upgradeUserPlan(user.id, {
-              plan: 'pro',
-              billingCycle,
-              planExpiresAt: proExpiresAt,
-              proExpiresAt,
-              paymentProvider: 'stripe',
-              providerCustomerId: customerId || (user as any).stripeCustomerId || '',
-              providerSubscriptionId: subscriptionId || (user as any).stripeSubscriptionId || '',
-              stripeCustomerId: customerId || (user as any).stripeCustomerId || '',
-              stripeSubscriptionId: subscriptionId || (user as any).stripeSubscriptionId || '',
-              subscriptionStatus: 'active',
-              paymentFailedAt: null,
-            });
-          } else {
-            const creditsToGrant = getPlanCredits(planId);
-            if (typeof creditsToGrant === 'number' && creditsToGrant > 0) {
-              await DataStore.incrementUserCredits(user.id, creditsToGrant);
-            }
-            if (customerId) {
-              await DataStore.upgradeUserPlan(user.id, {
-                plan: ((user as any).plan || 'free') as any,
-                billingCycle: (user as any).billingCycle || 'none',
-                planExpiresAt: (user as any).proExpiresAt || (user as any).planExpiresAt || null,
-                proExpiresAt: (user as any).proExpiresAt || (user as any).planExpiresAt || null,
-                paymentProvider: 'stripe',
-                stripeCustomerId: customerId,
-                providerCustomerId: customerId,
-              });
-            }
-          }
+        if (!order) {
+          return NextResponse.json(
+            {
+              error: 'ORDER_NOT_FOUND',
+              message: `Order not found for Stripe session (${normalized.orderId || normalized.orderReference}).`,
+            },
+            { status: 404 }
+          );
+        }
 
-          // Mark associated Order as paid if reference is present in metadata
-          const orderRef = metadata.reference || metadata.orderReference;
-          if (orderRef) {
-            const stripeOrder = await DataStore.findOrderByReference(String(orderRef));
-            if (stripeOrder && stripeOrder.status !== 'paid') {
-              await DataStore.updateOrderStatus(stripeOrder.id, 'paid', {
-                txid: session.id,
-                actor: 'stripe_webhook',
-                note: 'Paid via Stripe checkout.session.completed',
-              });
-            }
-          }
-
-          // Record payment audit trail
-          await DataStore.recordPayment({
-            userId: user.id,
-            userEmail: user.email || session.customer_details?.email,
-            amount,
-            currency,
+        if (order.status === 'paid') {
+          await DataStore.recordPaymentEvent({
+            eventId,
             provider: 'stripe',
-            providerPaymentId: session.id,
-            planId,
-            billingCycle: planId === 'pro' ? billingCycle : 'none',
-            status: 'succeeded',
-            metadata: {
-              stripeEventId: eventId,
-              eventType,
-              stripeCustomerId: customerId,
-              stripeSubscriptionId: subscriptionId,
+            eventType,
+            status: 'processed',
+            payload: { orderId: order.id, duplicateOrder: true },
+          });
+          return NextResponse.json(
+            { received: true, duplicate: true, status: 'paid' },
+            { status: 200 }
+          );
+        }
+
+        // Strict amount & currency validation against the stored Order
+        const expectedAmountCents = Math.round(Number(order.amount) * 100);
+        const actualAmountCents = Number(normalized.amountCents);
+        const expectedCurrency = String(order.currency || 'USD').toUpperCase();
+        const actualCurrency = String(normalized.currency || '').toUpperCase();
+
+        if (
+          !Number.isFinite(actualAmountCents) ||
+          actualAmountCents !== expectedAmountCents ||
+          actualCurrency !== expectedCurrency
+        ) {
+          await DataStore.updateOrderStatus(order.id, 'rejected', {
+            actor: 'stripe_webhook',
+            note: `Amount or currency mismatch: expected ${expectedAmountCents} cents (${expectedCurrency}), got ${actualAmountCents} cents (${actualCurrency})`,
+          });
+
+          await DataStore.recordPaymentEvent({
+            eventId,
+            provider: 'stripe',
+            eventType,
+            status: 'rejected',
+            payload: {
+              orderId: order.id,
+              reference: order.reference,
+              expectedAmountCents,
+              actualAmountCents,
+              expectedCurrency,
+              actualCurrency,
+              reason: 'AMOUNT_OR_CURRENCY_MISMATCH',
             },
           });
 
-          // Dispatch payment receipt email (non-blocking)
-          const recipientEmail = user.email || session.customer_details?.email;
-          if (recipientEmail) {
-            sendEmail({
-              to: recipientEmail,
-              subject: 'JobMatch AI - Payment Receipt & Confirmation 🧾',
-              html: getPaymentReceiptEmailHtml({
-                name: user.name || 'Valued Customer',
-                amount,
-                currency,
-                planId,
-                transactionId: session.id,
-              }),
-              isDemo: Boolean(user.isDemo),
-            }).catch((err) => {
-              console.error('[Stripe Webhook] Failed to send receipt email:', err);
-            });
-          }
+          return NextResponse.json(
+            {
+              error: 'AMOUNT_OR_CURRENCY_MISMATCH',
+              status: 'rejected',
+              message: 'Stripe session amount or currency does not match the stored order.',
+            },
+            { status: 400 }
+          );
         }
-      } else if (eventType === 'invoice.paid') {
-        const invoice = event.data?.object || {};
-        const customerId =
-          typeof invoice.customer === 'string'
-            ? invoice.customer
-            : invoice.customer?.id || '';
-        const subscriptionId =
-          typeof invoice.subscription === 'string'
-            ? invoice.subscription
-            : invoice.subscription?.id || '';
-        const lineItem = invoice.lines?.data?.[0] || {};
-        const metadata = {
-          ...(lineItem.metadata || {}),
-          ...(invoice.subscription_details?.metadata || {}),
-          ...(invoice.metadata || {}),
-        };
-        const userId = metadata.userId;
 
-        const user = await resolveStripeUser({ userId, subscriptionId, customerId });
+        const completion = await DataStore.completeOrder(order.id, {
+          actor: 'stripe_webhook',
+          note: `Activated via verified Stripe ${eventType} webhook`,
+        });
+
+        if (completion.alreadyPaid) {
+          return NextResponse.json(
+            { received: true, duplicate: true, status: 'paid' },
+            { status: 200 }
+          );
+        }
+
+        const user = await DataStore.findUserById(order.userId);
+        const resolvedBillingCycle: 'monthly' | 'annual' | 'none' =
+          order.planId === 'pro'
+            ? order.billingCycle === 'annual'
+              ? 'annual'
+              : 'monthly'
+            : 'none';
+
+        if (user && (normalized.customerId || normalized.subscriptionId)) {
+          await DataStore.upgradeUserPlan(user.id, {
+            plan: ((user as any).plan || (order.planId === 'pro' ? 'pro' : 'free')) as any,
+            billingCycle: (user as any).billingCycle || resolvedBillingCycle,
+            planExpiresAt: (user as any).proExpiresAt || (user as any).planExpiresAt || null,
+            proExpiresAt: (user as any).proExpiresAt || (user as any).planExpiresAt || null,
+            paymentProvider: 'stripe',
+            stripeCustomerId: normalized.customerId || (user as any).stripeCustomerId || '',
+            stripeSubscriptionId:
+              normalized.subscriptionId || (user as any).stripeSubscriptionId || '',
+            providerCustomerId: normalized.customerId || (user as any).providerCustomerId || '',
+            providerSubscriptionId:
+              normalized.subscriptionId || (user as any).providerSubscriptionId || '',
+            subscriptionStatus: 'active',
+            paymentFailedAt: null,
+          });
+        }
+
+        const sessionObj = (normalized.rawPayload as any)?.data?.object || {};
+        await DataStore.recordPayment({
+          userId: order.userId,
+          userEmail: order.userEmail || user?.email || normalized.userEmail,
+          amount: order.amount,
+          currency: order.currency,
+          provider: 'stripe',
+          providerPaymentId: sessionObj.id || eventId,
+          planId: order.planId,
+          billingCycle: resolvedBillingCycle,
+          status: 'succeeded',
+          metadata: {
+            stripeEventId: eventId,
+            eventType,
+            orderId: order.id,
+            reference: order.reference,
+            stripeCustomerId: normalized.customerId,
+            stripeSubscriptionId: normalized.subscriptionId,
+          },
+        });
+
+        await DataStore.recordPaymentEvent({
+          eventId,
+          provider: 'stripe',
+          eventType,
+          status: 'processed',
+          payload: {
+            orderId: order.id,
+            reference: order.reference,
+            planId: order.planId,
+            amount: order.amount,
+            currency: order.currency,
+          },
+        });
+
+        trackServerPaymentSucceeded({
+          userId: order.userId,
+          plan: order.planId,
+          provider: 'stripe',
+          amount: order.amount,
+          currency: order.currency,
+          billingCycle: resolvedBillingCycle,
+          orderReference: order.reference,
+        });
+
+        const recipientEmail = user?.email || order.userEmail || normalized.userEmail;
+        if (recipientEmail) {
+          sendEmail({
+            to: recipientEmail,
+            subject: 'JobMatch AI - Payment Receipt & Confirmation 🧾',
+            html: getPaymentReceiptEmailHtml({
+              name: user?.name || 'Valued Customer',
+              amount: order.amount,
+              currency: order.currency,
+              planId: order.planId,
+              transactionId: sessionObj.id || order.reference,
+            }),
+            isDemo: Boolean(user?.isDemo),
+          }).catch((err) => {
+            console.error('[Stripe Webhook] Failed to send receipt email:', err);
+          });
+        }
+
+        return NextResponse.json(
+          {
+            received: true,
+            status: 'paid',
+            orderId: order.id,
+            reference: order.reference,
+          },
+          { status: 200 }
+        );
+      }
+
+      // 1B. Refund handling on charge.refunded
+      if (action === 'order_refunded') {
+        const order = await resolveStoredOrder({
+          orderId: normalized.orderId,
+          orderReference: normalized.orderReference,
+        });
+        if (order && order.status === 'paid') {
+          const user = await DataStore.findUserById(order.userId);
+          if (user) {
+            if (order.planId === 'payg') {
+              const creditsToRevoke = Number(getPlanCredits('payg')) || 15;
+              const currentCredits = Number((user as any).aiCredits || 0);
+              const delta = -Math.min(currentCredits, creditsToRevoke);
+              if (delta < 0) {
+                await DataStore.incrementUserCredits(user.id, delta);
+              }
+            } else if (order.planId === 'pro') {
+              await DataStore.upgradeUserPlan(user.id, {
+                plan: 'free',
+                billingCycle: 'none',
+                planExpiresAt: null,
+                proExpiresAt: null,
+                subscriptionStatus: 'canceled',
+              });
+            }
+          }
+          await DataStore.updateOrderStatus(order.id, 'refunded', {
+            actor: 'stripe_webhook',
+            note: `Order refunded via Stripe (${eventId})`,
+          });
+        }
+      } else if (action === 'subscription_renewed') {
+        const user = await resolveStripeUser({
+          userId: normalized.userId,
+          subscriptionId: normalized.subscriptionId,
+          customerId: normalized.customerId,
+        });
         if (user) {
-          const recurringInterval = lineItem.price?.recurring?.interval;
           const billingCycle = (
-            metadata.billingCycle === 'annual' || recurringInterval === 'year'
+            normalized.billingCycle === 'annual'
               ? 'annual'
               : (user as any).billingCycle === 'annual'
               ? 'annual'
               : 'monthly'
           ) as 'monthly' | 'annual';
 
-          const periodEndSec = lineItem.period?.end;
           let proExpiresAt: Date;
-          if (typeof periodEndSec === 'number' && periodEndSec * 1000 > Date.now()) {
-            proExpiresAt = new Date(periodEndSec * 1000);
+          if (normalized.renewsAt && new Date(normalized.renewsAt).getTime() > Date.now()) {
+            proExpiresAt = new Date(normalized.renewsAt);
           } else {
             const now = Date.now();
             const existingRaw = (user as any).proExpiresAt || (user as any).planExpiresAt;
@@ -257,36 +391,39 @@ export async function POST(req: NextRequest) {
             planExpiresAt: proExpiresAt,
             proExpiresAt,
             paymentProvider: 'stripe',
-            providerCustomerId: customerId || (user as any).stripeCustomerId || '',
-            providerSubscriptionId: subscriptionId || (user as any).stripeSubscriptionId || '',
-            stripeCustomerId: customerId || (user as any).stripeCustomerId || '',
-            stripeSubscriptionId: subscriptionId || (user as any).stripeSubscriptionId || '',
+            providerCustomerId: normalized.customerId || (user as any).stripeCustomerId || '',
+            providerSubscriptionId:
+              normalized.subscriptionId || (user as any).stripeSubscriptionId || '',
+            stripeCustomerId: normalized.customerId || (user as any).stripeCustomerId || '',
+            stripeSubscriptionId:
+              normalized.subscriptionId || (user as any).stripeSubscriptionId || '',
             subscriptionStatus: 'active',
             paymentFailedAt: null,
           });
 
-          const amount = (invoice.amount_paid ?? invoice.total ?? 0) / 100;
-          const currency = (invoice.currency || 'USD').toUpperCase();
+          const amount = normalized.amount ?? 0;
+          const currency = normalized.currency || 'USD';
+          const invoiceObj = (normalized.rawPayload as any)?.data?.object || {};
 
           await DataStore.recordPayment({
             userId: user.id,
-            userEmail: user.email || invoice.customer_email,
+            userEmail: user.email || normalized.userEmail,
             amount,
             currency,
             provider: 'stripe',
-            providerPaymentId: invoice.id || eventId,
+            providerPaymentId: invoiceObj.id || eventId,
             planId: 'pro',
             billingCycle,
             status: 'succeeded',
             metadata: {
               stripeEventId: eventId,
               eventType,
-              stripeCustomerId: customerId,
-              stripeSubscriptionId: subscriptionId,
+              stripeCustomerId: normalized.customerId,
+              stripeSubscriptionId: normalized.subscriptionId,
             },
           });
 
-          const recipientEmail = user.email || invoice.customer_email;
+          const recipientEmail = user.email || normalized.userEmail;
           if (recipientEmail && amount > 0) {
             sendEmail({
               to: recipientEmail,
@@ -296,7 +433,7 @@ export async function POST(req: NextRequest) {
                 amount,
                 currency,
                 planId: 'pro',
-                transactionId: invoice.id || eventId,
+                transactionId: invoiceObj.id || eventId,
               }),
               isDemo: Boolean(user.isDemo),
             }).catch((err) => {
@@ -304,26 +441,29 @@ export async function POST(req: NextRequest) {
             });
           }
         }
-      } else if (eventType === 'customer.subscription.deleted') {
-        const subscription = event.data?.object || {};
-        const subscriptionId = subscription.id || '';
-        const customerId =
-          typeof subscription.customer === 'string'
-            ? subscription.customer
-            : subscription.customer?.id || '';
-        const userId = subscription.metadata?.userId;
-
-        const user = await resolveStripeUser({ userId, subscriptionId, customerId });
+      } else if (action === 'subscription_expired') {
+        const user = await resolveStripeUser({
+          userId: normalized.userId,
+          subscriptionId: normalized.subscriptionId,
+          customerId: normalized.customerId,
+        });
         if (user) {
           await DataStore.upgradeUserPlan(user.id, {
             plan: 'free',
             billingCycle: 'none',
             planExpiresAt: null,
             proExpiresAt: null,
-            stripeCustomerId: customerId || (user as any).stripeCustomerId || '',
+            stripeCustomerId: normalized.customerId || (user as any).stripeCustomerId || '',
             stripeSubscriptionId: '',
             providerSubscriptionId: '',
             subscriptionStatus: 'canceled',
+          });
+
+          trackServerSubscriptionCancelled({
+            userId: user.id,
+            plan: 'pro',
+            provider: 'stripe',
+            reason: eventType || 'subscription_deleted',
           });
 
           if (user.email) {
@@ -340,22 +480,12 @@ export async function POST(req: NextRequest) {
             });
           }
         }
-      } else if (eventType === 'invoice.payment_failed') {
-        const invoice = event.data?.object || {};
-        const customerId =
-          typeof invoice.customer === 'string'
-            ? invoice.customer
-            : invoice.customer?.id || '';
-        const subscriptionId =
-          typeof invoice.subscription === 'string'
-            ? invoice.subscription
-            : invoice.subscription?.id || '';
-        const userId =
-          invoice.subscription_details?.metadata?.userId ||
-          invoice.metadata?.userId ||
-          invoice.lines?.data?.[0]?.metadata?.userId;
-
-        const user = await resolveStripeUser({ userId, subscriptionId, customerId });
+      } else if (action === 'subscription_updated' && normalized.status === 'past_due') {
+        const user = await resolveStripeUser({
+          userId: normalized.userId,
+          subscriptionId: normalized.subscriptionId,
+          customerId: normalized.customerId,
+        });
         if (user) {
           const existingRaw = (user as any).proExpiresAt || (user as any).planExpiresAt;
           const isAlreadyExpired =
@@ -367,13 +497,14 @@ export async function POST(req: NextRequest) {
             planExpiresAt: isAlreadyExpired ? null : existingRaw,
             proExpiresAt: isAlreadyExpired ? null : existingRaw,
             paymentProvider: 'stripe',
-            stripeCustomerId: customerId || (user as any).stripeCustomerId || '',
-            stripeSubscriptionId: subscriptionId || (user as any).stripeSubscriptionId || '',
+            stripeCustomerId: normalized.customerId || (user as any).stripeCustomerId || '',
+            stripeSubscriptionId:
+              normalized.subscriptionId || (user as any).stripeSubscriptionId || '',
             subscriptionStatus: 'past_due',
             paymentFailedAt: new Date(),
           });
 
-          const recipientEmail = user.email || invoice.customer_email;
+          const recipientEmail = user.email || normalized.userEmail;
           if (recipientEmail) {
             sendEmail({
               to: recipientEmail,
@@ -396,7 +527,7 @@ export async function POST(req: NextRequest) {
         provider: 'stripe',
         eventType,
         status: 'processed',
-        payload: { id: event.id, type: event.type },
+        payload: { id: eventId, type: eventType },
       });
 
       return NextResponse.json({ received: true }, { status: 200 });
@@ -507,41 +638,43 @@ export async function POST(req: NextRequest) {
     }
 
     // ==========================================
-    // 3. PAYMOB WEBHOOK HANDLER
+    // 3. PAYMOB WEBHOOK HANDLER (via paymobProvider)
     // ==========================================
-    const obj = parsedBody.obj || parsedBody;
-    const hmacSecret = (process.env.PAYMOB_HMAC_SECRET || '').trim();
-
-    // Requirement 1: If PAYMOB_HMAC_SECRET is not configured in production -> log error & return 500.
-    // Even outside production, never allow unverified webhooks if secret is missing.
-    if (!hmacSecret || isUnconfiguredEnvValue(hmacSecret)) {
-      console.error('CRITICAL: PAYMOB_HMAC_SECRET is not configured in environment.');
+    let normalizedPaymob;
+    try {
+      normalizedPaymob = await paymobProvider.handleWebhook(rawBody, {
+        'x-paymob-hmac': paymobHmac || undefined,
+      });
+    } catch (err: any) {
+      if (err instanceof ProviderNotConfiguredError) {
+        console.error('CRITICAL: PAYMOB_HMAC_SECRET is not configured in environment.');
+        return NextResponse.json(
+          {
+            error: 'CONFIGURATION_ERROR',
+            message: 'PAYMOB_HMAC_SECRET is not configured.',
+          },
+          { status: 500 }
+        );
+      }
+      if (err instanceof WebhookSignatureError) {
+        return NextResponse.json(
+          {
+            error: 'INVALID_HMAC',
+            message: err.message,
+          },
+          { status: 401 }
+        );
+      }
       return NextResponse.json(
         {
-          error: 'CONFIGURATION_ERROR',
-          message: 'PAYMOB_HMAC_SECRET is not configured.',
+          error: 'INVALID_WEBHOOK_PAYLOAD',
+          message: err?.message || 'Invalid Paymob payload',
         },
-        { status: 500 }
+        { status: 400 }
       );
     }
 
-    // Requirement 1 & 2: If HMAC is missing or invalid -> return 401 immediately before any processing.
-    if (!paymobHmac || !verifyPaymobHmac(obj, paymobHmac, hmacSecret)) {
-      return NextResponse.json(
-        {
-          error: 'INVALID_HMAC',
-          message: 'Missing or invalid Paymob HMAC signature.',
-        },
-        { status: 401 }
-      );
-    }
-
-    // Requirement 3: Never read userId or planId from query or body.
-    // Look up stored Order by merchant_order_id (or reference).
-    const merchantOrderId = String(
-      obj.order?.merchant_order_id || obj.merchant_order_id || obj.reference || ''
-    ).trim();
-
+    const merchantOrderId = normalizedPaymob.orderReference || '';
     if (!merchantOrderId) {
       return NextResponse.json(
         {
@@ -552,7 +685,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const order = await DataStore.findOrderByReference(merchantOrderId);
+    const order = await resolveStoredOrder({
+      orderId: normalizedPaymob.orderId,
+      orderReference: merchantOrderId,
+    });
     if (!order) {
       return NextResponse.json(
         {
@@ -563,18 +699,62 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Requirement 6: Idempotency - if Order is already 'paid', return 200 without activating again.
-    if (order.status === 'paid') {
+    const eventId = normalizedPaymob.eventId;
+    const obj = normalizedPaymob.rawPayload || {};
+
+    if (await DataStore.isEventProcessed(eventId)) {
       return NextResponse.json(
-        { received: true, duplicate: true, status: 'paid' },
+        { received: true, duplicate: true, status: order.status },
         { status: 200 }
       );
     }
 
-    const eventId = `paymob_tx_${obj.id || merchantOrderId}`;
-    if (await DataStore.isEventProcessed(eventId)) {
+    // Handle Paymob refund
+    if (normalizedPaymob.action === 'order_refunded') {
+      if (order.status === 'paid') {
+        const user = await DataStore.findUserById(order.userId);
+        if (user) {
+          if (order.planId === 'payg') {
+            const creditsToRevoke = Number(getPlanCredits('payg')) || 15;
+            const currentCredits = Number((user as any).aiCredits || 0);
+            const delta = -Math.min(currentCredits, creditsToRevoke);
+            if (delta < 0) {
+              await DataStore.incrementUserCredits(user.id, delta);
+            }
+          } else if (order.planId === 'pro') {
+            await DataStore.upgradeUserPlan(user.id, {
+              plan: 'free',
+              billingCycle: 'none',
+              planExpiresAt: null,
+              proExpiresAt: null,
+              subscriptionStatus: 'canceled',
+            });
+          }
+        }
+        await DataStore.updateOrderStatus(order.id, 'refunded', {
+          actor: 'paymob_webhook',
+          note: `Order refunded via Paymob (${eventId})`,
+        });
+      }
+
+      await DataStore.recordPaymentEvent({
+        eventId,
+        provider: 'paymob',
+        eventType: 'TRANSACTION',
+        status: 'processed',
+        payload: { id: obj.id, merchantOrderId, orderId: order.id, status: 'refunded' },
+      });
+
       return NextResponse.json(
-        { received: true, duplicate: true, status: order.status },
+        { received: true, status: 'refunded', orderId: order.id },
+        { status: 200 }
+      );
+    }
+
+    // Idempotency - if Order is already 'paid', return 200 without activating again.
+    if (order.status === 'paid') {
+      return NextResponse.json(
+        { received: true, duplicate: true, status: 'paid' },
         { status: 200 }
       );
     }
@@ -590,11 +770,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Requirement 4: Verify amount_cents and currency in payload match the stored Order.
+    // Verify amount_cents and currency in payload match the stored Order
     const expectedAmountCents = Math.round(Number(order.amount) * 100);
-    const actualAmountCents = Number(obj.amount_cents);
+    const actualAmountCents = Number(normalizedPaymob.amountCents);
     const expectedCurrency = String(order.currency || 'EGP').toUpperCase();
-    const actualCurrency = String(obj.currency || '').toUpperCase();
+    const actualCurrency = String(normalizedPaymob.currency || '').toUpperCase();
 
     if (
       !Number.isFinite(actualAmountCents) ||
@@ -620,21 +800,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: 'AMOUNT_OR_CURRENCY_MISMATCH',
+          status: 'rejected',
           message: 'Transaction amount_cents or currency does not match the stored order.',
         },
         { status: 400 }
       );
     }
 
-    // Check Paymob transaction success flag (not voided / not refunded / not pending)
-    const isSuccessful =
-      (obj.success === true || obj.success === 'true') &&
-      obj.is_voided !== true &&
-      obj.is_refunded !== true &&
-      obj.pending !== true &&
-      obj.error_occured !== true;
-
-    if (!isSuccessful) {
+    if (normalizedPaymob.action !== 'activate_order') {
       await DataStore.recordPaymentEvent({
         eventId,
         provider: 'paymob',
@@ -650,9 +823,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true, status: 'failed' }, { status: 200 });
     }
 
-    // Requirement 5: Activate via DataStore.completeOrder (idempotent, uses lib/plans.ts credits/plan)
+    // Activate via DataStore.completeOrder (idempotent, uses lib/plans.ts credits/plan)
     const completion = await DataStore.completeOrder(order.id, {
-      txid: String(obj.id || ''),
       actor: 'paymob_webhook',
       note: 'Activated via verified Paymob HMAC webhook',
     });
@@ -677,6 +849,16 @@ export async function POST(req: NextRequest) {
         amount: order.amount,
         currency: order.currency,
       },
+    });
+
+    trackServerPaymentSucceeded({
+      userId: order.userId,
+      plan: order.planId,
+      provider: 'paymob',
+      amount: order.amount,
+      currency: order.currency,
+      billingCycle: order.billingCycle,
+      orderReference: order.reference,
     });
 
     // Dispatch payment receipt email (non-blocking)

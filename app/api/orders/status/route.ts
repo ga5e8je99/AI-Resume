@@ -74,21 +74,19 @@ export async function GET(req: NextRequest) {
       status = 'pending';
     } else if (rawStatus === 'expired') {
       status = 'expired';
-    } else if (rawStatus === 'rejected') {
+    } else if (rawStatus === 'rejected' || rawStatus === 'refunded') {
       status = 'failed';
     } else {
       status = 'awaiting_payment';
     }
 
-    let provider: 'stripe' | 'paymob' | 'binance_pay' | 'manual_crypto';
-    if (order.method === 'paymob' || order.network === 'paymob' || order.currency === 'EGP') {
+    let provider: 'lemonsqueezy' | 'stripe' | 'paymob';
+    if (order.method === 'paymob' || order.currency === 'EGP') {
       provider = 'paymob';
-    } else if (order.method === 'stripe' || order.network === 'stripe' || order.currency === 'USD') {
-      provider = 'stripe';
-    } else if (order.method === 'binance_pay') {
-      provider = 'binance_pay';
+    } else if (order.method === 'lemonsqueezy') {
+      provider = 'lemonsqueezy';
     } else {
-      provider = 'manual_crypto';
+      provider = 'stripe';
     }
 
     return NextResponse.json(
@@ -114,4 +112,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-

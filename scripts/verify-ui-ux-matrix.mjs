@@ -20,8 +20,6 @@ const PAGES = [
   { name: 'AI Resume Generator', path: '/resume/generate' },
   { name: 'Job Match', path: '/jobs' },
   { name: 'Pricing', path: '/pricing' },
-  { name: 'Crypto Payment', path: '/payment/crypto' },
-  { name: 'Admin Payments', path: '/admin/payments' },
   { name: '404 Page', path: '/non-existent-page-for-404-check' },
 ];
 

@@ -39,7 +39,8 @@ function getAllFiles(dir, baseDir = dir) {
       results = results.concat(getAllFiles(fullPath, baseDir));
     } else {
       if (IGNORED_FILES.has(dirent.name)) continue;
-      if (dirent.name.endsWith('.log')) continue;
+      if (dirent.name.startsWith('.env') && dirent.name !== '.env.example') continue;
+      if (/\.(pem|key|pfx|p12|log)$/i.test(dirent.name)) continue;
       results.push({ fullPath, relPath });
     }
   }

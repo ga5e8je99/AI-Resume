@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { comparePassword, signToken } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
+import { sendEmail, getEmailVerificationHtml } from '@/lib/email';
 import { applyRateLimit, parseBoundedJsonBody } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
@@ -55,6 +57,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // If an unverified user logs in and does not have an active verification token,
+    // automatically generate a 24h verification token (SHA-256 hash stored) and send the verification email.
+    if (!user.emailVerified && !user.isDemo && user.role !== 'admin') {
+      const hasValidToken =
+        Boolean(user.emailVerifyTokenHash) &&
+        Boolean(user.emailVerifyExpires) &&
+        new Date(user.emailVerifyExpires as string).getTime() > Date.now();
+
+      if (!hasValidToken) {
+        const rawVerifyToken = crypto.randomBytes(32).toString('hex');
+        const verifyTokenHash = crypto.createHash('sha256').update(rawVerifyToken).digest('hex');
+        const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await DataStore.setEmailVerifyToken(user.id, verifyTokenHash, verifyExpires);
+
+        const userLang = (
+          ['en', 'ar', 'fr', 'de', 'es', 'tr'].includes(body.language) ? body.language : 'en'
+        ) as 'en' | 'ar' | 'fr' | 'de' | 'es' | 'tr';
+
+        sendEmail({
+          to: user.email,
+          subject: 'Verify Your Email Address - JobMatch AI ✉️',
+          html: getEmailVerificationHtml({
+            name: user.name,
+            verifyToken: rawVerifyToken,
+            language: userLang,
+          }),
+          isDemo: Boolean(user.isDemo),
+        }).catch((err) => {
+          console.error('[Login] Verification email send error (non-blocking):', err);
+        });
+      }
+    }
+
     const token = signToken({
       userId: user.id,
       email: user.email,
@@ -64,11 +99,13 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({
       message: 'Login successful',
+      requiresVerification: !user.emailVerified && !user.isDemo && user.role !== 'admin',
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role || 'user',
+        emailVerified: user.emailVerified || null,
       },
     });
 

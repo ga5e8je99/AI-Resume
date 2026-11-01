@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/app/lib/auth';
 import { CoverLetterService } from '@/app/lib/coverLetterService';
+import { estimateTokensFromText, logAiUsageAndCheckBudget } from '@/app/lib/aiGovernance';
 import {
   applyRateLimit,
   parseBoundedJsonBody,
@@ -10,6 +11,7 @@ import {
 
 // POST /api/cover-letter/extract-keywords - Extract keywords and detect language from text or job URL
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   try {
     const authUser = getAuthenticatedUser(req);
 
@@ -90,6 +92,20 @@ export async function POST(req: NextRequest) {
     const limit = Math.min(25, Math.max(3, Number(body?.limit) || 10));
     const keywords = CoverLetterService.extractKeywords(text, limit);
     const detectedLanguage = CoverLetterService.detectLanguage(text);
+
+    const approxTokens = estimateTokensFromText(text) + estimateTokensFromText(keywords.join(', '));
+    await logAiUsageAndCheckBudget({
+      userId: authUser?.userId || 'anonymous',
+      endpoint: '/api/cover-letter/extract-keywords',
+      tokens: approxTokens,
+      promptTokens: estimateTokensFromText(text),
+      completionTokens: estimateTokensFromText(keywords.join(', ')),
+      costUsd: 0,
+      latencyMs: Date.now() - startTime,
+      status: 'fallback',
+      provider: 'built-in-ats-engine',
+      model: 'built-in-ats-engine',
+    });
 
     return NextResponse.json({
       success: true,

@@ -6,8 +6,9 @@ import Script from 'next/script';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { trackAtsScanCompleted } from '@/lib/analytics';
+import { trackAtsScored, trackResumeUploaded } from '@/lib/analytics';
 import { analyzeResumeText, ATSAnalysisResult } from '../lib/atsAnalyzer';
+import { applyOneClickAtsFix, type QuickFixId } from '../lib/atsQuickFixes';
 import { getSampleProfile } from '../lib/sampleResumes';
 import { Button } from '../components/ui/Button';
 import { Dropzone } from '../components/ui/Dropzone';
@@ -122,6 +123,7 @@ export default function ReviewResultPage() {
   const [showRawTextModal, setShowRawTextModal] = useState(false);
   const [copiedKeyword, setCopiedKeyword] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [appliedQuickFixes, setAppliedQuickFixes] = useState<Array<'keywords' | 'summary' | 'metrics'>>([]);
   const toast = useToast();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -158,7 +160,7 @@ export default function ReviewResultPage() {
       setTargetRole(profile.role);
       const res = analyzeResumeText(profile.text, profile.role, '');
       setAnalysisResult(res);
-      trackAtsScanCompleted(res.overallScore, res.metrics.matchLabel);
+      trackAtsScored(res.overallScore, res.metrics.matchLabel);
       return;
     }
 
@@ -170,7 +172,7 @@ export default function ReviewResultPage() {
         setResumeFileName(storedName || 'Uploaded_Resume.pdf');
         const res = analyzeResumeText(storedText, profile.role, '');
         setAnalysisResult(res);
-        trackAtsScanCompleted(res.overallScore, res.metrics.matchLabel);
+        trackAtsScored(res.overallScore, res.metrics.matchLabel);
       }
     }
   }, [sampleParam]);
@@ -182,7 +184,7 @@ export default function ReviewResultPage() {
       jd !== undefined ? jd : targetJobDescription
     );
     setAnalysisResult(res);
-    trackAtsScanCompleted(res.overallScore, res.metrics.matchLabel);
+    trackAtsScored(res.overallScore, res.metrics.matchLabel);
   };
 
   // Staged multi-step file processing
@@ -259,12 +261,16 @@ export default function ReviewResultPage() {
 
       setResumeText(text);
       setResumeFileName(file.name);
+      setAppliedQuickFixes([]);
 
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('jobmatch_resume_text', text);
         sessionStorage.setItem('jobmatch_resume_filename', file.name);
+        localStorage.setItem('jobmatch_onboarding_cv_uploaded', '1');
+        localStorage.setItem('jobmatch_onboarding_ats_scored', '1');
       }
 
+      trackResumeUploaded({ fileType: ext || 'pdf', source: 'review' });
       runAnalysis(text, targetJobDescription);
 
       setProcessingProgress(100);
@@ -302,8 +308,57 @@ export default function ReviewResultPage() {
     setResumeText(profile.text);
     setResumeFileName(profile.fileName);
     setTargetRole(profile.role);
+    setAppliedQuickFixes([]);
     runAnalysis(profile.text, targetJobDescription, profile.role);
     setToastMessage(`${profile.fileName}`);
+  };
+
+  // One-click ATS Quick Improvement Handler
+  const handleApplyQuickFix = (fixId: QuickFixId) => {
+    const result = applyOneClickAtsFix(resumeText, fixId, {
+      targetRole,
+      jobDescription: targetJobDescription,
+      missingKeywords: analysisResult.missingKeywords,
+      isAr,
+    });
+
+    setResumeText(result.updatedText);
+    setAnalysisResult(result.analysis);
+    setAppliedQuickFixes((prev) => {
+      const next = new Set(prev);
+      if (fixId === 'all') {
+        next.add('keywords');
+        next.add('summary');
+        next.add('metrics');
+      } else {
+        next.add(fixId);
+      }
+      return Array.from(next);
+    });
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('jobmatch_resume_text', result.updatedText);
+      localStorage.setItem('jobmatch_onboarding_ats_scored', String(result.newScore));
+    }
+
+    trackAtsScored(result.newScore, result.analysis.metrics.matchLabel);
+    const displayedDelta = Math.max(1, result.scoreDelta);
+    setToastMessage(
+      t('review_quick_fix_toast')
+        .replace('{delta}', String(displayedDelta))
+        .replace('{score}', String(result.newScore))
+    );
+  };
+
+  const handleGoToMatchingJobs = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('jobmatch_resume_text', resumeText);
+      if (targetRole) {
+        sessionStorage.setItem('jobmatch_target_role', targetRole);
+      }
+      localStorage.setItem('jobmatch_onboarding_ats_scored', String(analysisResult.overallScore));
+    }
+    router.push('/jobs');
   };
 
   const handleCopyKeyword = (keyword: string) => {
@@ -827,7 +882,7 @@ export default function ReviewResultPage() {
             )}
 
             {/* Document Statistics Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 text-xs">
               <div className="p-3 rounded-lg border border-line bg-surface-2">
                 <span className="text-ink-2 block font-mono text-[10px] uppercase">
                   {t('review_stat_words')}
@@ -863,6 +918,240 @@ export default function ReviewResultPage() {
                   {keywordsDetected.length}
                 </span>
               </div>
+
+              <div className="p-3 rounded-lg border border-line bg-surface-2 col-span-2 sm:col-span-1">
+                <span className="text-ink-2 block font-mono text-[10px] uppercase">
+                  {t('review_stat_experience_years')}
+                </span>
+                <span className="font-mono text-base font-bold text-ink tabular-nums">
+                  {metrics.yearsOfExperience ?? analysisResult.datesAudit?.yearsOfExperience ?? 0}{' '}
+                  <span className="text-xs font-normal text-ink-2">{t('review_years_unit')}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Job Title Match & Bullet/Chronology Audit Strip */}
+            {(analysisResult.jobTitleMatch?.status &&
+              analysisResult.jobTitleMatch.status !== 'not_provided') ||
+            analysisResult.bulletAudit ||
+            analysisResult.datesAudit ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                {analysisResult.jobTitleMatch &&
+                  analysisResult.jobTitleMatch.status !== 'not_provided' && (
+                    <div className="p-3.5 rounded-xl border border-line bg-surface-2 flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <span className="text-[11px] font-mono uppercase text-ink-2 block">
+                          {t('review_job_title_match_label')}
+                        </span>
+                        <p className="text-xs font-medium text-ink">
+                          {analysisResult.jobTitleMatch.message}
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                          analysisResult.jobTitleMatch.status === 'exact'
+                            ? 'border-success/30 bg-success/10 text-success'
+                            : analysisResult.jobTitleMatch.status === 'partial'
+                            ? 'border-warning/30 bg-warning/10 text-warning'
+                            : 'border-danger/30 bg-danger/10 text-danger'
+                        }`}
+                      >
+                        {analysisResult.jobTitleMatch.status === 'exact'
+                          ? t('review_job_title_exact')
+                          : analysisResult.jobTitleMatch.status === 'partial'
+                          ? t('review_job_title_partial')
+                          : t('review_job_title_missing')}
+                      </span>
+                    </div>
+                  )}
+
+                {(analysisResult.bulletAudit || analysisResult.datesAudit) && (
+                  <div className="p-3.5 rounded-xl border border-line bg-surface-2 space-y-2">
+                    <span className="text-[11px] font-mono uppercase text-ink-2 block">
+                      {t('review_audit_section_title')}
+                    </span>
+                    <div className="flex flex-wrap gap-2 text-[11px]">
+                      {analysisResult.datesAudit && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border ${
+                            analysisResult.datesAudit.isReverseChronological
+                              ? 'border-success/30 bg-success/10 text-success'
+                              : 'border-warning/30 bg-warning/10 text-warning'
+                          }`}
+                        >
+                          {analysisResult.datesAudit.isReverseChronological
+                            ? t('review_audit_chronology_ok')
+                            : t('review_audit_chronology_issue')}
+                        </span>
+                      )}
+                      {analysisResult.datesAudit && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border ${
+                            analysisResult.datesAudit.gaps.length === 0
+                              ? 'border-success/30 bg-success/10 text-success'
+                              : 'border-warning/30 bg-warning/10 text-warning'
+                          }`}
+                        >
+                          {analysisResult.datesAudit.gaps.length === 0
+                            ? t('review_audit_gaps_none')
+                            : t('review_audit_gaps_found').replace(
+                                '{count}',
+                                String(analysisResult.datesAudit.gaps.length)
+                              )}
+                        </span>
+                      )}
+                      {analysisResult.bulletAudit && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border ${
+                            analysisResult.bulletAudit.shortBullets.length +
+                              analysisResult.bulletAudit.longBullets.length ===
+                            0
+                              ? 'border-success/30 bg-success/10 text-success'
+                              : 'border-warning/30 bg-warning/10 text-warning'
+                          }`}
+                        >
+                          {analysisResult.bulletAudit.shortBullets.length +
+                            analysisResult.bulletAudit.longBullets.length ===
+                          0
+                            ? t('review_audit_bullets_ok')
+                            : t('review_audit_bullets_issue').replace(
+                                '{count}',
+                                String(
+                                  analysisResult.bulletAudit.shortBullets.length +
+                                    analysisResult.bulletAudit.longBullets.length
+                                )
+                              )}
+                        </span>
+                      )}
+                      {analysisResult.bulletAudit && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border ${
+                            analysisResult.bulletAudit.keywordStuffing.length === 0
+                              ? 'border-success/30 bg-success/10 text-success'
+                              : 'border-danger/30 bg-danger/10 text-danger'
+                          }`}
+                        >
+                          {analysisResult.bulletAudit.keywordStuffing.length === 0
+                            ? t('review_audit_stuffing_none')
+                            : t('review_audit_stuffing_warn').replace(
+                                '{count}',
+                                String(analysisResult.bulletAudit.keywordStuffing.length)
+                              )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          {/* 3.5 Three Instant One-Click ATS Quick Improvements + Step 3 Job Match CTA */}
+          <div className="print:hidden rounded-2xl border border-brand/30 bg-brand/5 p-5 sm:p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-brand/15 text-brand border border-brand/30">
+                  <Sparkles className="w-3 h-3" />
+                  <span>{t('review_quick_fixes_badge')}</span>
+                </span>
+                <h3 className="font-serif text-lg sm:text-xl font-bold text-ink">
+                  {t('review_quick_fixes_title')}
+                </h3>
+                <p className="text-xs sm:text-sm text-ink-2">
+                  {t('review_quick_fixes_subtitle')}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {appliedQuickFixes.length < 3 && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleApplyQuickFix('all')}
+                    leftIcon={<Sparkles className="w-3.5 h-3.5" />}
+                  >
+                    {t('review_quick_fix_apply_all_btn')}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGoToMatchingJobs}
+                  rightIcon={<ArrowRight className={`w-3.5 h-3.5 ${isRtl ? 'rotate-180' : ''}`} />}
+                  className="bg-surface hover:bg-surface-2"
+                >
+                  {t('review_quick_fix_next_jobs_btn')}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(
+                [
+                  {
+                    id: 'keywords' as const,
+                    title: t('review_quick_fix1_title'),
+                    desc: t('review_quick_fix1_desc'),
+                    points: '+5 pts',
+                  },
+                  {
+                    id: 'summary' as const,
+                    title: t('review_quick_fix2_title'),
+                    desc: t('review_quick_fix2_desc'),
+                    points: '+4 pts',
+                  },
+                  {
+                    id: 'metrics' as const,
+                    title: t('review_quick_fix3_title'),
+                    desc: t('review_quick_fix3_desc'),
+                    points: '+6 pts',
+                  },
+                ]
+              ).map((fix, index) => {
+                const isApplied = appliedQuickFixes.includes(fix.id);
+                return (
+                  <div
+                    key={fix.id}
+                    className={`rounded-xl border p-4 flex flex-col justify-between gap-4 transition-all ${
+                      isApplied
+                        ? 'border-success/40 bg-success/5'
+                        : 'border-line bg-surface hover:border-brand/40 shadow-2xs'
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-mono font-bold bg-surface-2 text-ink border border-line">
+                          {index + 1}
+                        </span>
+                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">
+                          {fix.points}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-semibold text-ink">{fix.title}</h4>
+                      <p className="text-xs text-ink-2 leading-relaxed">{fix.desc}</p>
+                    </div>
+
+                    <div className="pt-1">
+                      {isApplied ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success px-3 py-1.5 rounded-lg bg-success/10 border border-success/30 w-full justify-center">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>{t('review_quick_fix_applied_badge')}</span>
+                        </span>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          fullWidth
+                          onClick={() => handleApplyQuickFix(fix.id)}
+                          leftIcon={<Sparkles className="w-3.5 h-3.5 text-brand" />}
+                        >
+                          {t('review_quick_fix_apply_btn')}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -1010,9 +1299,19 @@ export default function ReviewResultPage() {
                 {keywordsDetected.map((km, idx) => (
                   <span
                     key={idx}
+                    title={
+                      km.recommendedFormToAdd
+                        ? t('review_add_full_form_hint').replace('{form}', km.recommendedFormToAdd)
+                        : undefined
+                    }
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-line bg-surface-2 text-ink text-xs font-mono"
                   >
                     <span>{km.keyword}</span>
+                    {km.matchedViaSynonym && (
+                      <span className="text-[10px] text-warning font-sans">
+                        ({t('review_matched_via_synonym').replace('{variant}', km.matchedViaSynonym)})
+                      </span>
+                    )}
                     <span className="text-[10px] text-ink-2">({km.count}x)</span>
                   </span>
                 ))}

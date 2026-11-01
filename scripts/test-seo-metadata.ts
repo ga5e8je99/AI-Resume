@@ -17,7 +17,6 @@ import { generateMetadata as cvBuilderMeta } from '../app/cv-builder/layout';
 import { generateMetadata as paymentMeta } from '../app/payment/layout';
 import { generateMetadata as paymentSuccessMeta } from '../app/payment/success/layout';
 import { generateMetadata as paymentCancelledMeta } from '../app/payment/cancelled/layout';
-import { generateMetadata as paymentCryptoMeta } from '../app/payment/crypto/layout';
 import { generateMetadata as adminMeta } from '../app/admin/layout';
 import { generateMetadata as resetPasswordMeta } from '../app/reset-password/layout';
 import { generateMetadata as previewTemplateMeta } from '../app/preview-template/layout';
@@ -133,7 +132,6 @@ async function runTests() {
     { path: '/payment', fn: paymentMeta },
     { path: '/payment/success', fn: paymentSuccessMeta },
     { path: '/payment/cancelled', fn: paymentCancelledMeta },
-    { path: '/payment/crypto', fn: paymentCryptoMeta },
     { path: '/admin', fn: adminMeta },
     { path: '/reset-password', fn: resetPasswordMeta },
     { path: '/preview-template', fn: previewTemplateMeta },

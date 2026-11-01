@@ -278,7 +278,9 @@ async function runTests() {
       data.resumes = data.resumes.filter((r: any) => r.id !== resumeA.id);
     }
     fs.writeFileSync(localDbPath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch {}
+  } catch {
+    // Best-effort cleanup of temporary test fixtures from local JSON store
+  }
 
   console.log('\n============================================================');
   console.log('>>> ALL 10 CREDIT GUARD & IDOR PROTECTION TESTS PASSED! <<<');

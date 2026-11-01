@@ -8,6 +8,9 @@ export interface UserProfile {
   email: string;
   role?: 'user' | 'admin';
   isDemo?: boolean;
+  emailVerified?: string | null;
+  termsAcceptedAt?: string | null;
+  termsVersion?: string | null;
   plan?: 'free' | 'pro' | 'enterprise';
   aiCredits?: number;
   aiResumeGenerationsCount?: number;
@@ -15,9 +18,11 @@ export interface UserProfile {
   billingCycle?: 'monthly' | 'annual' | 'lifetime' | 'none';
   planExpiresAt?: string | null;
   proExpiresAt?: string | null;
-  paymentProvider?: 'stripe' | 'paymob' | 'paddle' | 'binance' | 'none';
+  paymentProvider?: 'lemonsqueezy' | 'stripe' | 'paymob' | 'paddle' | 'none';
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  lemonCustomerId?: string;
+  lemonSubscriptionId?: string;
   subscriptionStatus?: 'active' | 'past_due' | 'canceled' | 'expired' | 'none';
   paymentFailedAt?: string | null;
   createdAt?: string;
@@ -28,7 +33,12 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginDemo: () => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    options?: { termsAccepted?: boolean; termsVersion?: string; language?: string }
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -103,19 +113,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    options?: { termsAccepted?: boolean; termsVersion?: string; language?: string }
+  ) => {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          termsAccepted: options?.termsAccepted ?? true,
+          termsVersion: options?.termsVersion || '2026-10-31',
+          language: options?.language,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
-        return { success: false, error: data.error || 'Failed to create account' };
+        return { success: false, error: data.error || data.message || 'Failed to create account' };
       }
-      setUser(data.user);
-      return { success: true };
+      if (data.user) {
+        setUser(data.user);
+        return { success: true };
+      }
+      return {
+        success: false,
+        error: data.message || 'Please check your email or sign in if you already have an account.',
+      };
     } catch (err: any) {
       return { success: false, error: err.message || 'Network error' };
     }

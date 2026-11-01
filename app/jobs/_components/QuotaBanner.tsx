@@ -91,6 +91,34 @@ export default function QuotaBanner({
         </div>
       </div>
 
+      {/* First Quota Consumption Upgrade Point Banner (Non-blocking) */}
+      {!isProUser && freeQuotaUsed >= 1 && !isQuotaExhausted && (
+        <div
+          data-testid="first-quota-upgrade-banner"
+          className="rounded-xl border border-brand/30 bg-brand/5 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-brand shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-semibold text-ink">
+                {t('jobs_first_quota_title')
+                  .replace('{used}', String(usedCount))
+                  .replace('{total}', String(JOB_MATCH_FREE_QUOTA))}
+              </h3>
+              <p className="text-xs text-ink-2 mt-0.5">
+                {t('jobs_first_quota_desc').replace('{remaining}', String(remainingCount))}
+              </p>
+            </div>
+          </div>
+          <Link href="/pricing" className="shrink-0">
+            <Button size="sm" variant="primary">
+              <span>{t('jobs_first_quota_cta')}</span>
+              <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Quota Exhausted Paywall Banner */}
       {isQuotaExhausted && (
         <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

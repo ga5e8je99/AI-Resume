@@ -15,7 +15,29 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Push to Hugging Face Space
+      - name: Security Audit — Ensure No Secrets or .env Files Are Tracked
+        run: |
+          echo "🔒 Auditing tracked files for accidental secrets or environment files..."
+
+          # 1. Block any tracked .env* file (except .env.example), private keys, or local DB dumps
+          FORBIDDEN_FILES=$(git ls-files | grep -E '(^|/)\.env($|\.(?!example$))|\.(pem|key|p12|pfx)$|(^|/)\.data/db\.json$' || true)
+          if [ -n "$FORBIDDEN_FILES" ]; then
+            echo "❌ SECURITY BLOCK: Forbidden environment or secret files are tracked in Git:"
+            echo "$FORBIDDEN_FILES"
+            exit 1
+          fi
+
+          # 2. Scan tracked text files for live API keys / private keys
+          SECRET_MATCHES=$(git grep -I -E '(sk_live_[0-9a-zA-Z]{20,}|rk_live_[0-9a-zA-Z]{20,}|whsec_[0-9a-zA-Z]{24,}|ghp_[0-9a-zA-Z]{30,}|hf_[0-9a-zA-Z]{25,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' -- ':!.github/workflows/sync-to-huggingface.yml' ':!tests/*' || true)
+          if [ -n "$SECRET_MATCHES" ]; then
+            echo "❌ SECURITY BLOCK: Potential live secret key detected in tracked files:"
+            echo "$SECRET_MATCHES"
+            exit 1
+          fi
+
+          echo "✅ Security audit passed: No secrets or .env files found in tracked repository."
+
+      - name: Push to Hugging Face Space (Without Exposing Token in URL)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_USERNAME: ${{ secrets.HF_USERNAME }}
@@ -28,10 +50,12 @@ jobs:
             exit 1
           fi
 
-          # Use environment secret or sensible fallback defaults
+          echo "::add-mask::$HF_TOKEN"
+
           TARGET_USER="${HF_USERNAME:-Gamal306}"
           TARGET_SPACE="${HF_SPACE_NAME:-JobMatch-AI}"
+          AUTH_HEADER=$(printf "%s:%s" "$TARGET_USER" "$HF_TOKEN" | base64 -w 0)
 
           echo "🚀 Syncing main branch to Hugging Face Space: https://huggingface.co/spaces/$TARGET_USER/$TARGET_SPACE"
-          git push --force "https://$TARGET_USER:$HF_TOKEN@huggingface.co/spaces/$TARGET_USER/$TARGET_SPACE" main:main
-          echo "✅ Synchronization initiated successfully! Hugging Face is now building the Docker demo."
+          git -c http.extraHeader="Authorization: Basic $AUTH_HEADER" push --force "https://huggingface.co/spaces/$TARGET_USER/$TARGET_SPACE" main:main
+          echo "✅ Synchronization initiated successfully! No secrets were included in the push."

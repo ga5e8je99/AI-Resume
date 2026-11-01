@@ -23,6 +23,9 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.pfx
+*.p12
 
 # debug
 npm-debug.log*
@@ -30,9 +33,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (never commit real .env files; only .env.example is tracked)
 .env*
 !.env.example
+
+# local fallback datastore
+/.data/
+.data/db.json
 
 # vercel
 .vercel

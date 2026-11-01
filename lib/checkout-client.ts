@@ -8,13 +8,15 @@ export type CheckoutErrorCode =
   | 'PROVIDER_NOT_CONFIGURED'
   | 'NETWORK_ERROR'
   | 'UNAUTHENTICATED'
+  | 'EMAIL_NOT_VERIFIED'
+  | 'RATE_LIMITED'
   | 'CHECKOUT_FAILED';
 
 export interface CheckoutOptions {
   currency?: CurrencyCode;
   billingCycle?: BillingCycle;
-  method?: 'card' | 'binance' | 'manual_crypto' | 'auto';
-  network?: 'BEP20' | 'TRC20';
+  method?: 'lemonsqueezy' | 'stripe' | 'paymob' | 'card' | 'auto';
+  provider?: 'lemonsqueezy' | 'stripe' | 'paymob';
   language?: LanguageCode;
   /** Optional internal router navigation callback (e.g. router.push) */
   onNavigate?: (path: string) => void;
@@ -63,6 +65,22 @@ const ERROR_MESSAGES: Record<CheckoutErrorCode, Record<LanguageCode, string>> = 
     es: 'Por favor, inicia sesión para continuar con el pago.',
     tr: 'Ödemeye devam etmek için lütfen giriş yapın.',
   },
+  EMAIL_NOT_VERIFIED: {
+    ar: 'يرجى تأكيد بريدك الإلكتروني أولاً قبل إتمام عملية الدفع.',
+    en: 'Please verify your email address before proceeding to payment checkout.',
+    fr: 'Veuillez vérifier votre adresse e-mail avant de procéder au paiement.',
+    de: 'Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie mit der Zahlung fortfahren.',
+    es: 'Por favor, verifica tu correo electrónico antes de continuar con el pago.',
+    tr: 'Ödeme işlemine geçmeden önce lütfen e-posta adresinizi doğrulayın.',
+  },
+  RATE_LIMITED: {
+    ar: 'تم تجاوز الحد المسموح لمحاولات الدفع المتتالية. يرجى الانتظار لحظات والمحاولة مرة أخرى.',
+    en: 'Too many checkout attempts. Please wait a moment and try again.',
+    fr: 'Trop de tentatives de paiement. Veuillez patienter un instant avant de réessayer.',
+    de: 'Zu viele Zahlungsversuche. Bitte warten Sie einen Moment und versuchen Sie es erneut.',
+    es: 'Demasiados intentos de pago. Espera un momento e inténtalo de nuevo.',
+    tr: 'Çok fazla ödeme denemesi yapıldı. Lütfen biraz bekleyip tekrar deneyin.',
+  },
   CHECKOUT_FAILED: {
     ar: 'حدث خطأ غير متوقع أثناء بدء الدفع. يرجى المحاولة مرة أخرى.',
     en: 'An unexpected error occurred while starting checkout. Please try again.',
@@ -82,8 +100,8 @@ export function getCheckoutErrorMessage(
 }
 
 /**
- * Extracts an internal app path (e.g. "/payment/crypto?...") if the URL belongs to the app,
- * or returns null for external gateway URLs (Stripe, Paymob, Binance Pay).
+ * Extracts an internal app path (e.g. "/payment/success?...") if the URL belongs to the app,
+ * or returns null for external gateway URLs (Lemon Squeezy, Stripe, Paymob).
  */
 export function toInternalPath(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
@@ -125,7 +143,7 @@ export async function startCheckout(
   const currency = options.currency || 'USD';
   const billingCycle = options.billingCycle || 'monthly';
   const method = options.method;
-  const network = options.network;
+  const provider = options.provider;
   const lang: LanguageCode = options.language || 'ar';
   const doFetch = options.customFetch || fetch;
 
@@ -140,7 +158,7 @@ export async function startCheckout(
         currency,
         billingCycle,
         method,
-        network,
+        provider,
       }),
     });
 
@@ -179,6 +197,30 @@ export async function startCheckout(
       };
     }
 
+    // 2.5. EMAIL_NOT_VERIFIED (403)
+    if (res.status === 403 && data.error === 'EMAIL_NOT_VERIFIED') {
+      return {
+        success: false,
+        status: 403,
+        error: 'EMAIL_NOT_VERIFIED',
+        errorCode: 'EMAIL_NOT_VERIFIED',
+        canRetry: false,
+        message: getCheckoutErrorMessage('EMAIL_NOT_VERIFIED', lang),
+      };
+    }
+
+    // 2.6. RATE_LIMITED (429)
+    if (res.status === 429 || data.error === 'RATE_LIMIT_EXCEEDED' || data.error === 'TOO_MANY_REQUESTS') {
+      return {
+        success: false,
+        status: 429,
+        error: 'RATE_LIMITED',
+        errorCode: 'RATE_LIMITED',
+        canRetry: true,
+        message: getCheckoutErrorMessage('RATE_LIMITED', lang),
+      };
+    }
+
     // 3. Any other non-OK HTTP status -> generic message + Sentry.captureException
     if (!res.ok) {
       const checkoutErr = new Error(
@@ -196,7 +238,7 @@ export async function startCheckout(
           error: data.error,
           message: data.message,
           method,
-          network,
+          provider,
         },
       });
 

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getUserEntitlements } from '@/lib/credits';
+import { trackResumeUploaded } from '@/lib/analytics';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -17,6 +18,7 @@ import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton';
 import { ScrollReveal, Stagger } from '../components/landing/ScrollReveal';
 import { useToast } from '@/app/context/ToastContext';
 import ThemeToggle from '../components/ThemeToggle';
+import PrivacySettingsSection from '../components/PrivacySettingsSection';
 import {
   FileText,
   Plus,
@@ -43,6 +45,7 @@ import {
   Search,
   Sliders,
   Briefcase,
+  Upload,
 } from 'lucide-react';
 
 interface SavedResume {
@@ -111,11 +114,74 @@ export default function DashboardPage() {
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [isUploadingCv, setIsUploadingCv] = useState(false);
+  const [localOnboarding, setLocalOnboarding] = useState<{
+    hasUploadedCv: boolean;
+    hasScoredAts: boolean;
+  }>({ hasUploadedCv: false, hasScoredAts: false });
+  const cvUploadInputRef = useRef<HTMLInputElement>(null);
 
   const entitlements = useMemo(() => getUserEntitlements(user), [user]);
   const hasStripeBilling = Boolean(
-    user?.stripeCustomerId || user?.paymentProvider === 'stripe'
+    user?.lemonSubscriptionId ||
+      user?.lemonCustomerId ||
+      user?.paymentProvider === 'lemonsqueezy' ||
+      user?.stripeCustomerId ||
+      user?.paymentProvider === 'stripe'
   );
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const tabParam = new URLSearchParams(window.location.search).get('tab');
+      if (
+        tabParam === 'settings' ||
+        tabParam === 'resumes' ||
+        tabParam === 'analyses' ||
+        tabParam === 'coverLetters'
+      ) {
+        setActiveTab(tabParam);
+      }
+      const hasSessionResume = Boolean(sessionStorage.getItem('jobmatch_resume_text'));
+      const hasLocalCv = Boolean(localStorage.getItem('jobmatch_onboarding_cv_uploaded'));
+      const hasLocalAts = Boolean(localStorage.getItem('jobmatch_onboarding_ats_scored'));
+      setLocalOnboarding({
+        hasUploadedCv: hasSessionResume || hasLocalCv,
+        hasScoredAts: hasSessionResume || hasLocalAts,
+      });
+    }
+  }, []);
+
+  const handleDirectCvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingCv(true);
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+      const { extractTextFromFile } = await import('../lib/pdfExtractor');
+      const text = await extractTextFromFile(file);
+      if (!text || text.trim().length < 20) {
+        throw new Error(t('common_error'));
+      }
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('jobmatch_resume_text', text);
+        sessionStorage.setItem('jobmatch_resume_filename', file.name);
+        localStorage.setItem('jobmatch_onboarding_cv_uploaded', '1');
+        localStorage.setItem('jobmatch_onboarding_ats_scored', '1');
+      }
+      trackResumeUploaded({ fileType: ext, source: 'dashboard' });
+      router.push('/review');
+    } catch (err: any) {
+      setToastMessage({
+        type: 'error',
+        text: err?.message || t('common_error'),
+      });
+    } finally {
+      setIsUploadingCv(false);
+      if (e.target) {
+        e.target.value = '';
+      }
+    }
+  };
 
   const handleManageSubscription = async () => {
     try {
@@ -764,6 +830,215 @@ export default function DashboardPage() {
           </ScrollReveal>
         </div>
 
+        {/* Hidden Direct CV Upload Input */}
+        <input
+          ref={cvUploadInputRef}
+          type="file"
+          accept=".pdf,.docx,.txt"
+          onChange={handleDirectCvUpload}
+          className="hidden"
+          aria-label={t('dashboard_upload_cv_direct')}
+        />
+
+        {/* 4-STEP POST-REGISTRATION PROGRESS CHECKLIST (NON-BLOCKING) */}
+        {(() => {
+          const step1Done =
+            resumes.length > 0 || analyses.length > 0 || localOnboarding.hasUploadedCv;
+          const step2Done = analyses.length > 0 || localOnboarding.hasScoredAts;
+          const step3Done = (user?.jobMatchFreeUsed ?? 0) >= 1;
+          const step4Done = entitlements.isPro;
+          const hasConsumedFirstQuota =
+            !entitlements.isPro &&
+            ((user?.jobMatchFreeUsed ?? 0) >= 1 || (user?.aiResumeGenerationsCount ?? 0) >= 1);
+          const doneCount = [step1Done, step2Done, step3Done, step4Done].filter(Boolean).length;
+
+          return (
+            <div
+              data-testid="dashboard-progress-checklist"
+              className="rounded-xl border border-line-strong bg-surface p-5 sm:p-6 shadow-subtle space-y-4"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base sm:text-lg font-serif font-bold text-ink">
+                    {t('checklist_title')}
+                  </h3>
+                  <p className="text-xs text-ink-2 mt-0.5">{t('checklist_subtitle')}</p>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs font-mono font-bold text-brand px-2.5 py-1 rounded-full bg-brand-soft border border-brand/20">
+                    {t('checklist_progress_label')
+                      .replace('{done}', String(doneCount))
+                      .replace('{total}', '4')}
+                  </span>
+                  <div className="w-24 sm:w-32 h-2 rounded-full bg-surface-2 border border-line overflow-hidden">
+                    <div
+                      className="h-full bg-brand rounded-full transition-all duration-300"
+                      style={{ width: `${(doneCount / 4) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {/* Step 1: Upload CV or Start from Scratch */}
+                <div
+                  className={`rounded-xl border p-4 flex flex-col justify-between gap-3 transition-all ${
+                    step1Done
+                      ? 'border-success/35 bg-success/5'
+                      : 'border-line-strong bg-surface-2/60'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-mono font-bold bg-surface text-ink border border-line-strong">
+                        1
+                      </span>
+                      {step1Done && <CheckCircle2 className="w-4 h-4 text-success shrink-0" />}
+                    </div>
+                    <h4 className="text-xs sm:text-sm font-semibold text-ink">
+                      {t('checklist_step1_title')}
+                    </h4>
+                    <p className="text-[11px] text-ink-2 leading-relaxed">
+                      {t('checklist_step1_desc')}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <Button
+                      size="sm"
+                      variant={step1Done ? 'outline' : 'primary'}
+                      isLoading={isUploadingCv}
+                      onClick={() => cvUploadInputRef.current?.click()}
+                      startIcon={<Upload className="w-3.5 h-3.5" />}
+                      className="text-xs flex-1"
+                    >
+                      <span>{t('checklist_step1_upload_btn')}</span>
+                    </Button>
+                    <Link href="/builder" className="flex-1">
+                      <Button size="sm" variant="outline" fullWidth className="text-xs">
+                        <span>{t('checklist_step1_scratch_btn')}</span>
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Step 2: Instant ATS Score + 3 One-Click Improvements */}
+                <div
+                  className={`rounded-xl border p-4 flex flex-col justify-between gap-3 transition-all ${
+                    step2Done
+                      ? 'border-success/35 bg-success/5'
+                      : 'border-line-strong bg-surface-2/60'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-mono font-bold bg-surface text-ink border border-line-strong">
+                        2
+                      </span>
+                      {step2Done && <CheckCircle2 className="w-4 h-4 text-success shrink-0" />}
+                    </div>
+                    <h4 className="text-xs sm:text-sm font-semibold text-ink">
+                      {t('checklist_step2_title')}
+                    </h4>
+                    <p className="text-[11px] text-ink-2 leading-relaxed">
+                      {t('checklist_step2_desc')}
+                    </p>
+                  </div>
+                  <Link href="/review" className="pt-1">
+                    <Button
+                      size="sm"
+                      variant={step2Done ? 'outline' : 'secondary'}
+                      fullWidth
+                      startIcon={<ShieldCheck className="w-3.5 h-3.5" />}
+                      className="text-xs"
+                    >
+                      <span>{t('checklist_step2_cta')}</span>
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Step 3: Matching Jobs (Free Sample) */}
+                <div
+                  className={`rounded-xl border p-4 flex flex-col justify-between gap-3 transition-all ${
+                    step3Done
+                      ? 'border-success/35 bg-success/5'
+                      : 'border-line-strong bg-surface-2/60'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-mono font-bold bg-surface text-ink border border-line-strong">
+                        3
+                      </span>
+                      {step3Done && <CheckCircle2 className="w-4 h-4 text-success shrink-0" />}
+                    </div>
+                    <h4 className="text-xs sm:text-sm font-semibold text-ink">
+                      {t('checklist_step3_title')}
+                    </h4>
+                    <p className="text-[11px] text-ink-2 leading-relaxed">
+                      {t('checklist_step3_desc')}
+                    </p>
+                  </div>
+                  <Link href="/jobs" className="pt-1">
+                    <Button
+                      size="sm"
+                      variant={step3Done ? 'outline' : 'secondary'}
+                      fullWidth
+                      startIcon={<Briefcase className="w-3.5 h-3.5" />}
+                      className="text-xs"
+                    >
+                      <span>{t('checklist_step3_cta')}</span>
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Step 4: Clear Upgrade Point on First Quota Consumption */}
+                <div
+                  className={`rounded-xl border p-4 flex flex-col justify-between gap-3 transition-all ${
+                    step4Done
+                      ? 'border-success/35 bg-success/5'
+                      : hasConsumedFirstQuota
+                      ? 'border-brand/50 bg-brand-soft/40 shadow-subtle'
+                      : 'border-line-strong bg-surface-2/60'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-mono font-bold bg-surface text-ink border border-line-strong">
+                        4
+                      </span>
+                      {step4Done ? (
+                        <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                      ) : hasConsumedFirstQuota ? (
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-brand text-white">
+                          {t('checklist_first_quota_badge')}
+                        </span>
+                      ) : null}
+                    </div>
+                    <h4 className="text-xs sm:text-sm font-semibold text-ink">
+                      {t('checklist_step4_title')}
+                    </h4>
+                    <p className="text-[11px] text-ink-2 leading-relaxed">
+                      {t('checklist_step4_desc')}
+                    </p>
+                  </div>
+                  <Link href="/pricing" className="pt-1">
+                    <Button
+                      size="sm"
+                      variant={hasConsumedFirstQuota && !step4Done ? 'primary' : 'outline'}
+                      fullWidth
+                      startIcon={<Zap className="w-3.5 h-3.5" />}
+                      className="text-xs"
+                    >
+                      <span>{t('checklist_step4_cta')}</span>
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* KPI CARDS (4 CARDS) */}
         <Stagger
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
@@ -935,9 +1210,21 @@ export default function DashboardPage() {
                     <p className="text-xs text-ink-2 leading-relaxed">
                       {t('dashboard_empty_resumes_desc')}
                     </p>
+                    <p className="text-[11px] text-brand font-medium bg-brand-soft/60 border border-brand/20 rounded-lg px-3 py-2">
+                      {t('dashboard_empty_resumes_hint')}
+                    </p>
                     <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        isLoading={isUploadingCv}
+                        onClick={() => cvUploadInputRef.current?.click()}
+                        startIcon={<Upload className="w-3.5 h-3.5" />}
+                      >
+                        <span>{t('dashboard_upload_cv_direct')}</span>
+                      </Button>
                       <Link href="/builder">
-                        <Button size="sm" variant="primary" startIcon={<Plus className="w-3.5 h-3.5" />}>
+                        <Button size="sm" variant="secondary" startIcon={<Plus className="w-3.5 h-3.5" />}>
                           <span>{t('dashboard_btn_new_resume')}</span>
                         </Button>
                       </Link>
@@ -1094,10 +1381,24 @@ export default function DashboardPage() {
                     <p className="text-xs text-ink-2 leading-relaxed">
                       {t('dashboard_empty_scans_desc')}
                     </p>
-                    <div className="pt-2">
+                    <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        isLoading={isUploadingCv}
+                        onClick={() => cvUploadInputRef.current?.click()}
+                        startIcon={<Upload className="w-3.5 h-3.5" />}
+                      >
+                        <span>{t('dashboard_upload_cv_direct')}</span>
+                      </Button>
                       <Link href="/review">
-                        <Button size="sm" variant="primary" startIcon={<Search className="w-3.5 h-3.5" />}>
+                        <Button size="sm" variant="secondary" startIcon={<Search className="w-3.5 h-3.5" />}>
                           <span>{t('dashboard_btn_new_scan')}</span>
+                        </Button>
+                      </Link>
+                      <Link href="/review?sample=compact">
+                        <Button size="sm" variant="outline" startIcon={<Sparkles className="w-3.5 h-3.5" />}>
+                          <span>{t('dashboard_empty_scans_sample_btn')}</span>
                         </Button>
                       </Link>
                     </div>
@@ -1204,10 +1505,15 @@ export default function DashboardPage() {
                     <p className="text-xs text-ink-2 leading-relaxed">
                       {t('dashboard_empty_letters_desc')}
                     </p>
-                    <div className="pt-2">
+                    <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
                       <Link href="/cover-letter">
                         <Button size="sm" variant="primary" startIcon={<Sparkles className="w-3.5 h-3.5" />}>
                           <span>{t('dashboard_btn_new_cover')}</span>
+                        </Button>
+                      </Link>
+                      <Link href="/jobs">
+                        <Button size="sm" variant="outline" startIcon={<Briefcase className="w-3.5 h-3.5" />}>
+                          <span>{t('dashboard_empty_letters_jobs_btn')}</span>
                         </Button>
                       </Link>
                     </div>
@@ -1438,6 +1744,9 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Privacy: Export My Data & Delete My Account */}
+                <PrivacySettingsSection />
               </CardBody>
             </Card>
           )}

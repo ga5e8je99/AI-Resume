@@ -9,7 +9,7 @@ import Logo from '../components/Logo';
 import LanguageSelector from '../components/LanguageSelector';
 import ThemeToggle from '../components/ThemeToggle';
 import { Eye, EyeOff, AlertCircle, Sparkles, CheckCircle2, ShieldCheck, ArrowRight, ArrowLeft, Star, FileCheck, Layers } from 'lucide-react';
-import { trackSignupCompleted, trackDemoStarted } from '@/lib/analytics';
+import { trackSignupStarted, trackSignupCompleted, trackDemoStarted } from '@/lib/analytics';
 import { Button } from '../components/ui/Button';
 
 export default function RegisterPage() {
@@ -27,6 +27,8 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const TERMS_VERSION = '2026-10-31';
 
   // Field-level errors & general error
   const [fieldErrors, setFieldErrors] = useState<{
@@ -34,6 +36,7 @@ export default function RegisterPage() {
     email?: string;
     password?: string;
     confirmPassword?: string;
+    terms?: string;
   }>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
 
@@ -41,6 +44,7 @@ export default function RegisterPage() {
   const [isDemoSubmitting, setIsDemoSubmitting] = useState(false);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const hasTrackedSignupStartedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (user) {
@@ -48,9 +52,15 @@ export default function RegisterPage() {
     }
   }, [user, returnUrl, router]);
 
-  // Autofocus on first field
+  // Autofocus on first field and track signup_started
   useEffect(() => {
     nameInputRef.current?.focus();
+    if (!hasTrackedSignupStartedRef.current) {
+      const sent = trackSignupStarted({ source: 'register_page', method: 'email' });
+      if (sent) {
+        hasTrackedSignupStartedRef.current = true;
+      }
+    }
   }, []);
 
   const validate = (): boolean => {
@@ -59,6 +69,7 @@ export default function RegisterPage() {
       email?: string;
       password?: string;
       confirmPassword?: string;
+      terms?: string;
     } = {};
 
     const trimmedName = name.trim();
@@ -87,6 +98,10 @@ export default function RegisterPage() {
       errors.confirmPassword = t('auth_err_passwords_mismatch');
     }
 
+    if (!termsAccepted) {
+      errors.terms = t('auth_err_terms_required');
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -97,10 +112,21 @@ export default function RegisterPage() {
 
     if (!validate()) return;
 
+    if (!hasTrackedSignupStartedRef.current) {
+      hasTrackedSignupStartedRef.current = trackSignupStarted({
+        source: 'register_submit',
+        method: 'email',
+      });
+    }
+
     setIsSubmitting(true);
 
     try {
-      const result = await register(name.trim(), email.trim(), password);
+      const result = await register(name.trim(), email.trim(), password, {
+        termsAccepted: true,
+        termsVersion: TERMS_VERSION,
+        language,
+      });
       if (result.success) {
         trackSignupCompleted('free');
         router.push(returnUrl);
@@ -405,10 +431,56 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {/* Terms & Privacy Agreement Notice */}
-            <p className="text-[11px] text-ink-3 leading-relaxed text-start pt-1">
-              {t('auth_register_terms_notice')}
-            </p>
+            {/* Mandatory Terms, Privacy & Refund Agreement Checkbox */}
+            <div className="space-y-1 text-start pt-1">
+              <label
+                htmlFor="reg-terms-checkbox"
+                className="flex items-start gap-2.5 cursor-pointer select-none"
+              >
+                <input
+                  id="reg-terms-checkbox"
+                  name="termsAccepted"
+                  type="checkbox"
+                  required
+                  checked={termsAccepted}
+                  onChange={(e) => {
+                    setTermsAccepted(e.target.checked);
+                    if (fieldErrors.terms) {
+                      setFieldErrors((prev) => ({ ...prev, terms: undefined }));
+                    }
+                  }}
+                  aria-invalid={!!fieldErrors.terms}
+                  aria-describedby={fieldErrors.terms ? 'reg-terms-error' : undefined}
+                  className="mt-0.5 h-4 w-4 rounded border-line-strong accent-accent cursor-pointer shrink-0"
+                />
+                <span className="text-[11px] text-ink-2 leading-relaxed">
+                  {t('auth_register_terms_checkbox_prefix')}{' '}
+                  <Link href="/terms" className="text-accent underline underline-offset-4 hover:opacity-80 font-medium">
+                    {t('footer_terms')}
+                  </Link>
+                  {', '}
+                  <Link href="/privacy" className="text-accent underline underline-offset-4 hover:opacity-80 font-medium">
+                    {t('footer_privacy')}
+                  </Link>
+                  {' '}{t('auth_register_terms_checkbox_and')}{' '}
+                  <Link href="/refund" className="text-accent underline underline-offset-4 hover:opacity-80 font-medium">
+                    {t('footer_refund')}
+                  </Link>
+                  {' '}
+                  <span className="text-ink-3 font-mono text-[10px]">(v{TERMS_VERSION})</span>
+                </span>
+              </label>
+              {fieldErrors.terms && (
+                <p
+                  id="reg-terms-error"
+                  role="alert"
+                  className="flex items-center gap-1.5 text-xs text-danger font-medium mt-1"
+                >
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  <span>{fieldErrors.terms}</span>
+                </p>
+              )}
+            </div>
 
             {/* Submit Button */}
             <Button
@@ -480,13 +552,25 @@ export default function RegisterPage() {
             <BackIcon className="w-3.5 h-3.5" />
             <span>{t('common_back')}</span>
           </Link>
-          <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex flex-wrap items-center gap-3 text-[11px]">
             <Link href="/terms" className="hover:text-ink underline transition-colors">
               {t('footer_terms')}
             </Link>
             <span>•</span>
             <Link href="/privacy" className="hover:text-ink underline transition-colors">
               {t('footer_privacy')}
+            </Link>
+            <span>•</span>
+            <Link href="/refund" className="hover:text-ink underline transition-colors">
+              {t('footer_refund')}
+            </Link>
+            <span>•</span>
+            <Link href="/contact" className="hover:text-ink underline transition-colors">
+              {t('footer_contact')}
+            </Link>
+            <span>•</span>
+            <Link href="/about" className="hover:text-ink underline transition-colors">
+              {t('footer_about')}
             </Link>
           </div>
         </footer>

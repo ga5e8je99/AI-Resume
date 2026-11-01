@@ -123,7 +123,10 @@ export async function POST(req: NextRequest) {
       language: body.language || CoverLetterService.detectLanguage(resolvedDescription),
     };
 
-    const aiResult = await AICoverLetterClient.generateCoverLetter(synthesizedBody, resumeData);
+    const aiResult = await AICoverLetterClient.generateCoverLetter(synthesizedBody, resumeData, {
+      userId: authUser.userId,
+      endpoint: '/api/cover-letter/generate',
+    });
 
     // 7. Atomic Credit Deduction (Only on successful generation)
     let creditsLeft: number | undefined;

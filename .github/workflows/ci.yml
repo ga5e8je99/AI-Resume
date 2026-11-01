@@ -12,13 +12,20 @@ concurrency:
 
 jobs:
   ci:
-    name: Typecheck, Lint, Test & Build
+    name: Typecheck, Lint, Test, Build & Smoke E2E
     runs-on: ubuntu-latest
 
     env:
       CI: true
       NEXT_TELEMETRY_DISABLED: 1
-      JWT_SECRET: ci_test_jwt_secret_key_for_github_actions_2026
+      JWT_SECRET: ci_dummy_jwt_secret_key_for_github_actions_min_32_chars_2026
+      ADMIN_KEY: ci_dummy_admin_key_for_github_actions_2026
+      ADMIN_EMAILS: admin@jobmatch.ai
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3000/api
+      EMAIL_FROM: "JobMatch AI <noreply@jobmatch.ai>"
+      SUPPORT_EMAIL: support@jobmatch.ai
+      ADMIN_ALERT_EMAIL: admin@jobmatch.ai
 
     steps:
       - name: Checkout repository
@@ -39,9 +46,42 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      - name: Run automated tests
+      - name: Run unit & integration tests (Cover Letter, Payments, Credits, Auth, Rate Limit, ATS)
         run: npm test
 
-      - name: Build production bundle
+      - name: Build production bundle (with dummy environment variables)
+        env:
+          NODE_ENV: production
+          MONGODB_URI: mongodb://127.0.0.1:27017/jobmatch_ci_dummy
+          ALLOW_MOCK_PAYMENTS: "false"
+          LEMONSQUEEZY_API_KEY: ls_ci_dummy_api_key
+          LEMONSQUEEZY_STORE_ID: "10000"
+          LEMONSQUEEZY_VARIANT_PRO_MONTHLY: "20001"
+          LEMONSQUEEZY_VARIANT_PRO_ANNUAL: "20002"
+          LEMONSQUEEZY_VARIANT_PAYG: "20003"
+          LEMONSQUEEZY_WEBHOOK_SECRET: ls_ci_dummy_webhook_secret
+          STRIPE_SECRET_KEY: sk_test_ci_dummy_stripe_secret_key
+          STRIPE_WEBHOOK_SECRET: whsec_ci_dummy_stripe_webhook_secret
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_dummy_stripe_publishable_key
+          STRIPE_PRICE_PRO_MONTHLY: price_ci_dummy_pro_monthly
+          STRIPE_PRICE_PRO_ANNUAL: price_ci_dummy_pro_annual
+          PAYMOB_API_KEY: ci_dummy_paymob_api_key
+          PAYMOB_INTEGRATION_ID: "123456"
+          PAYMOB_HMAC_SECRET: ci_dummy_paymob_hmac_secret
+          PAYMOB_IFRAME_ID: "123456"
+          RESEND_API_KEY: re_ci_dummy_resend_api_key
+          NEXT_PUBLIC_SENTRY_DSN: https://examplePublicKey@o0.ingest.sentry.io/0
+          SENTRY_DSN: https://examplePublicKey@o0.ingest.sentry.io/0
+          NEXT_PUBLIC_POSTHOG_KEY: phc_ci_dummy_posthog_key
+          NEXT_PUBLIC_POSTHOG_HOST: https://us.i.posthog.com
+          UPSTASH_REDIS_REST_URL: https://ci-dummy-upstash.upstash.io
+          UPSTASH_REDIS_REST_TOKEN: ci_dummy_upstash_token
         run: npm run build
 
+      - name: Install Playwright Chromium browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright smoke tests (Home, Register, Login, Upload CV, Analyze, Pricing)
+        env:
+          SMOKE_USE_PROD_BUILD: "true"
+        run: npm run test:smoke

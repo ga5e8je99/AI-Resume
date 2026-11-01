@@ -1141,6 +1141,24 @@ export default function AdminDashboardPage() {
             </button>
 
             <Link
+              href="/admin/analytics"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent/15 hover:bg-accent/25 border border-accent/30 text-xs text-cyan-300 font-semibold transition-all"
+              title="لوحة قمع التحويل والأحداث (PostHog Funnel)"
+            >
+              <Filter className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">قمع التحويل (Funnel)</span>
+            </Link>
+
+            <Link
+              href="/admin/ai-usage"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs text-emerald-300 font-semibold transition-all"
+              title="مراقبة تكلفة واستهلاك الذكاء الاصطناعي"
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">تكلفة الـ AI (اليوم/الأسبوع)</span>
+            </Link>
+
+            <Link
               href="/dashboard"
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-xs text-cyan-300 font-medium transition-all"
             >
@@ -1296,15 +1314,6 @@ export default function AdminDashboardPage() {
               خارطة الطريق
             </span>
           </button>
-
-          <Link
-            href="/admin/payments"
-            className="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/30 transition-all cursor-pointer"
-            title="Crypto & Binance Payments Verification"
-          >
-            <DollarSign className="w-4 h-4 text-emerald-400" />
-            <span>مدفوعات Binance والـ Crypto</span>
-          </Link>
         </div>
 
         {/* TAB 1: OVERVIEW & ANALYTICS */}

@@ -9,6 +9,7 @@ import ScrollToTop from './ScrollToTop';
 import PostHogProvider from './PostHogProvider';
 import CookieConsentBanner from './CookieConsentBanner';
 import Navbar from './Navbar';
+import EmailVerificationBanner from './EmailVerificationBanner';
 import RouteProgressBar from '@/components/navigation/RouteProgressBar';
 import FirstVisitSplash from '@/components/brand/FirstVisitSplash';
 
@@ -30,6 +31,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
               <RouteProgressBar />
               <FirstVisitSplash />
               <Navbar />
+              <EmailVerificationBanner />
               {children}
               <CookieConsentBanner />
               <ScrollToTop />

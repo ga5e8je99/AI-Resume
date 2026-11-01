@@ -4,6 +4,8 @@ import DataStore from '@/app/lib/datastore';
 import { getPlanById, BillingCycle } from '@/lib/plans';
 import { createCheckout, ProviderNotConfiguredError } from '@/lib/payments';
 import { applyRateLimit } from '@/lib/rate-limit';
+import { isUserEmailVerified } from '@/lib/credit-guard';
+import { reportOperationalAlert, recordServer5xxAndAlert } from '@/lib/sentry';
 
 /**
  * POST /api/checkout
@@ -44,13 +46,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!isUserEmailVerified(user)) {
+      return NextResponse.json(
+        {
+          error: 'EMAIL_NOT_VERIFIED',
+          message:
+            'Please verify your email address before proceeding to payment checkout. Check your inbox or resend the verification email.',
+          resendUrl: '/api/auth/resend-verification',
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const {
       planId,
       currency: rawCurrency,
       billingCycle: rawBillingCycle,
       method: rawMethod,
-      network: rawNetwork,
+      provider: rawProvider,
     } = body;
 
     if (!planId) {
@@ -86,16 +100,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate currency and parameters
-    const currency =
-      rawCurrency === 'EGP' ? 'EGP' : rawCurrency === 'USDT' ? 'USDT' : 'USD';
+    const currency = rawCurrency === 'EGP' ? 'EGP' : 'USD';
     const billingCycle: BillingCycle = rawBillingCycle === 'annual' ? 'annual' : 'monthly';
     const method =
-      rawMethod === 'binance' || rawMethod === 'manual_crypto'
+      rawMethod === 'lemonsqueezy' ||
+      rawMethod === 'stripe' ||
+      rawMethod === 'paymob' ||
+      rawMethod === 'card'
         ? rawMethod
-        : currency === 'USDT'
-        ? 'binance'
         : 'auto';
-    const network = rawNetwork === 'TRC20' ? 'TRC20' : 'BEP20';
+    const provider =
+      rawProvider === 'lemonsqueezy' || rawProvider === 'stripe' || rawProvider === 'paymob'
+        ? rawProvider
+        : undefined;
 
     // Dispatch to universal payment provider abstraction
     const checkoutResult = await createCheckout({
@@ -104,12 +121,13 @@ export async function POST(req: NextRequest) {
         email: user.email,
         name: user.name,
         stripeCustomerId: (user as any).stripeCustomerId || '',
+        lemonCustomerId: (user as any).lemonCustomerId || '',
       },
       planId: plan.id,
       currency,
       billingCycle,
       method,
-      network,
+      provider,
     });
 
     return NextResponse.json({
@@ -120,7 +138,6 @@ export async function POST(req: NextRequest) {
       orderId: checkoutResult.orderId,
       reference: checkoutResult.reference,
       amount: checkoutResult.amount,
-      network: checkoutResult.network,
     });
   } catch (error: any) {
     if (
@@ -128,6 +145,13 @@ export async function POST(req: NextRequest) {
       error?.name === 'ProviderNotConfiguredError' ||
       error?.code === 'PROVIDER_NOT_CONFIGURED'
     ) {
+      reportOperationalAlert({
+        category: 'payment_failure',
+        severity: 'warning',
+        title: 'Checkout Provider Not Configured',
+        message: error?.message || 'Payment provider is not configured.',
+        tags: { endpoint: '/api/checkout', code: 'PROVIDER_NOT_CONFIGURED' },
+      });
       return NextResponse.json(
         {
           error: 'PROVIDER_NOT_CONFIGURED',
@@ -138,6 +162,19 @@ export async function POST(req: NextRequest) {
     }
 
     console.error('Checkout creation error:', error);
+    reportOperationalAlert({
+      category: 'payment_failure',
+      severity: 'error',
+      title: 'Checkout Creation Failed',
+      message: error?.message || 'Failed to create checkout session.',
+      tags: { endpoint: '/api/checkout' },
+    });
+    recordServer5xxAndAlert({
+      endpoint: '/api/checkout',
+      statusCode: 500,
+      error,
+      userAgent: req.headers.get('user-agent'),
+    });
     return NextResponse.json(
       {
         error: 'CHECKOUT_ERROR',

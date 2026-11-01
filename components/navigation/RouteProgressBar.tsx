@@ -27,6 +27,7 @@ function RouteProgressBarInner({
   const safeguardTimerRef = useRef<NodeJS.Timeout | null>(null);
   const visibleStartTimeRef = useRef<number | null>(null);
   const isPendingRef = useRef(false);
+  const lastCommittedUrlRef = useRef<string>('');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -49,21 +50,23 @@ function RouteProgressBarInner({
   const cancelTransition = useCallback(() => {
     isPendingRef.current = false;
     clearAllTimers();
-    setIsCompleting(true);
-    setProgress(0);
-    setIsVisible(false);
     visibleStartTimeRef.current = null;
+    setTimeout(() => {
+      setIsCompleting(true);
+      setProgress(0);
+      setIsVisible(false);
+    }, 0);
   }, [clearAllTimers]);
 
   const startTransition = useCallback(() => {
     if (isPendingRef.current) return;
     isPendingRef.current = true;
-    setIsCompleting(false);
 
     clearAllTimers();
 
     const activateBar = () => {
       visibleStartTimeRef.current = Date.now();
+      setIsCompleting(false);
       setIsVisible(true);
       setProgress(28);
 
@@ -77,11 +80,10 @@ function RouteProgressBarInner({
       }, 160);
     };
 
-    if (delay <= 0) {
-      activateBar();
-    } else {
-      flickerTimerRef.current = setTimeout(activateBar, delay);
-    }
+    // Always schedule via setTimeout (even when delay is 0, or 150ms anti-flicker)
+    // so React state updates are never scheduled synchronously inside Next.js's useInsertionEffect.
+    const effectiveDelay = Math.max(0, delay);
+    flickerTimerRef.current = setTimeout(activateBar, effectiveDelay);
 
     // Safeguard: auto-cancel after 8s if navigation is abandoned or stuck
     safeguardTimerRef.current = setTimeout(() => {
@@ -94,7 +96,6 @@ function RouteProgressBarInner({
 
     if (!isVisible && visibleStartTimeRef.current === null) {
       clearAllTimers();
-      setProgress(0);
       return;
     }
 
@@ -133,6 +134,8 @@ function RouteProgressBarInner({
 
   // Complete progress bar when route pathname or searchParams update
   useEffect(() => {
+    const qs = searchParams?.toString();
+    lastCommittedUrlRef.current = `${pathname}${qs ? `?${qs}` : ''}`;
     completeTransition();
   }, [pathname, searchParams, completeTransition]);
 
@@ -197,40 +200,68 @@ function RouteProgressBarInner({
 
     window.history.pushState = function (...args) {
       const url = args[2];
-      if (url) {
+      const currentHref = window.location.href;
+      const currentPathname = window.location.pathname;
+      const currentSearch = window.location.search;
+      const wasPending = isPendingRef.current;
+      const res = origPushState.apply(this, args);
+      if (url && !wasPending) {
         try {
-          const targetUrl = new URL(String(url), window.location.href);
+          const targetUrl = new URL(String(url), currentHref);
           if (
             targetUrl.origin === window.location.origin &&
-            (targetUrl.pathname !== window.location.pathname ||
-              targetUrl.search !== window.location.search)
+            (targetUrl.pathname !== currentPathname ||
+              targetUrl.search !== currentSearch)
           ) {
-            startTransition();
+            const targetPathAndSearch = `${targetUrl.pathname}${targetUrl.search}`;
+            // Defer outside Next.js App Router's useInsertionEffect stack frame
+            setTimeout(() => {
+              startTransition();
+              if (lastCommittedUrlRef.current === targetPathAndSearch) {
+                setTimeout(() => {
+                  completeTransition();
+                }, Math.max(20, delay + 20));
+              }
+            }, 0);
           }
         } catch {
           // Intentionally ignored: malformed URL passed to history.pushState should not break native history API
         }
       }
-      return origPushState.apply(this, args);
+      return res;
     };
 
     window.history.replaceState = function (...args) {
       const url = args[2];
-      if (url) {
+      const currentHref = window.location.href;
+      const currentPathname = window.location.pathname;
+      const currentSearch = window.location.search;
+      const wasPending = isPendingRef.current;
+      const res = origReplaceState.apply(this, args);
+      if (url && !wasPending) {
         try {
-          const targetUrl = new URL(String(url), window.location.href);
+          const targetUrl = new URL(String(url), currentHref);
           if (
             targetUrl.origin === window.location.origin &&
-            (targetUrl.pathname !== window.location.pathname ||
-              targetUrl.search !== window.location.search)
+            (targetUrl.pathname !== currentPathname ||
+              targetUrl.search !== currentSearch)
           ) {
-            startTransition();
+            const targetPathAndSearch = `${targetUrl.pathname}${targetUrl.search}`;
+            // Defer outside Next.js App Router's useInsertionEffect stack frame
+            setTimeout(() => {
+              startTransition();
+              if (lastCommittedUrlRef.current === targetPathAndSearch) {
+                setTimeout(() => {
+                  completeTransition();
+                }, Math.max(20, delay + 20));
+              }
+            }, 0);
           }
         } catch {
           // Intentionally ignored: malformed URL passed to history.replaceState should not break native history API
         }
       }
-      return origReplaceState.apply(this, args);
+      return res;
     };
 
     const handleCustomStart = () => startTransition();
@@ -255,7 +286,7 @@ function RouteProgressBarInner({
       window.history.replaceState = origReplaceState;
       clearAllTimers();
     };
-  }, [startTransition, completeTransition, cancelTransition, clearAllTimers]);
+  }, [startTransition, completeTransition, cancelTransition, clearAllTimers, delay]);
 
   if (!isVisible && progress === 0) return null;
 
@@ -269,8 +300,8 @@ function RouteProgressBarInner({
         transition: prefersReducedMotion
           ? 'none'
           : isCompleting
-          ? 'width 160ms ease-out, opacity 180ms ease-in 50ms'
-          : 'width 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 120ms ease-in',
+            ? 'width 160ms ease-out, opacity 180ms ease-in 50ms'
+            : 'width 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 120ms ease-in',
       }}
     />
   );

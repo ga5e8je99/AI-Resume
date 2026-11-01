@@ -3,12 +3,14 @@ import * as Sentry from '@sentry/nextjs';
 import { requireAuth } from '@/app/lib/auth';
 import DataStore from '@/app/lib/datastore';
 import { extractProfileFromResumeData, extractProfileFromText } from '@/lib/jobs/extractor';
+import { estimateTokensFromText, logAiUsageAndCheckBudget } from '@/app/lib/aiGovernance';
 import { applyRateLimit, parseBoundedJsonBody } from '@/lib/rate-limit';
 
 const MAX_EXTRACT_PROFILE_BODY_BYTES = 150 * 1024; // 150KB max request payload
 const MAX_EXTRACT_PROFILE_TEXT_CHARS = 50000;      // 50,000 chars max resume text
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   try {
     // 1. Enforce authentication (returns 401 if unauthenticated)
     const { user, errorResponse } = requireAuth(req);
@@ -83,6 +85,22 @@ export async function POST(req: NextRequest) {
         experience: [{ title: 'Software Engineer' }],
       });
     }
+
+    const approxTokens = estimateTokensFromText(
+      typeof text === 'string' ? text : JSON.stringify(profile)
+    );
+    await logAiUsageAndCheckBudget({
+      userId: user.id,
+      endpoint: '/api/jobs/extract-profile',
+      tokens: approxTokens,
+      promptTokens: approxTokens,
+      completionTokens: estimateTokensFromText(JSON.stringify(profile)),
+      costUsd: 0,
+      latencyMs: Date.now() - startTime,
+      status: 'fallback',
+      provider: 'built-in-ats-engine',
+      model: 'built-in-ats-engine',
+    });
 
     return NextResponse.json({
       success: true,

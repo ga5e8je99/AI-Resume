@@ -7,14 +7,17 @@
       "password": "$2a$10$wT8m9aHn9q6XqZvZl0lPbe4E7mO8QGqVw1jG6w6rD7eF9tY1yM8aW",
       "role": "admin",
       "createdAt": "2026-10-09T12:27:52.488Z",
-      "updatedAt": "2026-10-26T15:04:04.424Z",
+      "updatedAt": "2026-10-31T21:03:39.732Z",
       "plan": "free",
       "aiCredits": 3,
       "billingCycle": "none",
       "planExpiresAt": null,
       "paymentProvider": "none",
       "providerCustomerId": "",
-      "providerSubscriptionId": ""
+      "providerSubscriptionId": "",
+      "emailVerified": "2026-10-09T12:27:52.488Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_002",
@@ -23,14 +26,17 @@
       "password": "$2b$10$sF3s9v3qd8JCQImmZJ0ST.Qhla89vTJiLd0GyuMAqoDAcrhS5J0M2",
       "role": "user",
       "createdAt": "2026-10-23T17:30:25.261Z",
-      "updatedAt": "2026-10-27T09:10:14.221Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "plan": "free",
       "aiCredits": 0,
       "billingCycle": "none",
       "planExpiresAt": null,
       "paymentProvider": "none",
       "providerCustomerId": "",
-      "providerSubscriptionId": ""
+      "providerSubscriptionId": "",
+      "emailVerified": "2026-10-23T17:30:25.261Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvl8wx9p0rt4",
@@ -39,14 +45,17 @@
       "password": "$2b$10$sF3s9v3qd8JCQImmZJ0ST.Qhla89vTJiLd0GyuMAqoDAcrhS5J0M2",
       "role": "user",
       "createdAt": "2026-10-23T17:30:25.261Z",
-      "updatedAt": "2026-10-26T15:04:04.425Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "plan": "free",
       "aiCredits": 3,
       "billingCycle": "none",
       "planExpiresAt": null,
       "paymentProvider": "none",
       "providerCustomerId": "",
-      "providerSubscriptionId": ""
+      "providerSubscriptionId": "",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvl8x5ln2e6f",
@@ -55,14 +64,17 @@
       "password": "$2b$10$p/n0CjIaLr2U5iI5CE/gheAFvBUH7mgwuDu.m5A9s.7UolaLa0Af6",
       "role": "user",
       "createdAt": "2026-10-23T17:30:36.059Z",
-      "updatedAt": "2026-10-26T15:04:04.426Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "plan": "free",
       "aiCredits": 3,
       "billingCycle": "none",
       "planExpiresAt": null,
       "paymentProvider": "none",
       "providerCustomerId": "",
-      "providerSubscriptionId": ""
+      "providerSubscriptionId": "",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvl8xqfs4xbj",
@@ -71,14 +83,17 @@
       "password": "$2b$10$M7uQG7P8Ano4PRBSFCh4Z.9b0aELo9Ndrp0ypqViqc6qGVvKuPW/2",
       "role": "user",
       "createdAt": "2026-10-23T17:31:03.064Z",
-      "updatedAt": "2026-10-26T15:04:04.426Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "plan": "free",
       "aiCredits": 3,
       "billingCycle": "none",
       "planExpiresAt": null,
       "paymentProvider": "none",
       "providerCustomerId": "",
-      "providerSubscriptionId": ""
+      "providerSubscriptionId": "",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvpabfxqsnc5",
@@ -88,14 +103,17 @@
       "role": "user",
       "isDemo": true,
       "createdAt": "2026-10-26T13:20:46.958Z",
-      "updatedAt": "2026-10-26T15:04:04.426Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "plan": "free",
       "aiCredits": 3,
       "billingCycle": "none",
       "planExpiresAt": null,
       "paymentProvider": "none",
       "providerCustomerId": "",
-      "providerSubscriptionId": ""
+      "providerSubscriptionId": "",
+      "emailVerified": "2026-10-26T13:20:46.958Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvpfcxu38wps",
@@ -112,7 +130,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-26T15:41:54.891Z",
-      "updatedAt": "2026-10-26T15:41:54.932Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-26T15:41:54.891Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvpfsfa97gay",
@@ -129,9 +150,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-26T15:53:57.345Z",
-      "updatedAt": "2026-10-26T15:53:57.888Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "0d64eb2c7b7d395ee992518261475dda85d098ce0333647047bd076adae1403c",
-      "resetPasswordExpires": "2026-10-26T15:52:57.887Z"
+      "resetPasswordExpires": "2026-10-26T15:52:57.887Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvpft9bgkcwf",
@@ -148,7 +172,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-26T15:54:36.268Z",
-      "updatedAt": "2026-10-26T15:54:36.720Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqfr4d92hp0",
@@ -165,7 +192,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T08:40:42.717Z",
-      "updatedAt": "2026-10-27T08:40:42.717Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqfsda4qe1q",
@@ -182,7 +212,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T08:41:40.924Z",
-      "updatedAt": "2026-10-27T08:41:40.924Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqftjsjuimy",
@@ -199,7 +232,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T08:42:36.037Z",
-      "updatedAt": "2026-10-27T08:42:36.037Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqfurchb4h8",
@@ -216,7 +252,10 @@
       "providerCustomerId": "cus_test",
       "providerSubscriptionId": "sub_test",
       "createdAt": "2026-10-27T08:43:32.488Z",
-      "updatedAt": "2026-10-27T08:43:32.657Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T08:43:32.488Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqfvhen2tsv",
@@ -233,9 +272,12 @@
       "providerCustomerId": "cus_test",
       "providerSubscriptionId": "sub_test",
       "createdAt": "2026-10-27T08:44:06.239Z",
-      "updatedAt": "2026-10-27T08:44:06.847Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "72533d9f09c93f0779466a1810ff1a99058471ed45cd6427053e938224fe6add",
-      "resetPasswordExpires": "2026-10-27T08:59:06.845Z"
+      "resetPasswordExpires": "2026-10-27T08:59:06.845Z",
+      "emailVerified": "2026-10-27T08:44:06.239Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqfxszby4wz",
@@ -252,7 +294,10 @@
       "providerCustomerId": "cus_test",
       "providerSubscriptionId": "sub_test",
       "createdAt": "2026-10-27T08:45:54.551Z",
-      "updatedAt": "2026-10-27T08:45:55.440Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T08:45:54.551Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqg2vs8g6vo",
@@ -269,7 +314,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T08:49:51.464Z",
-      "updatedAt": "2026-10-27T08:49:51.502Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T08:49:51.464Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqg37pclcrw",
@@ -286,9 +334,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T08:50:06.912Z",
-      "updatedAt": "2026-10-27T08:50:07.449Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "dcbe9e23dfaaabd581785a3ac7fe00a5f650104ddfe5451cf0f4163fa1f46b45",
-      "resetPasswordExpires": "2026-10-27T08:49:07.448Z"
+      "resetPasswordExpires": "2026-10-27T08:49:07.448Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqgnmlays0o",
@@ -305,7 +356,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T09:05:59.326Z",
-      "updatedAt": "2026-10-27T09:05:59.385Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T09:05:59.326Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqgo4d6nc1a",
@@ -322,9 +376,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T09:06:22.362Z",
-      "updatedAt": "2026-10-27T09:06:23.380Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "15be7e73c8d7bc5812c3ed14c8206ffdb9c51c482fdf649ca39ca6a82989eb58",
-      "resetPasswordExpires": "2026-10-27T09:05:23.379Z"
+      "resetPasswordExpires": "2026-10-27T09:05:23.379Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqgq4a1j1rn",
@@ -341,7 +398,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T09:07:55.561Z",
-      "updatedAt": "2026-10-27T09:07:55.717Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T09:07:55.561Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqgqgjdxui9",
@@ -358,9 +418,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T09:08:11.449Z",
-      "updatedAt": "2026-10-27T09:08:12.093Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "a9a6fc0daef0d680d0dde4412aeed9b1ea9bc1a3205b01766afc59a6f3efc31a",
-      "resetPasswordExpires": "2026-10-27T09:07:12.092Z"
+      "resetPasswordExpires": "2026-10-27T09:07:12.092Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqgzouf5zmb",
@@ -377,7 +440,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T09:15:22.119Z",
-      "updatedAt": "2026-10-27T09:15:22.167Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T09:15:22.119Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqh01w6usuw",
@@ -394,9 +460,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T09:15:39.030Z",
-      "updatedAt": "2026-10-27T09:15:39.938Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "1351c7fcd71e82015c12c7e411419bd0945da4d2e14ba40eb3c3f2c754e4fdd0",
-      "resetPasswordExpires": "2026-10-27T09:14:39.937Z"
+      "resetPasswordExpires": "2026-10-27T09:14:39.937Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqj3la5smh7",
@@ -413,7 +482,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T10:14:23.357Z",
-      "updatedAt": "2026-10-27T10:14:23.456Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T10:14:23.357Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqj3y6z2uhq",
@@ -430,9 +502,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T10:14:40.091Z",
-      "updatedAt": "2026-10-27T10:14:40.725Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "ac55bd807a504d4d2823ed98bea41b5f6eabbcb4ecaa80a707fd05a8adec7cf0",
-      "resetPasswordExpires": "2026-10-27T10:13:40.724Z"
+      "resetPasswordExpires": "2026-10-27T10:13:40.724Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqorkurf4h1",
@@ -449,7 +524,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T12:53:00.627Z",
-      "updatedAt": "2026-10-27T12:53:00.665Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T12:53:00.627Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqorxoqmba5",
@@ -466,9 +544,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T12:53:17.258Z",
-      "updatedAt": "2026-10-27T12:53:17.930Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "87410f5399e92beed468ec21d177d215cf5be48f9f8a16548fc8a58661085fc7",
-      "resetPasswordExpires": "2026-10-27T12:52:17.928Z"
+      "resetPasswordExpires": "2026-10-27T12:52:17.928Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqqc59jawbj",
@@ -485,7 +566,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T13:36:59.815Z",
-      "updatedAt": "2026-10-27T13:36:59.887Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T13:36:59.815Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvqqci2rel0h",
@@ -502,9 +586,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T13:37:16.419Z",
-      "updatedAt": "2026-10-27T13:37:17.203Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "b0f86c6df0872730517fa4768cb319e3eeec8ecd7b6894d6599e0c7dc9038d2e",
-      "resetPasswordExpires": "2026-10-27T13:36:17.202Z"
+      "resetPasswordExpires": "2026-10-27T13:36:17.202Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr49r24b3ce",
@@ -521,7 +608,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T20:07:02.716Z",
-      "updatedAt": "2026-10-27T20:07:02.800Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T20:07:02.716Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr4a4incojc",
@@ -538,9 +628,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T20:07:20.159Z",
-      "updatedAt": "2026-10-27T20:07:21.016Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "3e5cdbe9b501ba8b4a37abfd335d9d166ca4dee9765234d7a13e96cc52c14e07",
-      "resetPasswordExpires": "2026-10-27T20:06:21.008Z"
+      "resetPasswordExpires": "2026-10-27T20:06:21.008Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr5fide8m6i",
@@ -557,7 +650,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T20:39:31.010Z",
-      "updatedAt": "2026-10-27T20:39:31.010Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr5vzmonlz6",
@@ -574,7 +670,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T20:52:19.872Z",
-      "updatedAt": "2026-10-27T20:52:19.872Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr86oszuui7",
@@ -591,7 +690,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T21:56:38.291Z",
-      "updatedAt": "2026-10-27T21:56:38.344Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T21:56:38.291Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr870ubw5p9",
@@ -608,9 +710,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T21:56:53.891Z",
-      "updatedAt": "2026-10-27T21:56:54.497Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "9f9d436e51ca9c97e575b235f25069970f0c33925d7e2474a96ae9bdd5791241",
-      "resetPasswordExpires": "2026-10-27T21:55:54.496Z"
+      "resetPasswordExpires": "2026-10-27T21:55:54.496Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr8knkbam8s",
@@ -627,7 +732,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T22:07:29.868Z",
-      "updatedAt": "2026-10-27T22:07:29.924Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T22:07:29.868Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr8l03has7s",
@@ -644,9 +752,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T22:07:46.109Z",
-      "updatedAt": "2026-10-27T22:07:46.693Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "b7fd3b78d933a668976ef83d8b6eaa5c9601ea49e1a0304e90ade368c270b3f8",
-      "resetPasswordExpires": "2026-10-27T22:06:46.691Z"
+      "resetPasswordExpires": "2026-10-27T22:06:46.691Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr8yjl07o6p",
@@ -663,7 +774,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T22:18:17.892Z",
-      "updatedAt": "2026-10-27T22:18:17.956Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T22:18:17.892Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr8yvmrja31",
@@ -680,9 +794,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T22:18:33.507Z",
-      "updatedAt": "2026-10-27T22:18:34.238Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "28c056caf671af35930a48be2e7365150d498d976aed2e694cace63df6feeec4",
-      "resetPasswordExpires": "2026-10-27T22:17:34.237Z"
+      "resetPasswordExpires": "2026-10-27T22:17:34.237Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr9tz0tgjw9",
@@ -699,7 +816,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-27T22:42:44.237Z",
-      "updatedAt": "2026-10-27T22:42:44.279Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-27T22:42:44.237Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvr9ucjfqlny",
@@ -716,9 +836,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-27T22:43:01.755Z",
-      "updatedAt": "2026-10-27T22:43:02.246Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "6c8c91d60ba492922db4a5cb03fe3c51a455293ce7af835a183d257e94ede72e",
-      "resetPasswordExpires": "2026-10-27T22:42:02.245Z"
+      "resetPasswordExpires": "2026-10-27T22:42:02.245Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvryp5tvzgof",
@@ -735,7 +858,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-28T10:18:50.179Z",
-      "updatedAt": "2026-10-28T10:18:50.243Z"
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "emailVerified": "2026-10-28T10:18:50.179Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvrypivypqah",
@@ -752,9 +878,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T10:19:07.102Z",
-      "updatedAt": "2026-10-28T10:19:07.667Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "e4345856f76b72f32ef7377db1a7504ea3cd25f127b649c326eca6fd8433914f",
-      "resetPasswordExpires": "2026-10-28T10:18:07.666Z"
+      "resetPasswordExpires": "2026-10-28T10:18:07.666Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs8eab8jwzx",
@@ -771,9 +900,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T14:50:18.932Z",
-      "updatedAt": "2026-10-28T14:50:19.583Z",
+      "updatedAt": "2026-10-31T21:03:39.733Z",
       "resetPasswordToken": "187bbc5b7d804e9e803634e866d46a4d925b3cda79971ca459be0ec32a623dab",
-      "resetPasswordExpires": "2026-10-28T14:49:19.580Z"
+      "resetPasswordExpires": "2026-10-28T14:49:19.580Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9ibx938qq",
@@ -790,8 +922,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:21:27.261Z",
-      "updatedAt": "2026-10-28T15:21:27.314Z",
-      "aiResumeGenerationsCount": 1
+      "updatedAt": "2026-10-31T21:03:39.733Z",
+      "aiResumeGenerationsCount": 1,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9kvhwjn9h",
@@ -808,8 +943,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:23:25.940Z",
-      "updatedAt": "2026-10-28T15:23:25.968Z",
-      "aiResumeGenerationsCount": 1
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 1,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9kvjozufi",
@@ -826,7 +964,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:23:26.004Z",
-      "updatedAt": "2026-10-28T15:23:26.004Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T15:23:26.004Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9kvkiesaj",
@@ -843,8 +984,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:23:26.034Z",
-      "updatedAt": "2026-10-28T15:23:26.103Z",
-      "aiResumeGenerationsCount": 1
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 1,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9lozzonaz",
@@ -861,8 +1005,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:24:04.175Z",
-      "updatedAt": "2026-10-28T15:24:04.221Z",
-      "aiResumeGenerationsCount": 1
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 1,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9lp2pmgjw",
@@ -879,7 +1026,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:24:04.273Z",
-      "updatedAt": "2026-10-28T15:24:04.273Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T15:24:04.273Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9lp483c1a",
@@ -896,8 +1046,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:24:04.328Z",
-      "updatedAt": "2026-10-28T15:24:04.465Z",
-      "aiResumeGenerationsCount": 3
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 3,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9lp94tvp3",
@@ -914,7 +1067,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:24:04.504Z",
-      "updatedAt": "2026-10-28T15:24:04.504Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T15:24:04.504Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9n3zjpjfj",
@@ -931,8 +1087,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:25:10.255Z",
-      "updatedAt": "2026-10-28T15:25:10.294Z",
-      "aiResumeGenerationsCount": 1
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 1,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9n41sgp7l",
@@ -949,7 +1108,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:25:10.336Z",
-      "updatedAt": "2026-10-28T15:25:10.336Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T15:25:10.336Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9n42ykqac",
@@ -966,8 +1128,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:25:10.378Z",
-      "updatedAt": "2026-10-28T15:25:10.474Z",
-      "aiResumeGenerationsCount": 3
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 3,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvs9n46meblk",
@@ -984,7 +1149,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:25:10.510Z",
-      "updatedAt": "2026-10-28T15:25:10.510Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T15:25:10.510Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsavnnkddi6",
@@ -1001,7 +1169,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T15:59:48.608Z",
-      "updatedAt": "2026-10-28T15:59:48.608Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsbtoihynyg",
@@ -1018,8 +1189,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T16:26:16.025Z",
-      "updatedAt": "2026-10-28T16:26:16.058Z",
-      "aiResumeGenerationsCount": 1
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 1,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsbtokcz3i9",
@@ -1036,7 +1210,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T16:26:16.092Z",
-      "updatedAt": "2026-10-28T16:26:16.092Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T16:26:16.092Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsbtol9ivwq",
@@ -1053,8 +1230,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T16:26:16.125Z",
-      "updatedAt": "2026-10-28T16:26:16.237Z",
-      "aiResumeGenerationsCount": 3
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 3,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsbtop3yvmw",
@@ -1071,7 +1251,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T16:26:16.263Z",
-      "updatedAt": "2026-10-28T16:26:16.263Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T16:26:16.263Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvscfb4x3v04",
@@ -1088,7 +1271,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T16:43:05.121Z",
-      "updatedAt": "2026-10-28T16:43:05.121Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvscgzqzkw3q",
@@ -1105,7 +1291,10 @@
       "providerCustomerId": "paytest_1793205861117@example.com",
       "providerSubscriptionId": "ORD-EXT-863890",
       "createdAt": "2026-10-28T16:44:23.675Z",
-      "updatedAt": "2026-10-28T16:44:24.679Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T16:44:23.675Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsdcw9e6kdj",
@@ -1122,9 +1311,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T17:09:12.146Z",
-      "updatedAt": "2026-10-28T17:09:12.959Z",
+      "updatedAt": "2026-10-31T21:03:39.734Z",
       "resetPasswordToken": "4555cb392561373ef2b7510ae2de51400509da942e64bdc0e5caed3b82d1248f",
-      "resetPasswordExpires": "2026-10-28T17:08:12.954Z"
+      "resetPasswordExpires": "2026-10-28T17:08:12.954Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsdst04b02z",
@@ -1141,9 +1333,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T17:21:34.421Z",
-      "updatedAt": "2026-10-28T17:21:35.951Z",
+      "updatedAt": "2026-10-31T21:03:39.734Z",
       "resetPasswordToken": "87df2f7f525cc437b5a8188b91be65b43388c0c48963a1c1d952911ee12ee593",
-      "resetPasswordExpires": "2026-10-28T17:20:35.943Z"
+      "resetPasswordExpires": "2026-10-28T17:20:35.943Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsdwy02yqjw",
@@ -1160,7 +1355,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-28T17:24:47.522Z",
-      "updatedAt": "2026-10-28T17:24:47.581Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T17:24:47.522Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsdxfqm98hf",
@@ -1177,8 +1375,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T17:25:10.510Z",
-      "updatedAt": "2026-10-28T17:25:10.585Z",
-      "aiResumeGenerationsCount": 1
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 1,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsdxftlr173",
@@ -1195,7 +1396,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T17:25:10.617Z",
-      "updatedAt": "2026-10-28T17:25:10.617Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T17:25:10.617Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsdxfub350j",
@@ -1212,8 +1416,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T17:25:10.643Z",
-      "updatedAt": "2026-10-28T17:25:10.772Z",
-      "aiResumeGenerationsCount": 3
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 3,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsdxfymlsm1",
@@ -1230,7 +1437,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T17:25:10.798Z",
-      "updatedAt": "2026-10-28T17:25:10.798Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T17:25:10.798Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsdyk9pejai",
@@ -1247,7 +1457,10 @@
       "providerCustomerId": "paytest_1793208360491@example.com",
       "providerSubscriptionId": "ORD-EXT-363179",
       "createdAt": "2026-10-28T17:26:03.037Z",
-      "updatedAt": "2026-10-28T17:26:03.363Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T17:26:03.037Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsehlk13gsq",
@@ -1264,7 +1477,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-28T17:40:51.169Z",
-      "updatedAt": "2026-10-28T17:40:51.230Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-28T17:40:51.169Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvsehytzx2cm",
@@ -1281,9 +1497,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-28T17:41:08.375Z",
-      "updatedAt": "2026-10-28T17:41:08.982Z",
+      "updatedAt": "2026-10-31T21:03:39.734Z",
       "resetPasswordToken": "49c3294bc15ee2ebd14f32caaf181d945daa64b215f6984188856408aa5db2a5",
-      "resetPasswordExpires": "2026-10-28T17:40:08.980Z"
+      "resetPasswordExpires": "2026-10-28T17:40:08.980Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvthbscmpss0",
@@ -1300,7 +1519,10 @@
       "providerCustomerId": "cus_test_123",
       "providerSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-29T11:48:05.062Z",
-      "updatedAt": "2026-10-29T11:48:05.106Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-29T11:48:05.062Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvthc7kple9o",
@@ -1317,9 +1539,12 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-29T11:48:24.793Z",
-      "updatedAt": "2026-10-29T11:48:25.459Z",
+      "updatedAt": "2026-10-31T21:03:39.734Z",
       "resetPasswordToken": "34edb24e96ffc735e5b1ad5bb037578077715760b299da54e5a91cf9c71732fc",
-      "resetPasswordExpires": "2026-10-29T11:47:25.457Z"
+      "resetPasswordExpires": "2026-10-29T11:47:25.457Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvthe409nj0d",
@@ -1336,8 +1561,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-29T11:49:53.481Z",
-      "updatedAt": "2026-10-29T11:49:53.512Z",
-      "aiResumeGenerationsCount": 1
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 1,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvthe424fowg",
@@ -1354,7 +1582,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-29T11:49:53.548Z",
-      "updatedAt": "2026-10-29T11:49:53.548Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-29T11:49:53.548Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvthe436dzh8",
@@ -1371,8 +1602,11 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-29T11:49:53.586Z",
-      "updatedAt": "2026-10-29T11:49:53.689Z",
-      "aiResumeGenerationsCount": 3
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "aiResumeGenerationsCount": 3,
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvthe46nsex0",
@@ -1389,7 +1623,10 @@
       "providerCustomerId": "",
       "providerSubscriptionId": "",
       "createdAt": "2026-10-29T11:49:53.711Z",
-      "updatedAt": "2026-10-29T11:49:53.711Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-29T11:49:53.711Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvtheto5vx17",
@@ -1406,7 +1643,10 @@
       "providerCustomerId": "paytest_1793274624178@example.com",
       "providerSubscriptionId": "ORD-EXT-626951",
       "createdAt": "2026-10-29T11:50:26.741Z",
-      "updatedAt": "2026-10-29T11:50:27.603Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-29T11:50:26.741Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvmqjng3zrf",
@@ -1426,8 +1666,11 @@
       "stripeCustomerId": "cus_test_123",
       "stripeSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-30T23:55:04.060Z",
-      "updatedAt": "2026-10-30T23:55:04.117Z",
-      "subscriptionStatus": "active"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "subscriptionStatus": "active",
+      "emailVerified": "2026-10-30T23:55:04.060Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvnhsoqewbn",
@@ -1447,7 +1690,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T00:16:15.482Z",
-      "updatedAt": "2026-10-31T00:16:15.770Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvnhsq2hi85",
@@ -1467,7 +1713,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T00:16:15.530Z",
-      "updatedAt": "2026-10-31T00:16:15.530Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvni4zo6mjv",
@@ -1487,8 +1736,11 @@
       "stripeCustomerId": "cus_test_123",
       "stripeSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-31T00:16:31.428Z",
-      "updatedAt": "2026-10-31T00:16:31.487Z",
-      "subscriptionStatus": "active"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "subscriptionStatus": "active",
+      "emailVerified": "2026-10-31T00:16:31.428Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvnqznvvazd",
@@ -1508,7 +1760,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T00:23:24.427Z",
-      "updatedAt": "2026-10-31T00:23:24.427Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvnsrwvv7wb",
@@ -1528,7 +1783,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T00:24:47.695Z",
-      "updatedAt": "2026-10-31T00:24:47.695Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvnsryrnsei",
@@ -1548,8 +1806,11 @@
       "stripeCustomerId": "cus_test_123",
       "stripeSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-31T00:24:47.763Z",
-      "updatedAt": "2026-10-31T00:24:47.819Z",
-      "subscriptionStatus": "active"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "subscriptionStatus": "active",
+      "emailVerified": "2026-10-31T00:24:47.763Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvo1q0ix96b",
@@ -1569,7 +1830,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T00:31:45.139Z",
-      "updatedAt": "2026-10-31T00:31:45.139Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvo1q3g404r",
@@ -1589,8 +1853,11 @@
       "stripeCustomerId": "cus_test_123",
       "stripeSubscriptionId": "sub_test_123",
       "createdAt": "2026-10-31T00:31:45.244Z",
-      "updatedAt": "2026-10-31T00:31:45.307Z",
-      "subscriptionStatus": "active"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "subscriptionStatus": "active",
+      "emailVerified": "2026-10-31T00:31:45.244Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvotroc4qfa",
@@ -1610,7 +1877,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T00:53:33.660Z",
-      "updatedAt": "2026-10-31T00:53:33.660Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvounxj70p9",
@@ -1630,9 +1900,12 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T00:54:15.463Z",
-      "updatedAt": "2026-10-31T00:54:16.653Z",
+      "updatedAt": "2026-10-31T21:03:39.734Z",
       "subscriptionStatus": "active",
-      "paymentFailedAt": null
+      "paymentFailedAt": null,
+      "emailVerified": "2026-10-31T00:54:15.463Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqg5ev82f9",
@@ -1652,7 +1925,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:38:57.511Z",
-      "updatedAt": "2026-10-31T01:38:57.589Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqg5ifuhkz",
@@ -1672,7 +1948,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:38:57.639Z",
-      "updatedAt": "2026-10-31T01:38:57.639Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-31T01:38:57.639Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqg5j6msru",
@@ -1692,8 +1971,11 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:38:57.666Z",
-      "updatedAt": "2026-10-31T01:38:57.690Z",
-      "subscriptionStatus": "expired"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "subscriptionStatus": "expired",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqg5kfacyg",
@@ -1713,7 +1995,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:38:57.711Z",
-      "updatedAt": "2026-10-31T01:38:57.711Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-31T01:38:57.711Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqg5lm80gz",
@@ -1733,7 +2018,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:38:57.754Z",
-      "updatedAt": "2026-10-31T01:38:57.804Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqhual8yap",
@@ -1753,7 +2041,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:40:16.413Z",
-      "updatedAt": "2026-10-31T01:40:16.512Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqhuetisth",
@@ -1773,7 +2064,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:40:16.565Z",
-      "updatedAt": "2026-10-31T01:40:16.565Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-31T01:40:16.565Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqhuftybc4",
@@ -1793,8 +2087,11 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:40:16.601Z",
-      "updatedAt": "2026-10-31T01:40:16.621Z",
-      "subscriptionStatus": "expired"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "subscriptionStatus": "expired",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqhuhj74do",
@@ -1814,7 +2111,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:40:16.663Z",
-      "updatedAt": "2026-10-31T01:40:16.663Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": "2026-10-31T01:40:16.663Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqhuinomtz",
@@ -1834,7 +2134,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:40:16.703Z",
-      "updatedAt": "2026-10-31T01:40:16.785Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqhuloveuc",
@@ -1854,7 +2157,10 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:40:16.812Z",
-      "updatedAt": "2026-10-31T01:40:16.812Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
     },
     {
       "id": "usr_mvvqhum9zrjy",
@@ -1874,7 +2180,37 @@
       "stripeCustomerId": "",
       "stripeSubscriptionId": "",
       "createdAt": "2026-10-31T01:40:16.833Z",
-      "updatedAt": "2026-10-31T01:40:16.833Z"
+      "updatedAt": "2026-10-31T21:03:39.734Z",
+      "emailVerified": null,
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null
+    },
+    {
+      "id": "usr_mvwzn77g2zuf",
+      "name": "Smoke Test Engineer",
+      "email": "smoke_1793486593681@jobmatch.ai",
+      "password": "$2b$10$H9bbhLIotSHLgPeeBbTdz.A70SJRIqSfM6fPR8Pf.mu7kiem2yOzG",
+      "role": "user",
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "proExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "stripeCustomerId": "",
+      "stripeSubscriptionId": "",
+      "lemonCustomerId": "",
+      "lemonSubscriptionId": "",
+      "emailVerified": null,
+      "emailVerifyTokenHash": "6030e236ca2c0422e894575602ba08648b265438caae82844f1fda5eab7d3822",
+      "emailVerifyExpires": "2026-11-01T22:44:09.144Z",
+      "termsAcceptedAt": "2026-10-31T22:44:07.063Z",
+      "termsVersion": "2026-10-31",
+      "createdAt": "2026-10-31T22:44:09.149Z",
+      "updatedAt": "2026-10-31T22:44:09.149Z"
     }
   ],
   "resumes": [
