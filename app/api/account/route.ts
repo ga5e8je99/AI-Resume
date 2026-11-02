@@ -13,7 +13,7 @@ import { trackServerSubscriptionCancelled } from '@/lib/analytics';
 
 const deleteEmailTokens = new Map<string, { hash: string; expiresAt: number }>();
 
-export function issueAccountDeleteEmailToken(userId: string): string {
+function issueAccountDeleteEmailToken(userId: string): string {
   const rawToken = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8-char hex code
   const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
   deleteEmailTokens.set(userId, {

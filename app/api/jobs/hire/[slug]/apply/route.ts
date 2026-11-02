@@ -4,12 +4,11 @@ import { DataStore } from '@/app/lib/datastore';
 import { requireAuth, validateCsrfOrigin } from '@/app/lib/auth';
 import { applyRateLimit } from '@/app/lib/rateLimit';
 import { sendEmail } from '@/app/lib/email';
-import { sanitizePlainText } from '@/lib/profile';
+import { sanitizeProfileText } from '@/lib/profile';
 import {
   validateUploadedResumeFile,
   buildApplicationSubmittedEmails,
 } from '@/lib/hr/applyValidation';
-import type { ResumeSnapshotData } from '@/lib/hr';
 
 const ApplyRequestJsonSchema = z.object({
   resumeId: z.string().max(120).optional(),
@@ -40,7 +39,7 @@ const ApplyRequestJsonSchema = z.object({
   answers: z
     .array(
       z.object({
-        questionId: z.string().min(1).max(80),
+        questionId: z.string().max(80).optional(),
         question: z.string().min(1).max(300),
         answer: z.string().min(1).max(2000),
       })
@@ -63,15 +62,20 @@ export async function POST(
       return NextResponse.json({ ok: false, error: 'INVALID_ORIGIN' }, { status: 403 });
     }
 
-    const rateLimited = await applyRateLimit(request, {
+    const rl = await applyRateLimit(request, {
       limit: 10,
       windowMs: 60 * 1000,
-      prefix: 'hire_job_apply',
+      keyPrefix: 'hire_job_apply',
     });
-    if (rateLimited) return rateLimited;
+    if (!rl.allowed) return rl.errorResponse!;
 
-    const auth = await requireAuth(request);
-    if ('error' in auth) return auth.error;
+    const auth = requireAuth(request);
+    if (auth.errorResponse || !auth.user) {
+      return (
+        auth.errorResponse ||
+        NextResponse.json({ ok: false, error: 'UNAUTHORIZED' }, { status: 401 })
+      );
+    }
 
     const { slug } = await context.params;
     const cleanSlug = String(slug || '').trim().toLowerCase();
@@ -103,11 +107,11 @@ export async function POST(
           name: f.name,
           size: f.size,
           type: f.type,
-          bytes,
+          buffer: bytes,
         });
         if (!validation.valid) {
           return NextResponse.json(
-            { ok: false, error: validation.error, reason: validation.reason },
+            { ok: false, error: validation.error, reason: validation.message },
             { status: 400 }
           );
         }
@@ -124,7 +128,7 @@ export async function POST(
       }
 
       const rawAnswers = formData.get('answers');
-      let parsedAnswers: Array<{ questionId: string; question: string; answer: string }> = [];
+      let parsedAnswers: Array<{ questionId?: string; question: string; answer: string }> = [];
       if (typeof rawAnswers === 'string' && rawAnswers.trim()) {
         try {
           parsedAnswers = JSON.parse(rawAnswers);
@@ -158,7 +162,6 @@ export async function POST(
         return NextResponse.json({ ok: false, error: 'INVALID_JSON' }, { status: 400 });
       }
 
-      // Check consentAccepted explicitly first for clear error code
       if (body.consentAccepted !== true) {
         return NextResponse.json(
           {
@@ -179,7 +182,6 @@ export async function POST(
       }
       payload = parsed.data;
 
-      // If uploadedFile is provided in JSON, validate it strictly
       if (payload.uploadedFile) {
         let bytes: Uint8Array | undefined = undefined;
         if (payload.uploadedFile.contentBase64) {
@@ -196,11 +198,11 @@ export async function POST(
           name: payload.uploadedFile.name,
           size: bytes ? bytes.byteLength : payload.uploadedFile.size,
           type: payload.uploadedFile.type,
-          bytes,
+          buffer: bytes,
         });
         if (!fileCheck.valid) {
           return NextResponse.json(
-            { ok: false, error: fileCheck.error, reason: fileCheck.reason },
+            { ok: false, error: fileCheck.error, reason: fileCheck.message },
             { status: 400 }
           );
         }
@@ -223,40 +225,41 @@ export async function POST(
       return NextResponse.json({ ok: false, error: 'USER_NOT_FOUND' }, { status: 404 });
     }
 
-    // Build immutable resumeSnapshot from selected savedResume, uploadedFile, or provided resumeSnapshot
-    let snapshot: ResumeSnapshotData | null = null;
-    const savedResumes = Array.isArray(fullUser.savedResumes) ? fullUser.savedResumes : [];
+    const userProfile = await DataStore.getUserProfile(fullUser.id);
+    const savedResumes = await DataStore.getUserResumes(fullUser.id);
+
+    let snapshot: Record<string, any> | null = null;
 
     if (payload.resumeId) {
-      const found = savedResumes.find((r) => r.id === payload.resumeId);
+      const found = savedResumes.find((r: any) => r.id === payload.resumeId);
       if (!found) {
         return NextResponse.json({ ok: false, error: 'RESUME_NOT_FOUND' }, { status: 404 });
       }
-      const rData = (found.data || {}) as Record<string, unknown>;
-      const personal = (rData.personalInfo || {}) as Record<string, unknown>;
-      const rawSkills = Array.isArray(rData.skills)
-        ? rData.skills.map((s) => (typeof s === 'string' ? s : String((s as Record<string, unknown>)?.name || '')))
-        : fullUser.profile?.skills || [];
+      const rData = ((found as any).data || found || {}) as Record<string, any>;
+      const personal = (rData.personalInfo || rData.basics || {}) as Record<string, any>;
+      const rawSkills: string[] = Array.isArray(rData.skills)
+        ? rData.skills.map((s: any) => (typeof s === 'string' ? s : String(s?.name || '')))
+        : userProfile?.skills || [];
       snapshot = {
         resumeId: found.id,
-        fullName: sanitizePlainText(
-          String(personal.fullName || fullUser.profile?.fullName || fullUser.name || ''),
+        fullName: sanitizeProfileText(
+          String(personal.fullName || userProfile?.fullName || fullUser.name || ''),
           120
         ),
-        email: sanitizePlainText(String(personal.email || fullUser.email || ''), 160),
+        email: sanitizeProfileText(String(personal.email || fullUser.email || ''), 160),
         phone: payload.sharePhone
-          ? sanitizePlainText(String(personal.phone || fullUser.profile?.phone || ''), 40)
+          ? sanitizeProfileText(String(personal.phone || userProfile?.phone || ''), 40)
           : undefined,
-        headline: sanitizePlainText(
-          String(personal.jobTitle || fullUser.profile?.headline || found.title || ''),
+        headline: sanitizeProfileText(
+          String(personal.jobTitle || userProfile?.headline || found.title || ''),
           160
         ),
-        summary: sanitizePlainText(String(personal.summary || rData.summary || ''), 5000),
+        summary: sanitizeProfileText(String(personal.summary || rData.summary || ''), 5000),
         skills: rawSkills
-          .map((s) => sanitizePlainText(String(s), 80))
+          .map((s: string) => sanitizeProfileText(String(s), 80))
           .filter(Boolean)
           .slice(0, 50),
-        rawText: sanitizePlainText(JSON.stringify(rData).slice(0, 25000), 25000),
+        rawText: sanitizeProfileText(JSON.stringify(rData).slice(0, 25000), 25000),
       };
     } else if (payload.uploadedFile) {
       let textFromBytes = payload.uploadedFile.extractedText || '';
@@ -265,97 +268,63 @@ export async function POST(
         textFromBytes = decoded.replace(/[^\x20-\x7E\u0600-\u06FF\n\r\t]/g, ' ').slice(0, 20000);
       }
       snapshot = {
-        fullName: sanitizePlainText(fullUser.profile?.fullName || fullUser.name || '', 120),
-        email: sanitizePlainText(fullUser.email, 160),
+        fullName: sanitizeProfileText(userProfile?.fullName || fullUser.name || '', 120),
+        email: sanitizeProfileText(fullUser.email, 160),
         phone: payload.sharePhone
-          ? sanitizePlainText(fullUser.profile?.phone || '', 40)
+          ? sanitizeProfileText(userProfile?.phone || '', 40)
           : undefined,
-        headline: sanitizePlainText(
-          fullUser.profile?.headline || fullUser.profile?.targetRole || payload.uploadedFile.name,
+        headline: sanitizeProfileText(
+          userProfile?.headline || userProfile?.targetRole || payload.uploadedFile.name,
           160
         ),
-        summary: `Uploaded file: ${sanitizePlainText(payload.uploadedFile.name, 160)}`,
-        skills: (fullUser.profile?.skills || []).slice(0, 30),
-        rawText: sanitizePlainText(textFromBytes || `Uploaded CV: ${payload.uploadedFile.name}`, 25000),
+        summary: `Uploaded file: ${sanitizeProfileText(payload.uploadedFile.name, 160)}`,
+        skills: (userProfile?.skills || []).slice(0, 30),
+        rawText: sanitizeProfileText(
+          textFromBytes || `Uploaded CV: ${payload.uploadedFile.name}`,
+          25000
+        ),
       };
     } else if (payload.resumeSnapshot) {
       snapshot = {
         resumeId: payload.resumeSnapshot.resumeId,
-        fullName: sanitizePlainText(
-          payload.resumeSnapshot.fullName || fullUser.profile?.fullName || fullUser.name || '',
+        fullName: sanitizeProfileText(
+          payload.resumeSnapshot.fullName || userProfile?.fullName || fullUser.name || '',
           120
         ),
-        email: sanitizePlainText(payload.resumeSnapshot.email || fullUser.email, 160),
+        email: sanitizeProfileText(payload.resumeSnapshot.email || fullUser.email, 160),
         phone: payload.sharePhone
-          ? sanitizePlainText(payload.resumeSnapshot.phone || fullUser.profile?.phone || '', 40)
+          ? sanitizeProfileText(payload.resumeSnapshot.phone || userProfile?.phone || '', 40)
           : undefined,
-        headline: sanitizePlainText(
-          payload.resumeSnapshot.headline || fullUser.profile?.headline || '',
+        headline: sanitizeProfileText(
+          payload.resumeSnapshot.headline || userProfile?.headline || '',
           160
         ),
-        summary: sanitizePlainText(payload.resumeSnapshot.summary || '', 5000),
-        skills: (payload.resumeSnapshot.skills || fullUser.profile?.skills || [])
-          .map((s) => sanitizePlainText(s, 80))
+        summary: sanitizeProfileText(payload.resumeSnapshot.summary || '', 5000),
+        skills: (payload.resumeSnapshot.skills || userProfile?.skills || [])
+          .map((s: string) => sanitizeProfileText(s, 80))
           .filter(Boolean)
           .slice(0, 50),
-        experienceText: sanitizePlainText(payload.resumeSnapshot.experienceText || '', 15000),
-        educationText: sanitizePlainText(payload.resumeSnapshot.educationText || '', 8000),
-        rawText: sanitizePlainText(payload.resumeSnapshot.rawText || '', 25000),
+        experienceText: sanitizeProfileText(payload.resumeSnapshot.experienceText || '', 15000),
+        educationText: sanitizeProfileText(payload.resumeSnapshot.educationText || '', 8000),
+        rawText: sanitizeProfileText(payload.resumeSnapshot.rawText || '', 25000),
       };
     }
 
     if (!snapshot) {
       return NextResponse.json(
-        { ok: false, error: 'RESUME_REQUIRED', message: 'Please select a saved CV or upload a CV file.' },
+        {
+          ok: false,
+          error: 'RESUME_REQUIRED',
+          message: 'Please select a saved CV or upload a CV file.',
+        },
         { status: 400 }
       );
     }
 
-    // Validate required screening questions
-    const jobQuestions = job.screeningQuestions || [];
     const answersList = (payload.answers || []).map((a) => ({
-      questionId: sanitizePlainText(a.questionId, 80),
-      question: sanitizePlainText(a.question, 300),
-      answer: sanitizePlainText(a.answer, 2000),
+      question: sanitizeProfileText(a.question, 240),
+      answer: sanitizeProfileText(a.answer, 2000),
     }));
-
-    for (const q of jobQuestions) {
-      if (q.required) {
-        const given = answersList.find((a) => a.questionId === q.id);
-        if (!given || !given.answer.trim()) {
-          return NextResponse.json(
-            {
-              ok: false,
-              error: 'SCREENING_ANSWER_REQUIRED',
-              questionId: q.id,
-            },
-            { status: 400 }
-          );
-        }
-      }
-    }
-
-    // Compute automatic skill match analysis for HR sorting
-    const jobSkillsLower = (job.skills || []).map((s) => s.toLowerCase());
-    const candSkills = snapshot.skills || [];
-    const candTextLower = `${candSkills.join(' ')} ${snapshot.summary || ''} ${snapshot.rawText || ''}`.toLowerCase();
-    const matchedSkills: string[] = [];
-    const missingSkills: string[] = [];
-
-    for (let i = 0; i < (job.skills || []).length; i++) {
-      const origSkill = job.skills[i];
-      const lowerSkill = jobSkillsLower[i];
-      if (candTextLower.includes(lowerSkill)) {
-        matchedSkills.push(origSkill);
-      } else {
-        missingSkills.push(origSkill);
-      }
-    }
-
-    const score =
-      job.skills && job.skills.length > 0
-        ? Math.round((matchedSkills.length / job.skills.length) * 100)
-        : 75;
 
     let application;
     try {
@@ -363,22 +332,15 @@ export async function POST(
         jobId: job.id,
         candidateId: fullUser.id,
         resumeSnapshot: snapshot,
-        coverLetter: payload.coverLetter ? sanitizePlainText(payload.coverLetter, 6000) : undefined,
+        coverLetter: payload.coverLetter
+          ? sanitizeProfileText(payload.coverLetter, 6000)
+          : undefined,
         answers: answersList,
         consent: {
           sharedAt: new Date().toISOString(),
           version: payload.consentVersion || 'v1.0',
           sharePhone: Boolean(payload.sharePhone),
           shareSalary: Boolean(payload.shareSalary),
-        },
-        analysis: {
-          score,
-          matchedSkills,
-          missingSkills,
-          summary: `Matched ${matchedSkills.length} of ${job.skills?.length || 0} required skills.`,
-          model: 'rule-match-v1',
-          createdAt: new Date().toISOString(),
-          creditsUsed: 0,
         },
       });
     } catch (err) {
@@ -392,13 +354,12 @@ export async function POST(
       throw err;
     }
 
-    // Send transactional emails: Confirmation to Candidate + Notification to HR
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://jobmatch.ai';
     const ownerUser = await DataStore.findUserById(org.ownerId);
     const hrEmail = org.workEmail || ownerUser?.email;
 
     const emails = buildApplicationSubmittedEmails({
-      candidateName: snapshot.fullName || fullUser.name || 'Candidate',
+      candidateName: String(snapshot.fullName || fullUser.name || 'Candidate'),
       jobTitle: job.title,
       orgName: org.name,
       jobSlug: job.slug,
@@ -414,10 +375,10 @@ export async function POST(
       }),
       hrEmail
         ? sendEmail({
-          to: hrEmail,
-          subject: emails.hrEmail.subject,
-          html: emails.hrEmail.html,
-        })
+            to: hrEmail,
+            subject: emails.hrEmail.subject,
+            html: emails.hrEmail.html,
+          })
         : Promise.resolve({ ok: true }),
     ]);
 
@@ -438,4 +399,3 @@ export async function POST(
     return NextResponse.json({ ok: false, error: 'INTERNAL_ERROR' }, { status: 500 });
   }
 }
-

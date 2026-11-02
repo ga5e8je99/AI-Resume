@@ -1,18 +1,14 @@
 import React from 'react';
 import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Job Search & Optional CV Match | JobMatch AI',
-  description:
-    'Search open roles across global and regional job boards with optional ATS resume matching.',
-  robots: {
-    index: false,
-    follow: true,
-  },
-};
+import { buildPageMetadata } from '@/lib/seo';
 
 export async function generateMetadata(): Promise<Metadata> {
-  return metadata;
+  return buildPageMetadata({
+    title: 'Job Search & Optional CV Match',
+    description:
+      'Search open roles across global and regional job boards with optional ATS resume matching.',
+    path: '/jobs',
+  });
 }
 
 export default function JobsLayout({ children }: { children: React.ReactNode }) {
