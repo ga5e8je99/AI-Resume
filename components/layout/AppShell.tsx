@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useCallback, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/app/context/AuthContext';
 import { useLanguage } from '@/app/context/LanguageContext';
 import { AppSidebar } from './AppSidebar';
 import { AppTopBar } from './AppTopBar';
@@ -86,7 +88,26 @@ export function AppShell({
   className = '',
 }: AppShellProps) {
   const { isRtl } = useLanguage();
+  const { user, isLoading: authLoading } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
   const isCanvas = variant === 'canvas';
+
+  // Redirect newly registered/first-login users to /onboarding when onboardingCompletedAt is empty
+  useEffect(() => {
+    if (authLoading || !user) return;
+    if (user.isDemo || user.role === 'admin') return;
+    if (user.onboardingCompletedAt) return;
+    if (pathname === '/onboarding' || pathname === '/settings/profile') return;
+    if (typeof window !== 'undefined') {
+      try {
+        if (sessionStorage.getItem('jobmatch_onboarding_skipped') === '1') return;
+      } catch {
+        // Ignore sessionStorage restrictions
+      }
+    }
+    router.replace('/onboarding');
+  }, [authLoading, user, pathname, router]);
   const sidebarCollapsed = useSyncExternalStore(
     subscribeSidebarStore,
     isCanvas ? getSidebarSnapshotForCanvas : getSidebarSnapshotForDefault,

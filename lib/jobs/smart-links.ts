@@ -9,7 +9,7 @@ export interface SmartLinkOptions {
 
 /**
  * Generates the top 10 smart search platform deep links in priority order for Egypt/MENA + global audience.
- * No scraping is performed; these deep links take the candidate directly to the platform's official search results.
+ * No scraping is performed; these deep links take the candidate directly to the platform's official public search results.
  */
 export function generateSmartLinks(options: SmartLinkOptions): SmartLinkPlatform[] {
   const query = (options.query || '').trim() || 'Software Engineer';
@@ -51,8 +51,13 @@ export function generateSmartLinks(options: SmartLinkOptions): SmartLinkPlatform
   }
 
   // 6. Naukrigulf (Dominant Gulf job platform: UAE, Saudi, Bahrain, Qatar)
-  const naukriQuery = encodeURIComponent(query.toLowerCase().replace(/\s+/g, '-'));
-  const naukrigulfUrl = `https://www.naukrigulf.com/${naukriQuery}-jobs`;
+  const naukriClean =
+    query
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .trim()
+      .replace(/\s+/g, '-') || 'jobs';
+  const naukrigulfUrl = `https://www.naukrigulf.com/${encodeURIComponent(naukriClean)}-jobs`;
 
   // 7. GulfTalent (Gulf / MENA executive & professional recruitment)
   let gulftalentUrl = `https://www.gulftalent.com/jobs/search?pos_title=${encodeURIComponent(query)}`;

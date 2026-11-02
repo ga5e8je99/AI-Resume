@@ -9,10 +9,12 @@ export type NormalizedEventAction =
   | 'order_refunded'
   | 'ignore';
 
+export type OrderPlanId = 'pro' | 'payg' | 'hr_pack_50' | 'hr_pack_200' | 'hr_pack_1000';
+
 export interface CheckoutOrderInput {
   id: string;
   reference?: string;
-  planId: 'pro' | 'payg';
+  planId: OrderPlanId;
   billingCycle: 'monthly' | 'annual' | 'once';
   amount: number;
   currency: 'USD' | 'EGP';
@@ -38,7 +40,8 @@ export interface NormalizedEvent {
   orderReference?: string;
   userId?: string;
   userEmail?: string;
-  planId?: 'pro' | 'payg';
+  orgId?: string;
+  planId?: OrderPlanId;
   billingCycle?: 'monthly' | 'annual' | 'once';
   amount?: number;
   amountCents?: number;

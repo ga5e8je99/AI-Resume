@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import LanguageSelector from '../components/LanguageSelector';
 import ThemeToggle from '../components/ThemeToggle';
 import { useLanguage } from '../context/LanguageContext';
+import { Reveal, Stagger } from '@/components/motion/Reveal';
 import { Sparkles, ShieldCheck, Layers, Globe, Cpu, FileCheck, Mail } from 'lucide-react';
 
 interface AboutPillar {
@@ -254,7 +255,7 @@ export default function AboutPage() {
 
   return (
     <div
-      className="min-h-screen bg-paper text-ink flex flex-col justify-between selection:bg-accent-soft selection:text-ink"
+      className="min-h-screen bg-paper text-ink flex flex-col justify-between selection:bg-accent-soft selection:text-ink overflow-x-clip"
       dir={isRtl ? 'rtl' : 'ltr'}
     >
       {/* Top Navbar */}
@@ -277,7 +278,7 @@ export default function AboutPage() {
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16 w-full text-start space-y-12">
         {/* Hero */}
-        <section className="space-y-4 max-w-3xl">
+        <section className="hero-lcp-enter space-y-4 max-w-3xl overflow-x-clip">
           <span className="text-xs font-mono uppercase tracking-wider text-accent font-semibold inline-flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5" />
             <span>{content.badge}</span>
@@ -291,7 +292,7 @@ export default function AboutPage() {
         </section>
 
         {/* Mission Card */}
-        <section className="p-6 sm:p-8 rounded-[12px] bg-surface border border-line-strong space-y-4 shadow-subtle">
+        <Reveal from="up"><section className="p-6 sm:p-8 rounded-[12px] bg-surface border border-line-strong space-y-4 shadow-subtle overflow-x-clip">
           <div className="flex items-center gap-2 text-lg font-serif font-bold text-ink">
             <Layers className="w-5 h-5 text-accent shrink-0" />
             <h2>{content.missionTitle}</h2>
@@ -301,20 +302,20 @@ export default function AboutPage() {
               <p key={i}>{p}</p>
             ))}
           </div>
-        </section>
+        </section></Reveal>
 
         {/* 4 Pillars Grid */}
         <section className="space-y-4">
           <h2 className="font-serif text-2xl font-bold text-ink">
             {content.pillarsTitle}
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Stagger className="grid grid-cols-1 md:grid-cols-2 gap-5" from="up" itemClassName="h-full">
             {content.pillars.map((pillar, idx) => {
               const Icon = icons[idx % icons.length];
               return (
                 <div
                   key={idx}
-                  className="p-6 rounded-[12px] bg-surface border border-line-strong space-y-2.5 flex flex-col justify-between"
+                  className="card-interactive h-full p-6 rounded-[12px] bg-surface border border-line-strong space-y-2.5 flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="w-9 h-9 rounded-[8px] bg-accent-soft text-accent flex items-center justify-center">
@@ -330,11 +331,11 @@ export default function AboutPage() {
                 </div>
               );
             })}
-          </div>
+          </Stagger>
         </section>
 
         {/* Legal & Policy Links Strip */}
-        <section className="p-6 rounded-[12px] bg-surface-2 border border-line space-y-3">
+        <Reveal from="up"><section className="p-6 rounded-[12px] bg-surface-2 border border-line space-y-3 overflow-x-clip">
           <h2 className="font-serif text-lg font-bold text-ink">
             {content.transparencyTitle}
           </h2>
@@ -365,10 +366,10 @@ export default function AboutPage() {
               {t('nav_pricing')}
             </Link>
           </div>
-        </section>
+        </section></Reveal>
 
         {/* Bottom CTA */}
-        <section className="p-6 sm:p-8 rounded-[12px] bg-surface border border-line-strong flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <Reveal from="up"><section className="p-6 sm:p-8 rounded-[12px] bg-surface border border-line-strong flex flex-col sm:flex-row sm:items-center justify-between gap-6 overflow-x-clip">
           <div className="space-y-1">
             <h2 className="font-serif text-xl font-bold text-ink">
               {content.ctaTitle}
@@ -390,7 +391,7 @@ export default function AboutPage() {
               <span>{content.ctaSecondary}</span>
             </Link>
           </div>
-        </section>
+        </section></Reveal>
       </main>
 
       <Footer />

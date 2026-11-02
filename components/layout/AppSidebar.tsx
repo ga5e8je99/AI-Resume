@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Zap,
   Sparkles,
+  UserCheck,
 } from 'lucide-react';
 
 export interface AppSidebarProps {
@@ -67,6 +68,15 @@ export function AppSidebar({
       href: '/review',
       icon: ShieldCheck,
       badge: null,
+    },
+    {
+      label: t('settings_profile_nav_label'),
+      href: '/settings/profile',
+      icon: UserCheck,
+      badge:
+        typeof user?.profileCompletion === 'number'
+          ? `${user.profileCompletion}%`
+          : null,
     },
     {
       label: t('nav_pricing'),

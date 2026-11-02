@@ -23,7 +23,7 @@ export interface IOrder extends Document {
   _id: mongoose.Types.ObjectId;
   userId: string;
   userEmail: string;
-  planId: 'pro' | 'payg';
+  planId: 'pro' | 'payg' | 'hr_pack_50' | 'hr_pack_200' | 'hr_pack_1000';
   billingCycle: 'monthly' | 'annual' | 'once';
   baseAmount: number;
   amount: number;
@@ -81,7 +81,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     planId: {
       type: String,
-      enum: ['pro', 'payg'],
+      enum: ['pro', 'payg', 'hr_pack_50', 'hr_pack_200', 'hr_pack_1000'],
       required: true,
     },
     billingCycle: {

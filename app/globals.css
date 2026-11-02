@@ -867,3 +867,105 @@ html[dir="rtl"] .skeleton-shimmer::after {
     animation: none !important;
   }
 }
+
+
+/* ========================================================================= */
+/* AOS (Animate On Scroll) Progressive Enhancement & LCP Hero Animations     */
+/* ========================================================================= */
+
+/* Prevent elements from remaining hidden if JS is delayed or disabled */
+html:not(.js-aos) [data-aos] {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+/* Lightweight CSS animation for above-the-fold LCP-critical Hero elements */
+@keyframes heroLcpEnter {
+  from {
+    opacity: 0.01;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-lcp-enter {
+  animation: heroLcpEnter var(--duration-slow, 400ms) var(--ease-out, cubic-bezier(.22, 1, .36, 1)) both;
+}
+
+.hero-lcp-delay-50 {
+  animation-delay: 50ms;
+}
+
+.hero-lcp-delay-100 {
+  animation-delay: 100ms;
+}
+
+.hero-lcp-delay-150 {
+  animation-delay: 150ms;
+}
+
+.hero-lcp-delay-200 {
+  animation-delay: 200ms;
+}
+
+.hero-lcp-delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Slow ambient float animation for Hero Bento cards */
+@keyframes heroBentoFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.bento-float-1 {
+  animation: heroBentoFloat 6.5s ease-in-out infinite;
+}
+
+.bento-float-2 {
+  animation: heroBentoFloat 7.5s ease-in-out 1.2s infinite;
+}
+
+.bento-float-3 {
+  animation: heroBentoFloat 8s ease-in-out 2.4s infinite;
+}
+
+@keyframes heroScanBeam {
+  0%, 100% {
+    top: 8%;
+    opacity: 0.85;
+  }
+  50% {
+    top: 88%;
+    opacity: 1;
+  }
+}
+
+.hero-scan-beam {
+  animation: heroScanBeam 4.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-aos] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .hero-lcp-enter,
+  .bento-float-1,
+  .bento-float-2,
+  .bento-float-3,
+  .hero-scan-beam {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

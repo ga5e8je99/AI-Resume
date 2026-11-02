@@ -9,7 +9,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ user: null }, { status: 401 });
     }
 
-    const user = await DataStore.findUserById(authUser.userId);
+    const [user, profile] = await Promise.all([
+      DataStore.findUserById(authUser.userId),
+      DataStore.getUserProfile(authUser.userId, authUser.userId),
+    ]);
     if (!user) {
       return NextResponse.json({ user: null }, { status: 401 });
     }
@@ -18,6 +21,7 @@ export async function GET(req: NextRequest) {
       user: {
         id: user.id,
         name: user.name,
+        fullName: profile?.fullName || user.name,
         email: user.email,
         role: user.role || 'user',
         isDemo: Boolean((user as any).isDemo),
@@ -36,6 +40,8 @@ export async function GET(req: NextRequest) {
         lemonSubscriptionId: (user as any).lemonSubscriptionId || '',
         subscriptionStatus: (user as any).subscriptionStatus || 'none',
         paymentFailedAt: (user as any).paymentFailedAt || null,
+        profileCompletion: profile?.profileCompletion ?? 0,
+        onboardingCompletedAt: profile?.onboardingCompletedAt ?? null,
         createdAt: user.createdAt,
       },
     });

@@ -12,8 +12,83 @@ import Payment, { IPayment } from '../models/Payment';
 import PaymentEvent, { IPaymentEvent, PaymentEventStatus } from '../models/PaymentEvent';
 import Order, { IOrder, OrderStatus, PaymentMethodType, OrderCurrency } from '../models/Order';
 import AiUsage, { AiUsageStatus } from '../models/AiUsage';
+import Organization from '../models/Organization';
+import EmployerJob from '../models/EmployerJob';
+import Application from '../models/Application';
+import HrCreditLedger from '../models/HrCreditLedger';
 import { CoverLetterService } from './coverLetterService';
-import { getPlanCredits, JOB_MATCH_FREE_QUOTA, JOB_MATCH_CREDIT_COST } from '@/lib/plans';
+import {
+  getPlanCredits,
+  isHrPackId,
+  JOB_MATCH_FREE_QUOTA,
+  JOB_MATCH_CREDIT_COST,
+} from '@/lib/plans';
+import {
+  sendEmail,
+  getHrLowBalanceAlertEmailHtml,
+  getHrLowBalanceAlertEmailSubject,
+} from '@/lib/email';
+import {
+  resolveAccountRoleState,
+  enableAccountRole,
+  hasAccountRole,
+  sanitizeJobMarkdown,
+  generateEmployerJobSlug,
+  formatApplicationForViewer,
+  type AccountRole,
+  type AccountType,
+  type OrgMemberRole,
+  type OrganizationSize,
+  type OrganizationRecord,
+  type EmployerJobRecord,
+  type EmployerJobStatus,
+  type EmployerJobSeniority,
+  type EmployerJobSalary,
+  type ApplicationRecord,
+  type ApplicationStatus,
+  type ApplicationScreeningAnswer,
+  type ApplicationAnalysis,
+  type HrCreditLedgerRecord,
+  type HrCreditReason,
+  type JobReportRecord,
+  type JobReportReason,
+} from '@/lib/hr';
+import {
+  validateCompanyDomainEmail,
+  moderateJobContent,
+  type ModerationFlagCode,
+} from '@/lib/hr/moderation';
+import {
+  analyzeApplicantAgainstJob,
+  computeJobDescriptionHash,
+  buildTop10ComparisonReport,
+  ORG_DAILY_ANALYSIS_LIMIT,
+  TOP_10_COMPARISON_CREDIT_COST,
+  SINGLE_APPLICANT_ANALYSIS_CREDIT_COST,
+  BULK_ANALYZE_MAX_BATCH_SIZE,
+  type Top10ComparisonReport,
+} from '@/lib/employer/analyzeApplicant';
+import {
+  Job,
+  SavedJobItem,
+  SavedJobSearch,
+  JobClickRecord,
+  JobAlertFrequency,
+} from '@/lib/jobs/types';
+import {
+  calculateProfileCompletion,
+  formatProfileForViewer,
+  sanitizePhoneText,
+  sanitizeProfileText,
+  type EmploymentType,
+  type ExpectedSalary,
+  type ProfileLinks,
+  type ProfileUpdateInput,
+  type RedactedUserProfile,
+  type RemotePreference,
+  type SeniorityLevel,
+  type UserProfileData,
+} from '@/lib/profile';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -24,6 +99,8 @@ export interface StoredUser {
   email: string;
   password?: string;
   role: 'user' | 'admin';
+  accountType?: AccountType;
+  accountTypes?: AccountRole[];
   isDemo?: boolean;
   plan?: 'free' | 'pro' | 'enterprise';
   aiCredits?: number;
@@ -48,6 +125,27 @@ export interface StoredUser {
   termsVersion?: string | null;
   resetPasswordToken?: string | null;
   resetPasswordExpires?: string | null;
+  fullName?: string;
+  headline?: string;
+  targetRole?: string;
+  seniority?: SeniorityLevel | null;
+  yearsOfExperience?: number | null;
+  industries?: string[];
+  skills?: string[];
+  country?: string;
+  city?: string;
+  willingToRelocate?: boolean;
+  remotePreference?: RemotePreference;
+  employmentTypes?: EmploymentType[];
+  expectedSalary?: ExpectedSalary;
+  languages?: string[];
+  phone?: string;
+  phoneVisible?: boolean;
+  links?: ProfileLinks;
+  avatar?: string;
+  profileCompletion?: number;
+  onboardingCompletedAt?: string | null;
+  onboardingSkippedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -56,7 +154,7 @@ export interface StoredOrder {
   id: string;
   userId: string;
   userEmail: string;
-  planId: 'pro' | 'payg';
+  planId: 'pro' | 'payg' | 'hr_pack_50' | 'hr_pack_200' | 'hr_pack_1000';
   billingCycle: 'monthly' | 'annual' | 'once';
   baseAmount: number;
   amount: number;
@@ -162,6 +260,17 @@ interface LocalDatabase {
   jobCache?: any[];
   orders?: StoredOrder[];
   aiUsage?: StoredAiUsage[];
+  savedJobs?: SavedJobItem[];
+  savedSearches?: SavedJobSearch[];
+  jobClicks?: JobClickRecord[];
+  organizations?: (OrganizationRecord & {
+    verificationTokenHash?: string | null;
+    verificationExpiresAt?: string | null;
+  })[];
+  employerJobs?: EmployerJobRecord[];
+  applications?: ApplicationRecord[];
+  hrCreditLedger?: HrCreditLedgerRecord[];
+  jobReports?: JobReportRecord[];
 }
 
 // Initial seed data so user sees complete, realistic data right away
@@ -458,19 +567,127 @@ export async function isMongoAvailable(): Promise<boolean> {
 
 // In-process async mutex queue to ensure atomic order completion & TXID uniqueness
 let orderLockQueue: Promise<any> = Promise.resolve();
+let orderLockActive = false;
 
 export async function withOrderLock<T>(fn: () => Promise<T>): Promise<T> {
+  // Re-entrant fast path to prevent nested withOrderLock deadlocks
+  if (orderLockActive) {
+    return await fn();
+  }
   const prev = orderLockQueue;
   let release!: () => void;
   orderLockQueue = new Promise<void>((resolve) => {
     release = resolve;
   });
   await prev;
+  orderLockActive = true;
   try {
     return await fn();
   } finally {
+    orderLockActive = false;
     release();
   }
+}
+
+
+function normalizeUserProfileFromRecord(u: any): UserProfileData {
+  const userId = (u._id ? u._id.toString() : u.id) || '';
+  const fullName = sanitizeProfileText(u.fullName || u.name || '', 120);
+  const headline = sanitizeProfileText(u.headline || u.targetRole || '', 160);
+  const targetRole = sanitizeProfileText(u.targetRole || u.headline || '', 160);
+  const seniority: SeniorityLevel | null =
+    u.seniority && ['student', 'junior', 'mid', 'senior', 'lead'].includes(u.seniority)
+      ? u.seniority
+      : null;
+  const yearsOfExperience =
+    typeof u.yearsOfExperience === 'number' && Number.isFinite(u.yearsOfExperience)
+      ? u.yearsOfExperience
+      : null;
+  const industries = Array.isArray(u.industries)
+    ? u.industries.filter((i: any) => typeof i === 'string' && i.trim()).slice(0, 15)
+    : [];
+  const skills = Array.isArray(u.skills)
+    ? u.skills.filter((s: any) => typeof s === 'string' && s.trim()).slice(0, 30)
+    : [];
+  const country = typeof u.country === 'string' ? u.country : '';
+  const city = typeof u.city === 'string' ? u.city : '';
+  const willingToRelocate = Boolean(u.willingToRelocate);
+  const remotePreference: RemotePreference =
+    u.remotePreference && ['onsite', 'hybrid', 'remote', 'any'].includes(u.remotePreference)
+      ? u.remotePreference
+      : 'any';
+  const employmentTypes: EmploymentType[] = Array.isArray(u.employmentTypes)
+    ? u.employmentTypes.filter((e: any) =>
+        ['full-time', 'part-time', 'contract', 'internship'].includes(e)
+      )
+    : [];
+  const expectedSalary: ExpectedSalary = {
+    min:
+      typeof u.expectedSalary?.min === 'number' && Number.isFinite(u.expectedSalary.min)
+        ? u.expectedSalary.min
+        : null,
+    max:
+      typeof u.expectedSalary?.max === 'number' && Number.isFinite(u.expectedSalary.max)
+        ? u.expectedSalary.max
+        : null,
+    currency:
+      typeof u.expectedSalary?.currency === 'string' && u.expectedSalary.currency.trim()
+        ? u.expectedSalary.currency.trim().toUpperCase()
+        : 'USD',
+    visible: Boolean(u.expectedSalary?.visible === true),
+  };
+  const languages = Array.isArray(u.languages)
+    ? u.languages.filter((l: any) => typeof l === 'string' && l.trim()).slice(0, 15)
+    : [];
+  const phone = typeof u.phone === 'string' ? u.phone : '';
+  const phoneVisible = Boolean(u.phoneVisible === true);
+  const links: ProfileLinks = {
+    linkedin: typeof u.links?.linkedin === 'string' ? u.links.linkedin : '',
+    github: typeof u.links?.github === 'string' ? u.links.github : '',
+    portfolio: typeof u.links?.portfolio === 'string' ? u.links.portfolio : '',
+  };
+  const avatar = typeof u.avatar === 'string' ? u.avatar : '';
+  const onboardingCompletedAt = u.onboardingCompletedAt
+    ? u.onboardingCompletedAt instanceof Date
+      ? u.onboardingCompletedAt.toISOString()
+      : String(u.onboardingCompletedAt)
+    : null;
+  const onboardingSkippedAt = u.onboardingSkippedAt
+    ? u.onboardingSkippedAt instanceof Date
+      ? u.onboardingSkippedAt.toISOString()
+      : String(u.onboardingSkippedAt)
+    : null;
+
+  const baseProfile: Omit<UserProfileData, 'profileCompletion'> = {
+    userId,
+    fullName,
+    headline,
+    targetRole,
+    seniority,
+    yearsOfExperience,
+    industries,
+    skills,
+    country,
+    city,
+    willingToRelocate,
+    remotePreference,
+    employmentTypes,
+    expectedSalary,
+    languages,
+    phone,
+    phoneVisible,
+    links,
+    avatar,
+    onboardingCompletedAt,
+    onboardingSkippedAt,
+  };
+
+  const profileCompletion = calculateProfileCompletion(baseProfile);
+
+  return {
+    ...baseProfile,
+    profileCompletion,
+  };
 }
 
 export const DataStore = {
@@ -1715,11 +1932,17 @@ export const DataStore = {
               }).catch(() => {});
             }
 
+            const roleState = resolveAccountRoleState(
+              (u as any).accountType,
+              (u as any).accountTypes
+            );
             return {
               id: (u as any)._id.toString(),
               name: (u as any).name,
               email: (u as any).email,
               role: (u as any).role || 'user',
+              accountType: roleState.accountType,
+              accountTypes: roleState.accountTypes,
               isDemo: Boolean((u as any).isDemo),
               plan: currentPlan,
               aiCredits: typeof (u as any).aiCredits === 'number' ? (u as any).aiCredits : 3,
@@ -1782,11 +2005,14 @@ export const DataStore = {
         writeLocalDb(db);
       }
 
+      const roleState = resolveAccountRoleState(u.accountType, u.accountTypes);
       return {
         id: u.id,
         name: u.name,
         email: u.email,
         role: u.role || 'user',
+        accountType: roleState.accountType,
+        accountTypes: roleState.accountTypes,
         isDemo: Boolean(u.isDemo),
         plan: u.plan || 'free',
         aiCredits: typeof u.aiCredits === 'number' ? u.aiCredits : 3,
@@ -1824,12 +2050,18 @@ export const DataStore = {
         const u = await User.findOne({ email: email.toLowerCase().trim() }).select('+password').lean();
         if (u) {
           const rawExpiry = (u as any).proExpiresAt || (u as any).planExpiresAt || null;
+          const roleState = resolveAccountRoleState(
+            (u as any).accountType,
+            (u as any).accountTypes
+          );
           return {
             id: (u as any)._id.toString(),
             name: (u as any).name,
             email: (u as any).email,
             password: (u as any).password,
             role: (u as any).role || 'user',
+            accountType: roleState.accountType,
+            accountTypes: roleState.accountTypes,
             isDemo: Boolean((u as any).isDemo),
             plan: (u as any).plan || 'free',
             aiCredits: typeof (u as any).aiCredits === 'number' ? (u as any).aiCredits : 3,
@@ -1872,12 +2104,15 @@ export const DataStore = {
     const u = db.users.find((user) => user.email.toLowerCase() === email.toLowerCase().trim());
     if (u) {
       const rawExpiry = u.proExpiresAt || u.planExpiresAt || null;
+      const roleState = resolveAccountRoleState(u.accountType, u.accountTypes);
       return {
         id: u.id,
         name: u.name,
         email: u.email,
         password: u.password,
         role: u.role || 'user',
+        accountType: roleState.accountType,
+        accountTypes: roleState.accountTypes,
         isDemo: Boolean(u.isDemo),
         plan: u.plan || 'free',
         aiCredits: typeof u.aiCredits === 'number' ? u.aiCredits : 3,
@@ -2038,6 +2273,8 @@ export const DataStore = {
     email: string;
     password: string;
     role?: 'user' | 'admin';
+    accountType?: AccountType;
+    accountTypes?: AccountRole[];
     isDemo?: boolean;
     plan?: 'free' | 'pro' | 'enterprise';
     aiCredits?: number;
@@ -2099,6 +2336,8 @@ export const DataStore = {
       (userData.paymentProvider === 'lemonsqueezy' ? userData.providerSubscriptionId : '') ||
       '';
 
+    const roleState = resolveAccountRoleState(userData.accountType, userData.accountTypes);
+
     const mongoUp = await isMongoAvailable();
     if (mongoUp) {
       try {
@@ -2107,6 +2346,8 @@ export const DataStore = {
           email: userData.email.toLowerCase().trim(),
           password: userData.password,
           role: userData.role || 'user',
+          accountType: roleState.accountType,
+          accountTypes: roleState.accountTypes,
           isDemo: Boolean(userData.isDemo),
           plan: userData.plan || 'free',
           aiCredits: typeof userData.aiCredits === 'number' ? userData.aiCredits : 3,
@@ -2131,6 +2372,8 @@ export const DataStore = {
           name: newUser.name,
           email: newUser.email,
           role: newUser.role,
+          accountType: roleState.accountType,
+          accountTypes: roleState.accountTypes,
           isDemo: Boolean(newUser.isDemo),
           plan: newUser.plan,
           aiCredits: newUser.aiCredits,
@@ -2174,6 +2417,8 @@ export const DataStore = {
       email: userData.email.toLowerCase().trim(),
       password: userData.password,
       role: userData.role || 'user',
+      accountType: roleState.accountType,
+      accountTypes: roleState.accountTypes,
       isDemo: Boolean(userData.isDemo),
       plan: userData.plan || 'free',
       aiCredits: typeof userData.aiCredits === 'number' ? userData.aiCredits : 3,
@@ -2202,6 +2447,8 @@ export const DataStore = {
       name: newUser.name,
       email: newUser.email,
       role: newUser.role,
+      accountType: roleState.accountType,
+      accountTypes: roleState.accountTypes,
       isDemo: newUser.isDemo,
       plan: newUser.plan,
       aiCredits: newUser.aiCredits,
@@ -3125,7 +3372,7 @@ export const DataStore = {
   async createOrder(orderData: {
     userId: string;
     userEmail: string;
-    planId: 'pro' | 'payg';
+    planId: 'pro' | 'payg' | 'hr_pack_50' | 'hr_pack_200' | 'hr_pack_1000';
     billingCycle: 'monthly' | 'annual' | 'once';
     baseAmount: number;
     amount: number;
@@ -3573,6 +3820,36 @@ export const DataStore = {
           subscriptionStatus: 'active',
           paymentFailedAt: null,
         });
+      } else if (isHrPackId(existing.planId)) {
+        const packCredits = Number(getPlanCredits(existing.planId));
+        let targetOrgId = existing.metadata?.orgId ? String(existing.metadata.orgId) : '';
+        if (!targetOrgId) {
+          const userOrgs = await this.getUserOrganizations(existing.userId);
+          targetOrgId = userOrgs[0]?.id || '';
+        }
+        if (targetOrgId && Number.isFinite(packCredits) && packCredits > 0) {
+          await this.addHrCredits(
+            targetOrgId,
+            packCredits,
+            'credit_purchase',
+            existing.id,
+            existing.userId
+          );
+        }
+        if (resolvedProvider === 'lemonsqueezy' && options?.customerId) {
+          const currentUser = await this.findUserById(existing.userId);
+          if (currentUser) {
+            await this.upgradeUserPlan(existing.userId, {
+              plan: ((currentUser as any).plan || 'free') as any,
+              billingCycle: (currentUser as any).billingCycle || 'none',
+              planExpiresAt: (currentUser as any).proExpiresAt || (currentUser as any).planExpiresAt || null,
+              proExpiresAt: (currentUser as any).proExpiresAt || (currentUser as any).planExpiresAt || null,
+              paymentProvider: 'lemonsqueezy',
+              providerCustomerId: options.customerId,
+              lemonCustomerId: options.customerId,
+            });
+          }
+        }
       } else {
         const planCredits = getPlanCredits(existing.planId);
         if (typeof planCredits === 'number' && planCredits > 0) {
@@ -3698,6 +3975,21 @@ export const DataStore = {
             proExpiresAt: null,
             subscriptionStatus: 'canceled',
           });
+        } else if (isHrPackId(existing.planId)) {
+          const packCredits = Number(getPlanCredits(existing.planId));
+          let targetOrgId = existing.metadata?.orgId ? String(existing.metadata.orgId) : '';
+          if (!targetOrgId) {
+            const userOrgs = await this.getUserOrganizations(existing.userId);
+            targetOrgId = userOrgs[0]?.id || '';
+          }
+          if (targetOrgId && Number.isFinite(packCredits) && packCredits > 0) {
+            await this.revokeHrCreditsForOrderRefund(
+              targetOrgId,
+              packCredits,
+              existing.id,
+              actor
+            );
+          }
         } else {
           const planCredits = getPlanCredits(existing.planId);
           if (typeof planCredits === 'number' && planCredits > 0) {
@@ -4274,6 +4566,327 @@ export const DataStore = {
     };
   },
 
+  // =========================================================================
+  // User Profile & Onboarding Operations (MongoDB + Local JSON Fallback)
+  // =========================================================================
+
+  async getUserProfile(
+    userId: string,
+    viewerUserId?: string | null
+  ): Promise<RedactedUserProfile | null> {
+    if (!userId || typeof userId !== 'string') return null;
+    const cleanId = userId.trim();
+    const resolvedViewerId = viewerUserId === undefined ? cleanId : viewerUserId;
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanId)) {
+      try {
+        const u = await User.findById(cleanId).select('-password').lean();
+        if (u) {
+          const normalized = normalizeUserProfileFromRecord(u);
+          return formatProfileForViewer(normalized, resolvedViewerId);
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore.getUserProfile' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const u = db.users.find((user) => user.id === cleanId);
+    if (!u) return null;
+
+    const normalized = normalizeUserProfileFromRecord(u);
+    return formatProfileForViewer(normalized, resolvedViewerId);
+  },
+
+  async updateUserProfile(
+    userId: string,
+    input: ProfileUpdateInput
+  ): Promise<RedactedUserProfile | null> {
+    if (!userId || typeof userId !== 'string') return null;
+    const cleanId = userId.trim();
+
+    // Load current profile first so partial PUT updates merge cleanly
+    let existingRecord: any = null;
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanId)) {
+      try {
+        existingRecord = await User.findById(cleanId).select('-password').lean();
+      } catch {
+        existingRecord = null;
+      }
+    }
+    if (!existingRecord) {
+      const db = readLocalDb();
+      existingRecord = db.users.find((u) => u.id === cleanId) || null;
+    }
+    if (!existingRecord) return null;
+
+    const current = normalizeUserProfileFromRecord(existingRecord);
+
+    const nextFullName =
+      input.fullName !== undefined ? input.fullName : current.fullName;
+
+    // Keep headline and targetRole synchronized when one or both are provided
+    let nextHeadline = current.headline;
+    let nextTargetRole = current.targetRole;
+    if (input.headline !== undefined && input.targetRole !== undefined) {
+      nextHeadline = input.headline || input.targetRole;
+      nextTargetRole = input.targetRole || input.headline;
+    } else if (input.targetRole !== undefined) {
+      nextTargetRole = input.targetRole;
+      nextHeadline = input.targetRole;
+    } else if (input.headline !== undefined) {
+      nextHeadline = input.headline;
+      nextTargetRole = input.headline;
+    }
+
+    const nextSeniority =
+      input.seniority !== undefined ? input.seniority : current.seniority;
+    const nextYears =
+      input.yearsOfExperience !== undefined
+        ? input.yearsOfExperience
+        : current.yearsOfExperience;
+    const nextIndustries =
+      input.industries !== undefined ? input.industries : current.industries;
+    const nextSkills =
+      input.skills !== undefined ? input.skills : current.skills;
+    const nextCountry =
+      input.country !== undefined ? input.country : current.country;
+    const nextCity = input.city !== undefined ? input.city : current.city;
+    const nextRelocate =
+      input.willingToRelocate !== undefined
+        ? input.willingToRelocate
+        : current.willingToRelocate;
+    const nextRemote =
+      input.remotePreference !== undefined
+        ? input.remotePreference
+        : current.remotePreference;
+    const nextEmploymentTypes =
+      input.employmentTypes !== undefined
+        ? input.employmentTypes
+        : current.employmentTypes;
+
+    const nextExpectedSalary: ExpectedSalary = {
+      min:
+        input.expectedSalary?.min !== undefined
+          ? input.expectedSalary.min
+          : current.expectedSalary.min,
+      max:
+        input.expectedSalary?.max !== undefined
+          ? input.expectedSalary.max
+          : current.expectedSalary.max,
+      currency:
+        input.expectedSalary?.currency !== undefined
+          ? input.expectedSalary.currency
+          : current.expectedSalary.currency,
+      visible:
+        input.expectedSalary?.visible !== undefined
+          ? Boolean(input.expectedSalary.visible)
+          : current.expectedSalary.visible,
+    };
+
+    const nextLanguages =
+      input.languages !== undefined ? input.languages : current.languages;
+
+    let nextPhone = current.phone;
+    let nextPhoneVisible = current.phoneVisible;
+    if (input.phone !== undefined) {
+      if (typeof input.phone === 'string') {
+        nextPhone = sanitizePhoneText(input.phone);
+      } else if (input.phone && typeof input.phone === 'object') {
+        const rawPhone = input.phone.value ?? input.phone.number ?? '';
+        nextPhone = sanitizePhoneText(rawPhone);
+        if (input.phone.visible !== undefined) {
+          nextPhoneVisible = Boolean(input.phone.visible);
+        }
+      }
+    }
+    if (input.phoneVisible !== undefined) {
+      nextPhoneVisible = Boolean(input.phoneVisible);
+    }
+
+    const nextLinks: ProfileLinks = {
+      linkedin:
+        input.links?.linkedin !== undefined
+          ? input.links.linkedin
+          : current.links.linkedin,
+      github:
+        input.links?.github !== undefined
+          ? input.links.github
+          : current.links.github,
+      portfolio:
+        input.links?.portfolio !== undefined
+          ? input.links.portfolio
+          : current.links.portfolio,
+    };
+
+    const nextAvatar =
+      input.avatar !== undefined ? input.avatar : current.avatar;
+
+    const nowDate = new Date();
+    const nowIso = nowDate.toISOString();
+    const shouldMarkCompleted = input.completeOnboarding !== false;
+    const nextOnboardingCompletedAt =
+      current.onboardingCompletedAt || (shouldMarkCompleted ? nowIso : null);
+
+    const updatedProfileData: UserProfileData = {
+      userId: cleanId,
+      fullName: nextFullName,
+      headline: nextHeadline,
+      targetRole: nextTargetRole,
+      seniority: nextSeniority,
+      yearsOfExperience: nextYears,
+      industries: nextIndustries,
+      skills: nextSkills,
+      country: nextCountry,
+      city: nextCity,
+      willingToRelocate: nextRelocate,
+      remotePreference: nextRemote,
+      employmentTypes: nextEmploymentTypes,
+      expectedSalary: nextExpectedSalary,
+      languages: nextLanguages,
+      phone: nextPhone,
+      phoneVisible: nextPhoneVisible,
+      links: nextLinks,
+      avatar: nextAvatar,
+      profileCompletion: 0,
+      onboardingCompletedAt: nextOnboardingCompletedAt,
+      onboardingSkippedAt: current.onboardingSkippedAt ?? null,
+    };
+
+    updatedProfileData.profileCompletion =
+      calculateProfileCompletion(updatedProfileData);
+
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanId)) {
+      try {
+        const mongoSet: Record<string, any> = {
+          fullName: updatedProfileData.fullName,
+          headline: updatedProfileData.headline,
+          targetRole: updatedProfileData.targetRole,
+          seniority: updatedProfileData.seniority,
+          yearsOfExperience: updatedProfileData.yearsOfExperience,
+          industries: updatedProfileData.industries,
+          skills: updatedProfileData.skills,
+          country: updatedProfileData.country,
+          city: updatedProfileData.city,
+          willingToRelocate: updatedProfileData.willingToRelocate,
+          remotePreference: updatedProfileData.remotePreference,
+          employmentTypes: updatedProfileData.employmentTypes,
+          expectedSalary: updatedProfileData.expectedSalary,
+          languages: updatedProfileData.languages,
+          phone: updatedProfileData.phone,
+          phoneVisible: updatedProfileData.phoneVisible,
+          links: updatedProfileData.links,
+          avatar: updatedProfileData.avatar,
+          profileCompletion: updatedProfileData.profileCompletion,
+          onboardingCompletedAt: updatedProfileData.onboardingCompletedAt
+            ? new Date(updatedProfileData.onboardingCompletedAt)
+            : null,
+        };
+        if (updatedProfileData.fullName) {
+          mongoSet.name = updatedProfileData.fullName.slice(0, 60);
+        }
+        await User.findByIdAndUpdate(cleanId, { $set: mongoSet }, { new: true });
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore.updateUserProfile' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const localUser = db.users.find((u) => u.id === cleanId);
+    if (localUser) {
+      if (updatedProfileData.fullName) {
+        localUser.name = updatedProfileData.fullName.slice(0, 60);
+      }
+      localUser.fullName = updatedProfileData.fullName;
+      localUser.headline = updatedProfileData.headline;
+      localUser.targetRole = updatedProfileData.targetRole;
+      localUser.seniority = updatedProfileData.seniority;
+      localUser.yearsOfExperience = updatedProfileData.yearsOfExperience;
+      localUser.industries = updatedProfileData.industries;
+      localUser.skills = updatedProfileData.skills;
+      localUser.country = updatedProfileData.country;
+      localUser.city = updatedProfileData.city;
+      localUser.willingToRelocate = updatedProfileData.willingToRelocate;
+      localUser.remotePreference = updatedProfileData.remotePreference;
+      localUser.employmentTypes = updatedProfileData.employmentTypes;
+      localUser.expectedSalary = updatedProfileData.expectedSalary;
+      localUser.languages = updatedProfileData.languages;
+      localUser.phone = updatedProfileData.phone;
+      localUser.phoneVisible = updatedProfileData.phoneVisible;
+      localUser.links = updatedProfileData.links;
+      localUser.avatar = updatedProfileData.avatar;
+      localUser.profileCompletion = updatedProfileData.profileCompletion;
+      localUser.onboardingCompletedAt = updatedProfileData.onboardingCompletedAt;
+      localUser.updatedAt = nowIso;
+      writeLocalDb(db);
+    }
+
+    return formatProfileForViewer(updatedProfileData, cleanId);
+  },
+
+  async skipUserOnboarding(userId: string): Promise<RedactedUserProfile | null> {
+    if (!userId || typeof userId !== 'string') return null;
+    const cleanId = userId.trim();
+    const nowDate = new Date();
+    const nowIso = nowDate.toISOString();
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanId)) {
+      try {
+        const existing = await User.findById(cleanId).select('-password').lean();
+        if (existing) {
+          const completedAt = (existing as any).onboardingCompletedAt
+            ? new Date((existing as any).onboardingCompletedAt)
+            : nowDate;
+          const updated = await User.findByIdAndUpdate(
+            cleanId,
+            {
+              $set: {
+                onboardingCompletedAt: completedAt,
+                onboardingSkippedAt: nowDate,
+              },
+            },
+            { new: true }
+          )
+            .select('-password')
+            .lean();
+          if (updated) {
+            return formatProfileForViewer(
+              normalizeUserProfileFromRecord(updated),
+              cleanId
+            );
+          }
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore.skipUserOnboarding' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const localUser = db.users.find((u) => u.id === cleanId);
+    if (!localUser) return null;
+
+    if (!localUser.onboardingCompletedAt) {
+      localUser.onboardingCompletedAt = nowIso;
+    }
+    localUser.onboardingSkippedAt = nowIso;
+    localUser.updatedAt = nowIso;
+    writeLocalDb(db);
+
+    return formatProfileForViewer(
+      normalizeUserProfileFromRecord(localUser),
+      cleanId
+    );
+  },
+
   async clearAiUsageForTesting(): Promise<void> {
     const mongoUp = await isMongoAvailable();
     if (mongoUp) {
@@ -4288,6 +4901,3653 @@ export const DataStore = {
       db.aiUsage = [];
       writeLocalDb(db);
     });
+  },
+
+  // =========================================================================
+  // Saved Jobs, Saved Searches, Job Alerts, & Outbound Click Tracking
+  // =========================================================================
+
+  async getUserSavedJobs(userId: string): Promise<SavedJobItem[]> {
+    if (!userId || typeof userId !== 'string') return [];
+    const cleanId = userId.trim();
+    const db = readLocalDb();
+    const list = Array.isArray(db.savedJobs) ? db.savedJobs : [];
+    return list
+      .filter((item) => item.userId === cleanId)
+      .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
+  },
+
+  async saveUserJob(userId: string, job: Job, notes?: string): Promise<SavedJobItem> {
+    const cleanId = (userId || '').trim();
+    const nowIso = new Date().toISOString();
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.savedJobs)) {
+        db.savedJobs = [];
+      }
+
+      const existingIdx = db.savedJobs.findIndex(
+        (item) => item.userId === cleanId && item.jobId === job.id
+      );
+
+      const sanitizedJob: Job = {
+        id: sanitizeProfileText(job.id || `job_${Date.now()}`, 120),
+        title: sanitizeProfileText(job.title || 'Untitled Role', 180),
+        company: sanitizeProfileText(job.company || 'Company', 140),
+        location: sanitizeProfileText(job.location || 'Global', 140),
+        remote: Boolean(job.remote),
+        description: sanitizeProfileText(job.description || '', 2000),
+        url: sanitizeProfileText(job.url || '', 600),
+        source: sanitizeProfileText(job.source || 'JobMatch', 60),
+        ...(job.sourceBadge ? { sourceBadge: sanitizeProfileText(job.sourceBadge, 60) } : {}),
+        ...(job.postedDate ? { postedDate: sanitizeProfileText(job.postedDate, 40) } : {}),
+        ...(job.salary ? { salary: sanitizeProfileText(job.salary, 80) } : {}),
+        ...(job.jobType ? { jobType: sanitizeProfileText(job.jobType, 60) } : {}),
+        ...(Array.isArray(job.tags)
+          ? { tags: job.tags.map((t) => sanitizeProfileText(String(t), 40)).slice(0, 15) }
+          : {}),
+        ...(typeof job.matchScore === 'number' ? { matchScore: job.matchScore } : {}),
+      };
+
+      if (existingIdx >= 0) {
+        db.savedJobs[existingIdx] = {
+          ...db.savedJobs[existingIdx],
+          job: sanitizedJob,
+          ...(notes !== undefined ? { notes: sanitizeProfileText(notes, 400) } : {}),
+          savedAt: nowIso,
+        };
+        writeLocalDb(db);
+        return db.savedJobs[existingIdx];
+      }
+
+      const newItem: SavedJobItem = {
+        id: `sjob_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+        userId: cleanId,
+        jobId: sanitizedJob.id,
+        job: sanitizedJob,
+        ...(notes ? { notes: sanitizeProfileText(notes, 400) } : {}),
+        savedAt: nowIso,
+      };
+      db.savedJobs.unshift(newItem);
+      if (db.savedJobs.length > 1000) {
+        db.savedJobs.length = 1000;
+      }
+      writeLocalDb(db);
+      return newItem;
+    });
+  },
+
+  async removeUserSavedJob(userId: string, jobId: string): Promise<boolean> {
+    const cleanUserId = (userId || '').trim();
+    const cleanJobId = (jobId || '').trim();
+    if (!cleanUserId || !cleanJobId) return false;
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.savedJobs)) return false;
+      const before = db.savedJobs.length;
+      db.savedJobs = db.savedJobs.filter(
+        (item) =>
+          !(item.userId === cleanUserId && (item.jobId === cleanJobId || item.id === cleanJobId))
+      );
+      const removed = db.savedJobs.length < before;
+      if (removed) {
+        writeLocalDb(db);
+      }
+      return removed;
+    });
+  },
+
+  async getUserSavedSearches(userId: string): Promise<SavedJobSearch[]> {
+    if (!userId || typeof userId !== 'string') return [];
+    const cleanId = userId.trim();
+    const db = readLocalDb();
+    const list = Array.isArray(db.savedSearches) ? db.savedSearches : [];
+    return list
+      .filter((item) => item.userId === cleanId)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  },
+
+  async saveUserJobSearch(
+    userId: string,
+    userEmail: string,
+    input: {
+      id?: string;
+      name?: string;
+      query: string;
+      location?: string;
+      country?: string;
+      remote?: boolean;
+      employmentType?: SavedJobSearch['employmentType'];
+      datePosted?: SavedJobSearch['datePosted'];
+      seniority?: SavedJobSearch['seniority'];
+      minSalary?: number | null;
+      maxSalary?: number | null;
+      source?: string;
+      alertFrequency?: JobAlertFrequency;
+      alertEnabled?: boolean;
+    }
+  ): Promise<SavedJobSearch> {
+    const cleanUserId = (userId || '').trim();
+    const cleanEmail = (userEmail || '').trim().toLowerCase();
+    const cleanQuery = sanitizeProfileText(input.query || '', 120);
+    const cleanLocation = sanitizeProfileText(input.location || '', 120);
+    const freq: JobAlertFrequency =
+      input.alertFrequency && ['none', 'daily', 'weekly'].includes(input.alertFrequency)
+        ? input.alertFrequency
+        : 'none';
+    const alertEnabled =
+      input.alertEnabled !== undefined ? Boolean(input.alertEnabled && freq !== 'none') : freq !== 'none';
+    const nowIso = new Date().toISOString();
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.savedSearches)) {
+        db.savedSearches = [];
+      }
+
+      const existingIdx = db.savedSearches.findIndex(
+        (s) =>
+          s.userId === cleanUserId &&
+          ((input.id && s.id === input.id) ||
+            (s.query.toLowerCase() === cleanQuery.toLowerCase() &&
+              (s.location || '').toLowerCase() === cleanLocation.toLowerCase() &&
+              Boolean(s.remote) === Boolean(input.remote)))
+      );
+
+      if (existingIdx >= 0) {
+        const existing = db.savedSearches[existingIdx];
+        const updated: SavedJobSearch = {
+          ...existing,
+          name: sanitizeProfileText(
+            input.name || existing.name || `${cleanQuery}${cleanLocation ? ` · ${cleanLocation}` : ''}`,
+            140
+          ),
+          query: cleanQuery,
+          location: cleanLocation,
+          country: sanitizeProfileText(input.country || existing.country || 'global', 20),
+          remote: Boolean(input.remote),
+          employmentType: input.employmentType || existing.employmentType || 'any',
+          datePosted: input.datePosted || existing.datePosted || 'any',
+          seniority: input.seniority || existing.seniority || 'any',
+          minSalary:
+            input.minSalary !== undefined ? input.minSalary : (existing.minSalary ?? null),
+          maxSalary:
+            input.maxSalary !== undefined ? input.maxSalary : (existing.maxSalary ?? null),
+          source: sanitizeProfileText(input.source || existing.source || 'all', 40),
+          alertFrequency: freq,
+          alertEnabled,
+          unsubscribeToken:
+            existing.unsubscribeToken ||
+            `unsub_${crypto.randomBytes(18).toString('hex')}`,
+          updatedAt: nowIso,
+        };
+        db.savedSearches[existingIdx] = updated;
+        writeLocalDb(db);
+        return updated;
+      }
+
+      const created: SavedJobSearch = {
+        id: `ssearch_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+        userId: cleanUserId,
+        userEmail: cleanEmail,
+        name: sanitizeProfileText(
+          input.name || `${cleanQuery}${cleanLocation ? ` · ${cleanLocation}` : ''}`,
+          140
+        ),
+        query: cleanQuery,
+        location: cleanLocation,
+        country: sanitizeProfileText(input.country || 'global', 20),
+        remote: Boolean(input.remote),
+        employmentType: input.employmentType || 'any',
+        datePosted: input.datePosted || 'any',
+        seniority: input.seniority || 'any',
+        minSalary: input.minSalary ?? null,
+        maxSalary: input.maxSalary ?? null,
+        source: sanitizeProfileText(input.source || 'all', 40),
+        alertEnabled,
+        alertFrequency: freq,
+        unsubscribeToken: `unsub_${crypto.randomBytes(18).toString('hex')}`,
+        lastSentAt: null,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+
+      db.savedSearches.unshift(created);
+      if (db.savedSearches.length > 1000) {
+        db.savedSearches.length = 1000;
+      }
+      writeLocalDb(db);
+      return created;
+    });
+  },
+
+  async deleteUserSavedSearch(userId: string, searchId: string): Promise<boolean> {
+    const cleanUserId = (userId || '').trim();
+    const cleanSearchId = (searchId || '').trim();
+    if (!cleanUserId || !cleanSearchId) return false;
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.savedSearches)) return false;
+      const before = db.savedSearches.length;
+      db.savedSearches = db.savedSearches.filter(
+        (s) => !(s.userId === cleanUserId && s.id === cleanSearchId)
+      );
+      const removed = db.savedSearches.length < before;
+      if (removed) {
+        writeLocalDb(db);
+      }
+      return removed;
+    });
+  },
+
+  async unsubscribeJobAlertByToken(token: string): Promise<SavedJobSearch | null> {
+    const cleanToken = (token || '').trim();
+    if (!cleanToken) return null;
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.savedSearches)) return null;
+      const found = db.savedSearches.find((s) => s.unsubscribeToken === cleanToken);
+      if (!found) return null;
+
+      found.alertEnabled = false;
+      found.alertFrequency = 'none';
+      found.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return { ...found };
+    });
+  },
+
+  async getDueJobAlerts(nowMs: number = Date.now()): Promise<SavedJobSearch[]> {
+    const db = readLocalDb();
+    const list = Array.isArray(db.savedSearches) ? db.savedSearches : [];
+    const dailyWindowMs = 20 * 3600 * 1000; // 20 hours
+    const weeklyWindowMs = 6.5 * 24 * 3600 * 1000; // 6.5 days
+
+    return list.filter((s) => {
+      if (!s.alertEnabled || (s.alertFrequency !== 'daily' && s.alertFrequency !== 'weekly')) {
+        return false;
+      }
+      if (!s.userEmail || !s.query) return false;
+      if (!s.lastSentAt) return true;
+      const lastMs = new Date(s.lastSentAt).getTime();
+      if (!Number.isFinite(lastMs)) return true;
+      const elapsed = nowMs - lastMs;
+      return s.alertFrequency === 'daily' ? elapsed >= dailyWindowMs : elapsed >= weeklyWindowMs;
+    });
+  },
+
+  async markJobAlertSent(searchId: string, sentAtIso: string = new Date().toISOString()): Promise<void> {
+    const cleanId = (searchId || '').trim();
+    if (!cleanId) return;
+    await withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.savedSearches)) return;
+      const item = db.savedSearches.find((s) => s.id === cleanId);
+      if (item) {
+        item.lastSentAt = sentAtIso;
+        item.updatedAt = sentAtIso;
+        writeLocalDb(db);
+      }
+    });
+  },
+
+  async recordJobClick(input: {
+    userId?: string | null;
+    jobId: string;
+    title: string;
+    company: string;
+    source: string;
+    url: string;
+  }): Promise<JobClickRecord> {
+    const nowIso = new Date().toISOString();
+    const record: JobClickRecord = {
+      id: `jclick_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+      userId: input.userId || null,
+      jobId: sanitizeProfileText(input.jobId || '', 120),
+      title: sanitizeProfileText(input.title || '', 180),
+      company: sanitizeProfileText(input.company || '', 140),
+      source: sanitizeProfileText(input.source || '', 60),
+      url: sanitizeProfileText(input.url || '', 600),
+      clickedAt: nowIso,
+    };
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.jobClicks)) {
+        db.jobClicks = [];
+      }
+      db.jobClicks.unshift(record);
+      if (db.jobClicks.length > 1000) {
+        db.jobClicks.length = 1000;
+      }
+      writeLocalDb(db);
+      return record;
+    });
+  },
+
+  async getJobClicks(userId?: string): Promise<JobClickRecord[]> {
+    const db = readLocalDb();
+    const list = Array.isArray(db.jobClicks) ? db.jobClicks : [];
+    if (!userId) return list;
+    return list.filter((c) => c.userId === userId);
+  },
+
+  // ============================================================================
+  // Employer / HR Account Roles, Organizations, Jobs, Applications & HR Credits
+  // ============================================================================
+
+  /**
+   * Updates a user's `accountType` ('candidate' | 'employer' | 'both') or `accountTypes` array.
+   */
+  async updateUserAccountType(
+    userId: string,
+    accountTypeOrRoles: AccountType | AccountRole[]
+  ): Promise<{ accountType: AccountType; accountTypes: AccountRole[] } | null> {
+    const cleanId = (userId || '').trim();
+    if (!cleanId) return null;
+
+    const existing = await this.findUserById(cleanId);
+    if (!existing) return null;
+
+    const nextState = resolveAccountRoleState(accountTypeOrRoles, existing.accountTypes);
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanId)) {
+      try {
+        await User.findByIdAndUpdate(cleanId, {
+          $set: {
+            accountType: nextState.accountType,
+            accountTypes: nextState.accountTypes,
+          },
+        });
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'updateUserAccountType MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    await withOrderLock(async () => {
+      const db = readLocalDb();
+      const user = db.users.find((u) => u.id === cleanId);
+      if (user) {
+        user.accountType = nextState.accountType;
+        user.accountTypes = nextState.accountTypes;
+        user.updatedAt = new Date().toISOString();
+        writeLocalDb(db);
+      }
+    });
+
+    return nextState;
+  },
+
+  /**
+   * Enables an additional account role ('candidate' or 'employer') on the user,
+   * automatically upgrading to 'both' if the user already has the other role.
+   */
+  async enableUserAccountRole(
+    userId: string,
+    roleToAdd: AccountRole
+  ): Promise<{ accountType: AccountType; accountTypes: AccountRole[] } | null> {
+    const existing = await this.findUserById(userId);
+    if (!existing) return null;
+    const nextState = enableAccountRole(existing, roleToAdd);
+    return this.updateUserAccountType(userId, nextState.accountTypes);
+  },
+
+  /**
+   * Creates a new Organization owned by `ownerId`, adds the owner to `members[]` with role 'owner',
+   * sets `verified: false`, initializes separate `hrCredits` (`creditBalance`), and enables the 'employer'
+   * role on the owner's User account (upgrading candidate -> 'both').
+   */
+  async createOrganization(
+    ownerId: string,
+    input: {
+      name: string;
+      website?: string;
+      logo?: string;
+      industry?: string;
+      size?: OrganizationSize | string;
+      country?: string;
+      initialHrCredits?: number;
+    }
+  ): Promise<OrganizationRecord> {
+    const cleanOwnerId = (ownerId || '').trim();
+    if (!cleanOwnerId) {
+      throw new Error('OWNER_ID_REQUIRED');
+    }
+    const cleanName = sanitizeProfileText(input.name || '', 120);
+    if (!cleanName || cleanName.length < 2) {
+      throw new Error('ORGANIZATION_NAME_REQUIRED');
+    }
+
+    const nowIso = new Date().toISOString();
+    const initialCredits =
+      typeof input.initialHrCredits === 'number' && input.initialHrCredits > 0
+        ? Math.floor(input.initialHrCredits)
+        : 0;
+    const slug = generateEmployerJobSlug(cleanName, undefined, Date.now().toString(36));
+
+    // Ensure owner has 'employer' role enabled (becomes 'both' if already 'candidate')
+    await this.enableUserAccountRole(cleanOwnerId, 'employer');
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanOwnerId)) {
+      try {
+        const createdOrg = await Organization.create({
+          name: cleanName,
+          slug,
+          website: sanitizeProfileText(input.website || '', 300),
+          logo: sanitizeProfileText(input.logo || '', 500),
+          industry: sanitizeProfileText(input.industry || '', 80),
+          size: input.size || '1-10',
+          country: sanitizeProfileText(input.country || '', 80),
+          verified: false,
+          ownerId: cleanOwnerId,
+          members: [
+            {
+              userId: cleanOwnerId,
+              role: 'owner',
+              addedAt: new Date(nowIso),
+            },
+          ],
+          hrCredits: initialCredits,
+          creditBalance: initialCredits,
+        });
+
+        const orgIdStr = createdOrg._id.toString();
+        if (initialCredits > 0) {
+          await HrCreditLedger.create({
+            orgId: createdOrg._id,
+            delta: initialCredits,
+            balanceAfter: initialCredits,
+            reason: 'initial_grant',
+            refId: `org_init_${orgIdStr}`,
+            actorId: cleanOwnerId,
+          });
+        }
+
+        return {
+          id: orgIdStr,
+          name: createdOrg.name,
+          slug: createdOrg.slug || slug,
+          website: createdOrg.website || '',
+          logo: createdOrg.logo || '',
+          industry: createdOrg.industry || '',
+          size: createdOrg.size || '1-10',
+          country: createdOrg.country || '',
+          verified: Boolean(createdOrg.verified),
+          ownerId: createdOrg.ownerId.toString(),
+          members: (createdOrg.members || []).map((m: any) => ({
+            userId: m.userId.toString(),
+            role: m.role,
+            addedAt: m.addedAt instanceof Date ? m.addedAt.toISOString() : String(m.addedAt),
+          })),
+          hrCredits: createdOrg.hrCredits,
+          creditBalance: createdOrg.hrCredits,
+          createdAt: createdOrg.createdAt.toISOString(),
+          updatedAt: createdOrg.updatedAt.toISOString(),
+        };
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'createOrganization MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.organizations)) db.organizations = [];
+      if (!Array.isArray(db.hrCreditLedger)) db.hrCreditLedger = [];
+
+      const orgId = `org_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
+      const record: OrganizationRecord = {
+        id: orgId,
+        name: cleanName,
+        slug,
+        website: sanitizeProfileText(input.website || '', 300),
+        logo: sanitizeProfileText(input.logo || '', 500),
+        industry: sanitizeProfileText(input.industry || '', 80),
+        size: input.size || '1-10',
+        country: sanitizeProfileText(input.country || '', 80),
+        verified: false,
+        ownerId: cleanOwnerId,
+        members: [
+          {
+            userId: cleanOwnerId,
+            role: 'owner',
+            addedAt: nowIso,
+          },
+        ],
+        hrCredits: initialCredits,
+        creditBalance: initialCredits,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+
+      db.organizations.unshift(record);
+
+      if (initialCredits > 0) {
+        db.hrCreditLedger.unshift({
+          id: `hrled_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
+          orgId,
+          delta: initialCredits,
+          balanceAfter: initialCredits,
+          reason: 'initial_grant',
+          refId: `org_init_${orgId}`,
+          actorId: cleanOwnerId,
+          createdAt: nowIso,
+        });
+      }
+
+      writeLocalDb(db);
+      return { ...record };
+    });
+  },
+
+  async getOrganizationById(orgId: string): Promise<OrganizationRecord | null> {
+    const cleanOrgId = (orgId || '').trim();
+    if (!cleanOrgId) return null;
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanOrgId)) {
+      try {
+        const org: any = await Organization.findById(cleanOrgId).lean();
+        if (org) {
+          const credits = typeof org.hrCredits === 'number' ? org.hrCredits : org.creditBalance || 0;
+          return {
+            id: org._id.toString(),
+            name: org.name,
+            slug: org.slug || '',
+            website: org.website || '',
+            logo: org.logo || '',
+            industry: org.industry || '',
+            size: org.size || '1-10',
+            country: org.country || '',
+            verified: Boolean(org.verified),
+            ownerId: org.ownerId.toString(),
+            members: (org.members || []).map((m: any) => ({
+              userId: m.userId.toString(),
+              role: m.role,
+              addedAt: m.addedAt instanceof Date ? m.addedAt.toISOString() : String(m.addedAt),
+            })),
+            hrCredits: credits,
+            creditBalance: credits,
+            monthlySpendCap:
+              typeof org.monthlySpendCap === 'number' ? org.monthlySpendCap : null,
+            lowBalanceThreshold:
+              typeof org.lowBalanceThreshold === 'number' ? org.lowBalanceThreshold : 10,
+            lowBalanceAlertEnabled:
+              org.lowBalanceAlertEnabled !== undefined ? Boolean(org.lowBalanceAlertEnabled) : true,
+            lastLowBalanceAlertAt: org.lastLowBalanceAlertAt
+              ? new Date(org.lastLowBalanceAlertAt).toISOString()
+              : null,
+            createdAt: org.createdAt instanceof Date ? org.createdAt.toISOString() : String(org.createdAt),
+            updatedAt: org.updatedAt instanceof Date ? org.updatedAt.toISOString() : String(org.updatedAt),
+          };
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'getOrganizationById MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const found = (db.organizations || []).find((o) => o.id === cleanOrgId);
+    if (!found) return null;
+    const credits = typeof found.hrCredits === 'number' ? found.hrCredits : found.creditBalance || 0;
+    return {
+      ...found,
+      hrCredits: credits,
+      creditBalance: credits,
+      monthlySpendCap:
+        typeof found.monthlySpendCap === 'number' ? found.monthlySpendCap : null,
+      lowBalanceThreshold:
+        typeof found.lowBalanceThreshold === 'number' ? found.lowBalanceThreshold : 10,
+      lowBalanceAlertEnabled:
+        found.lowBalanceAlertEnabled !== undefined ? Boolean(found.lowBalanceAlertEnabled) : true,
+      lastLowBalanceAlertAt: found.lastLowBalanceAlertAt || null,
+      members: [...(found.members || [])],
+    };
+  },
+
+  async getUserOrganizations(userId: string): Promise<OrganizationRecord[]> {
+    const cleanUserId = (userId || '').trim();
+    if (!cleanUserId) return [];
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanUserId)) {
+      try {
+        const orgs: any[] = await Organization.find({
+          $or: [{ ownerId: cleanUserId }, { 'members.userId': cleanUserId }],
+        })
+          .sort({ createdAt: -1 })
+          .lean();
+
+        return orgs.map((org) => {
+          const credits = typeof org.hrCredits === 'number' ? org.hrCredits : org.creditBalance || 0;
+          return {
+            id: org._id.toString(),
+            name: org.name,
+            slug: org.slug || '',
+            website: org.website || '',
+            logo: org.logo || '',
+            industry: org.industry || '',
+            size: org.size || '1-10',
+            country: org.country || '',
+            verified: Boolean(org.verified),
+            ownerId: org.ownerId.toString(),
+            members: (org.members || []).map((m: any) => ({
+              userId: m.userId.toString(),
+              role: m.role,
+              addedAt: m.addedAt instanceof Date ? m.addedAt.toISOString() : String(m.addedAt),
+            })),
+            hrCredits: credits,
+            creditBalance: credits,
+            createdAt: org.createdAt instanceof Date ? org.createdAt.toISOString() : String(org.createdAt),
+            updatedAt: org.updatedAt instanceof Date ? org.updatedAt.toISOString() : String(org.updatedAt),
+          };
+        });
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'getUserOrganizations MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    return (db.organizations || []).filter(
+      (o) =>
+        o.ownerId === cleanUserId ||
+        (Array.isArray(o.members) && o.members.some((m) => m.userId === cleanUserId))
+    );
+  },
+
+  async isOrganizationMember(
+    orgId: string,
+    userId: string,
+    requiredRole?: OrgMemberRole
+  ): Promise<boolean> {
+    const org = await this.getOrganizationById(orgId);
+    if (!org || !userId) return false;
+    if (org.ownerId === userId) return true;
+    const member = (org.members || []).find((m) => m.userId === userId);
+    if (!member) return false;
+    if (requiredRole === 'owner') {
+      return member.role === 'owner';
+    }
+    return member.role === 'owner' || member.role === 'recruiter';
+  },
+
+  async addOrganizationMember(
+    orgId: string,
+    actorUserId: string,
+    memberUserId: string,
+    role: OrgMemberRole = 'recruiter'
+  ): Promise<OrganizationRecord | null> {
+    const isOwner = await this.isOrganizationMember(orgId, actorUserId, 'owner');
+    if (!isOwner) {
+      throw new Error('FORBIDDEN_ORG_OWNER_REQUIRED');
+    }
+
+    await this.enableUserAccountRole(memberUserId, 'employer');
+    const nowIso = new Date().toISOString();
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(orgId) && mongoose.Types.ObjectId.isValid(memberUserId)) {
+      try {
+        const orgDoc = await Organization.findById(orgId);
+        if (orgDoc) {
+          const existingIdx = orgDoc.members.findIndex(
+            (m: any) => m.userId.toString() === memberUserId
+          );
+          if (existingIdx >= 0) {
+            orgDoc.members[existingIdx].role = role;
+          } else {
+            orgDoc.members.push({
+              userId: new mongoose.Types.ObjectId(memberUserId),
+              role,
+              addedAt: new Date(nowIso),
+            });
+          }
+          await orgDoc.save();
+          return this.getOrganizationById(orgId);
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'addOrganizationMember MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const org = (db.organizations || []).find((o) => o.id === orgId);
+      if (!org) return null;
+      if (!Array.isArray(org.members)) org.members = [];
+      const existing = org.members.find((m) => m.userId === memberUserId);
+      if (existing) {
+        existing.role = role;
+      } else {
+        org.members.push({
+          userId: memberUserId,
+          role,
+          addedAt: nowIso,
+        });
+      }
+      org.updatedAt = nowIso;
+      writeLocalDb(db);
+      return { ...org, members: [...org.members] };
+    });
+  },
+
+  /**
+   * Atomically adds HR credits to an Organization and records an HrCreditLedger entry.
+   */
+  async addHrCredits(
+    orgId: string,
+    amount: number,
+    reason: HrCreditReason,
+    refId: string,
+    actorId?: string | null
+  ): Promise<{
+    success: boolean;
+    balanceAfter: number;
+    ledgerEntry: HrCreditLedgerRecord;
+  }> {
+    const cleanOrgId = (orgId || '').trim();
+    const cleanRefId = (refId || '').trim() || `ref_${Date.now()}`;
+    const cleanReason = (reason || 'credit_purchase').trim();
+    const positiveDelta = Math.floor(Number(amount));
+
+    if (!cleanOrgId) throw new Error('ORG_ID_REQUIRED');
+    if (!Number.isFinite(positiveDelta) || positiveDelta <= 0) {
+      throw new Error('INVALID_CREDIT_AMOUNT');
+    }
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanOrgId)) {
+      try {
+        const updatedOrg: any = await Organization.findOneAndUpdate(
+          { _id: cleanOrgId },
+          { $inc: { hrCredits: positiveDelta, creditBalance: positiveDelta } },
+          { new: true }
+        ).lean();
+
+        if (!updatedOrg) {
+          throw new Error('ORGANIZATION_NOT_FOUND');
+        }
+
+        const balanceAfter = updatedOrg.hrCredits;
+        const ledgerDoc = await HrCreditLedger.create({
+          orgId: cleanOrgId,
+          delta: positiveDelta,
+          balanceAfter,
+          reason: cleanReason,
+          refId: cleanRefId,
+          actorId: actorId || null,
+        });
+
+        return {
+          success: true,
+          balanceAfter,
+          ledgerEntry: {
+            id: ledgerDoc._id.toString(),
+            orgId: cleanOrgId,
+            delta: positiveDelta,
+            balanceAfter,
+            reason: cleanReason,
+            refId: cleanRefId,
+            actorId: actorId || null,
+            createdAt: ledgerDoc.createdAt.toISOString(),
+          },
+        };
+      } catch (err: any) {
+        if (err?.message === 'ORGANIZATION_NOT_FOUND') throw err;
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'addHrCredits MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.organizations)) db.organizations = [];
+      if (!Array.isArray(db.hrCreditLedger)) db.hrCreditLedger = [];
+
+      const org = db.organizations.find((o) => o.id === cleanOrgId);
+      if (!org) {
+        throw new Error('ORGANIZATION_NOT_FOUND');
+      }
+
+      const currentBalance =
+        typeof org.hrCredits === 'number' ? org.hrCredits : org.creditBalance || 0;
+      const balanceAfter = currentBalance + positiveDelta;
+      const nowIso = new Date().toISOString();
+
+      org.hrCredits = balanceAfter;
+      org.creditBalance = balanceAfter;
+      org.updatedAt = nowIso;
+
+      const ledgerEntry: HrCreditLedgerRecord = {
+        id: `hrled_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
+        orgId: cleanOrgId,
+        delta: positiveDelta,
+        balanceAfter,
+        reason: cleanReason,
+        refId: cleanRefId,
+        actorId: actorId || null,
+        createdAt: nowIso,
+      };
+
+      db.hrCreditLedger.unshift(ledgerEntry);
+      writeLocalDb(db);
+
+      return {
+        success: true,
+        balanceAfter,
+        ledgerEntry,
+      };
+    });
+  },
+
+  /**
+   * Atomically deducts HR credits from an Organization (`hrCredits >= cost`), enforcing:
+   * 1. Positive balance check (`hrCredits >= cost`, which also blocks usage when `hrCredits < 0` due to an unsettled refund).
+   * 2. Optional monthly spend cap (`org.monthlySpendCap`).
+   * 3. Low-balance alert notification when `balanceAfter <= org.lowBalanceThreshold` and `lowBalanceAlertEnabled !== false`.
+   */
+  async deductHrCredits(
+    orgId: string,
+    cost: number,
+    reason: HrCreditReason,
+    refId: string,
+    actorId?: string | null
+  ): Promise<{
+    success: boolean;
+    error?:
+      | 'INSUFFICIENT_HR_CREDITS'
+      | 'MONTHLY_SPEND_CAP_EXCEEDED'
+      | 'ORGANIZATION_NOT_FOUND';
+    balanceAfter: number;
+    lowBalanceAlertTriggered?: boolean;
+    ledgerEntry?: HrCreditLedgerRecord;
+  }> {
+    const cleanOrgId = (orgId || '').trim();
+    const cleanRefId = (refId || '').trim() || `ref_${Date.now()}`;
+    const cleanReason = (reason || 'candidate_ai_analysis').trim();
+    const deductAmount = Math.floor(Number(cost));
+
+    if (!cleanOrgId) throw new Error('ORG_ID_REQUIRED');
+    if (!Number.isFinite(deductAmount) || deductAmount <= 0) {
+      throw new Error('INVALID_CREDIT_COST');
+    }
+
+    const orgRecord = await this.getOrganizationById(cleanOrgId);
+    if (!orgRecord) {
+      return {
+        success: false,
+        error: 'ORGANIZATION_NOT_FOUND',
+        balanceAfter: 0,
+      };
+    }
+
+    // Check optional monthly spend cap before deducting
+    if (
+      typeof orgRecord.monthlySpendCap === 'number' &&
+      orgRecord.monthlySpendCap > 0
+    ) {
+      const monthlySpent = await this.getOrgMonthlyCreditSpend(cleanOrgId);
+      if (monthlySpent + deductAmount > orgRecord.monthlySpendCap) {
+        return {
+          success: false,
+          error: 'MONTHLY_SPEND_CAP_EXCEEDED',
+          balanceAfter: orgRecord.hrCredits,
+        };
+      }
+    }
+
+    const triggerLowBalanceAlertIfNeeded = async (balanceAfter: number): Promise<boolean> => {
+      const alertEnabled = orgRecord.lowBalanceAlertEnabled !== false;
+      const threshold =
+        typeof orgRecord.lowBalanceThreshold === 'number'
+          ? orgRecord.lowBalanceThreshold
+          : 10;
+      if (!alertEnabled || balanceAfter > threshold) {
+        return false;
+      }
+
+      const nowIso = new Date().toISOString();
+      const ownerUser = await this.findUserById(orgRecord.ownerId);
+      const targetEmail = orgRecord.workEmail || ownerUser?.email || '';
+      if (targetEmail) {
+        void sendEmail({
+          to: targetEmail,
+          subject: getHrLowBalanceAlertEmailSubject(orgRecord.name, balanceAfter, 'en'),
+          html: getHrLowBalanceAlertEmailHtml({
+            orgName: orgRecord.name,
+            remainingCredits: balanceAfter,
+            threshold,
+            language: 'en',
+          }),
+          isDemo: Boolean((ownerUser as any)?.isDemo),
+        });
+      }
+
+      const db = readLocalDb();
+      const localOrg = (db.organizations || []).find((o) => o.id === cleanOrgId);
+      if (localOrg) {
+        localOrg.lastLowBalanceAlertAt = nowIso;
+        writeLocalDb(db);
+      }
+      return true;
+    };
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanOrgId)) {
+      try {
+        // Atomic conditional update: only decrements if hrCredits >= deductAmount
+        const updatedOrg: any = await Organization.findOneAndUpdate(
+          { _id: cleanOrgId, hrCredits: { $gte: deductAmount } },
+          { $inc: { hrCredits: -deductAmount, creditBalance: -deductAmount } },
+          { new: true }
+        ).lean();
+
+        if (!updatedOrg) {
+          const existingOrg: any = await Organization.findById(cleanOrgId).lean();
+          if (!existingOrg) {
+            return {
+              success: false,
+              error: 'ORGANIZATION_NOT_FOUND',
+              balanceAfter: 0,
+            };
+          }
+          return {
+            success: false,
+            error: 'INSUFFICIENT_HR_CREDITS',
+            balanceAfter:
+              typeof existingOrg.hrCredits === 'number' ? existingOrg.hrCredits : 0,
+          };
+        }
+
+        const balanceAfter = updatedOrg.hrCredits;
+        const ledgerDoc = await HrCreditLedger.create({
+          orgId: cleanOrgId,
+          delta: -deductAmount,
+          balanceAfter,
+          reason: cleanReason,
+          refId: cleanRefId,
+          actorId: actorId || null,
+        });
+
+        const lowBalanceAlertTriggered = await triggerLowBalanceAlertIfNeeded(balanceAfter);
+
+        return {
+          success: true,
+          balanceAfter,
+          lowBalanceAlertTriggered,
+          ledgerEntry: {
+            id: ledgerDoc._id.toString(),
+            orgId: cleanOrgId,
+            delta: -deductAmount,
+            balanceAfter,
+            reason: cleanReason,
+            refId: cleanRefId,
+            actorId: actorId || null,
+            createdAt: ledgerDoc.createdAt.toISOString(),
+          },
+        };
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'deductHrCredits MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    // Local JSON fallback protected by in-process mutex lock (`withOrderLock`) for atomicity
+    const res = await withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.organizations)) db.organizations = [];
+      if (!Array.isArray(db.hrCreditLedger)) db.hrCreditLedger = [];
+
+      const org = db.organizations.find((o) => o.id === cleanOrgId);
+      if (!org) {
+        return {
+          success: false as const,
+          error: 'ORGANIZATION_NOT_FOUND' as const,
+          balanceAfter: 0,
+        };
+      }
+
+      const currentBalance =
+        typeof org.hrCredits === 'number' ? org.hrCredits : org.creditBalance || 0;
+
+      if (currentBalance < deductAmount) {
+        return {
+          success: false as const,
+          error: 'INSUFFICIENT_HR_CREDITS' as const,
+          balanceAfter: currentBalance,
+        };
+      }
+
+      const balanceAfter = currentBalance - deductAmount;
+      const nowIso = new Date().toISOString();
+
+      org.hrCredits = balanceAfter;
+      org.creditBalance = balanceAfter;
+      org.updatedAt = nowIso;
+
+      const ledgerEntry: HrCreditLedgerRecord = {
+        id: `hrled_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
+        orgId: cleanOrgId,
+        delta: -deductAmount,
+        balanceAfter,
+        reason: cleanReason,
+        refId: cleanRefId,
+        actorId: actorId || null,
+        createdAt: nowIso,
+      };
+
+      db.hrCreditLedger.unshift(ledgerEntry);
+      writeLocalDb(db);
+
+      return {
+        success: true as const,
+        balanceAfter,
+        ledgerEntry,
+      };
+    });
+
+    if (res.success) {
+      const lowBalanceAlertTriggered = await triggerLowBalanceAlertIfNeeded(res.balanceAfter);
+      return {
+        ...res,
+        lowBalanceAlertTriggered,
+      };
+    }
+    return res;
+  },
+
+  /**
+   * Unconditionally subtracts `creditsToRevoke` from an Organization's `hrCredits` when a payment provider
+   * issues an `order_refunded` webhook.
+   * Note: `balanceAfter` is allowed to go negative (`< 0`) if the Organization had already spent some or all
+   * of those credits, which automatically blocks any further HR credit usage until settled!
+   */
+  async revokeHrCreditsForOrderRefund(
+    orgId: string,
+    creditsToRevoke: number,
+    orderId: string,
+    actorId?: string | null
+  ): Promise<{
+    success: boolean;
+    balanceAfter: number;
+    ledgerEntry: HrCreditLedgerRecord;
+  }> {
+    const cleanOrgId = (orgId || '').trim();
+    const cleanRefId = (orderId || '').trim() || `refund_${Date.now()}`;
+    const revokeAmount = Math.floor(Number(creditsToRevoke));
+    if (!cleanOrgId || !Number.isFinite(revokeAmount) || revokeAmount <= 0) {
+      throw new Error('INVALID_REFUND_CREDIT_AMOUNT');
+    }
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanOrgId)) {
+      try {
+        const updatedOrg: any = await Organization.findOneAndUpdate(
+          { _id: cleanOrgId },
+          { $inc: { hrCredits: -revokeAmount, creditBalance: -revokeAmount } },
+          { new: true }
+        ).lean();
+
+        if (updatedOrg) {
+          const balanceAfter = updatedOrg.hrCredits;
+          const ledgerDoc = await HrCreditLedger.create({
+            orgId: cleanOrgId,
+            delta: -revokeAmount,
+            balanceAfter,
+            reason: 'refund',
+            refId: cleanRefId,
+            actorId: actorId || null,
+          });
+
+        // Sync local DB outside withOrderLock to avoid nested lock deadlock
+        const db = readLocalDb();
+        const localOrg = (db.organizations || []).find((o) => o.id === cleanOrgId);
+        if (localOrg) {
+          localOrg.hrCredits = balanceAfter;
+          localOrg.creditBalance = balanceAfter;
+          writeLocalDb(db);
+        }
+
+        return {
+          success: true,
+          balanceAfter,
+          ledgerEntry: {
+            id: ledgerDoc._id.toString(),
+            orgId: cleanOrgId,
+            delta: -revokeAmount,
+            balanceAfter,
+            reason: 'refund',
+            refId: cleanRefId,
+            actorId: actorId || null,
+            createdAt: ledgerDoc.createdAt.toISOString(),
+          },
+        };
+      }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore.revokeHrCreditsForOrderRefund' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    if (!Array.isArray(db.organizations)) db.organizations = [];
+    if (!Array.isArray(db.hrCreditLedger)) db.hrCreditLedger = [];
+
+    const org = db.organizations.find((o) => o.id === cleanOrgId);
+    if (!org) {
+      throw new Error('ORGANIZATION_NOT_FOUND');
+    }
+
+    const currentBalance =
+      typeof org.hrCredits === 'number' ? org.hrCredits : org.creditBalance || 0;
+    const balanceAfter = currentBalance - revokeAmount;
+    const nowIso = new Date().toISOString();
+
+    org.hrCredits = balanceAfter;
+    org.creditBalance = balanceAfter;
+    org.updatedAt = nowIso;
+
+    const ledgerEntry: HrCreditLedgerRecord = {
+      id: `hrled_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
+      orgId: cleanOrgId,
+      delta: -revokeAmount,
+      balanceAfter,
+      reason: 'refund',
+      refId: cleanRefId,
+      actorId: actorId || null,
+      createdAt: nowIso,
+    };
+
+    db.hrCreditLedger.unshift(ledgerEntry);
+    writeLocalDb(db);
+
+    return {
+      success: true,
+      balanceAfter,
+      ledgerEntry,
+    };
+  },
+
+  /**
+   * Computes net HR credits spent by `orgId` during the current calendar month.
+   * Excludes provider `refund` entries and offsets `*_refund` failure reversals.
+   */
+  async getOrgMonthlyCreditSpend(orgId: string): Promise<number> {
+    const ledger = await this.getHrCreditLedger(orgId, 500);
+    const now = new Date();
+    const startOfMonthMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+    let spent = 0;
+    for (const entry of ledger) {
+      const ts = new Date(entry.createdAt).getTime();
+      if (ts >= startOfMonthMs) {
+        if (
+          entry.delta < 0 &&
+          (entry.reason === 'job_publish' ||
+            entry.reason === 'candidate_ai_analysis' ||
+            entry.reason === 'top10_comparison_report')
+        ) {
+          spent += Math.abs(entry.delta);
+        } else if (
+          entry.delta > 0 &&
+          (entry.reason === 'candidate_ai_analysis_refund' ||
+            entry.reason === 'top10_comparison_refund')
+        ) {
+          spent = Math.max(0, spent - entry.delta);
+        }
+      }
+    }
+    return spent;
+  },
+
+  /**
+   * Updates an Organization's optional monthly spend cap (`monthlySpendCap`) and low-balance alert settings.
+   */
+  async updateOrganizationBillingSettings(
+    orgId: string,
+    actorUserId: string,
+    settings: {
+      monthlySpendCap?: number | null;
+      lowBalanceThreshold?: number;
+      lowBalanceAlertEnabled?: boolean;
+    }
+  ): Promise<OrganizationRecord | null> {
+    const isMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isMember) {
+      throw new Error('FORBIDDEN_ORG_MEMBER_REQUIRED');
+    }
+
+    const cleanOrgId = (orgId || '').trim();
+    const nextCap =
+      settings.monthlySpendCap === null
+        ? null
+        : typeof settings.monthlySpendCap === 'number' && settings.monthlySpendCap > 0
+        ? Math.floor(settings.monthlySpendCap)
+        : undefined;
+    const nextThreshold =
+      typeof settings.lowBalanceThreshold === 'number' && settings.lowBalanceThreshold >= 0
+        ? Math.floor(settings.lowBalanceThreshold)
+        : undefined;
+    const nextAlertEnabled =
+      settings.lowBalanceAlertEnabled !== undefined
+        ? Boolean(settings.lowBalanceAlertEnabled)
+        : undefined;
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanOrgId)) {
+      try {
+        const setPayload: Record<string, any> = {};
+        if (nextCap !== undefined) setPayload.monthlySpendCap = nextCap;
+        if (nextThreshold !== undefined) setPayload.lowBalanceThreshold = nextThreshold;
+        if (nextAlertEnabled !== undefined)
+          setPayload.lowBalanceAlertEnabled = nextAlertEnabled;
+
+        await Organization.findByIdAndUpdate(cleanOrgId, { $set: setPayload });
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore.updateOrganizationBillingSettings' },
+        });
+      }
+    }
+
+    await withOrderLock(async () => {
+      const db = readLocalDb();
+      const org = (db.organizations || []).find((o) => o.id === cleanOrgId);
+      if (org) {
+        if (nextCap !== undefined) org.monthlySpendCap = nextCap;
+        if (nextThreshold !== undefined) org.lowBalanceThreshold = nextThreshold;
+        if (nextAlertEnabled !== undefined)
+          org.lowBalanceAlertEnabled = nextAlertEnabled;
+        org.updatedAt = new Date().toISOString();
+        writeLocalDb(db);
+      }
+    });
+
+    return this.getOrganizationById(cleanOrgId);
+  },
+
+  async getHrCreditLedger(orgId: string, limit = 100): Promise<HrCreditLedgerRecord[]> {
+    const cleanOrgId = (orgId || '').trim();
+    if (!cleanOrgId) return [];
+    const safeLimit = Math.min(500, Math.max(1, limit));
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanOrgId)) {
+      try {
+        const docs: any[] = await HrCreditLedger.find({ orgId: cleanOrgId })
+          .sort({ createdAt: -1 })
+          .limit(safeLimit)
+          .lean();
+
+        return docs.map((d) => ({
+          id: d._id.toString(),
+          orgId: d.orgId.toString(),
+          delta: d.delta,
+          balanceAfter: d.balanceAfter,
+          reason: d.reason,
+          refId: d.refId,
+          actorId: d.actorId || null,
+          createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : String(d.createdAt),
+        }));
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'getHrCreditLedger MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    return (db.hrCreditLedger || [])
+      .filter((entry) => entry.orgId === cleanOrgId)
+      .slice(0, safeLimit);
+  },
+
+  /**
+   * Creates an EmployerJob posting with sanitized Markdown description and unique slug.
+   */
+  async createEmployerJob(
+    orgId: string,
+    actorUserId: string,
+    input: {
+      title: string;
+      description: string;
+      requirements?: string[];
+      skills?: string[];
+      location?: string;
+      remote?: boolean;
+      employmentType?: EmploymentType;
+      seniority?: EmployerJobSeniority;
+      salary?: Partial<EmployerJobSalary>;
+      screeningQuestions?: string[];
+      status?: EmployerJobStatus;
+      expiresAt?: string | Date | null;
+      slug?: string;
+    }
+  ): Promise<EmployerJobRecord> {
+    const cleanOrgId = (orgId || '').trim();
+    const isMember = await this.isOrganizationMember(cleanOrgId, actorUserId);
+    if (!isMember) {
+      throw new Error('FORBIDDEN_ORG_MEMBER_REQUIRED');
+    }
+
+    const org = await this.getOrganizationById(cleanOrgId);
+    const cleanTitle = sanitizeProfileText(input.title || '', 160);
+    if (!cleanTitle || cleanTitle.length < 2) {
+      throw new Error('JOB_TITLE_REQUIRED');
+    }
+
+    const cleanDescription = sanitizeJobMarkdown(input.description || '', 15000);
+    if (!cleanDescription) {
+      throw new Error('JOB_DESCRIPTION_REQUIRED');
+    }
+
+    const requirements = Array.isArray(input.requirements)
+      ? input.requirements
+          .map((r) => sanitizeProfileText(r, 300))
+          .filter(Boolean)
+          .slice(0, 30)
+      : [];
+    const skills = Array.isArray(input.skills)
+      ? input.skills
+          .map((s) => sanitizeProfileText(s, 60))
+          .filter(Boolean)
+          .slice(0, 30)
+      : [];
+    const screeningQuestions = Array.isArray(input.screeningQuestions)
+      ? input.screeningQuestions
+          .map((q) => sanitizeProfileText(q, 240))
+          .filter(Boolean)
+          .slice(0, 10)
+      : [];
+    const location = sanitizeProfileText(input.location || '', 120);
+    const remote = Boolean(input.remote);
+    const employmentType: EmploymentType =
+      input.employmentType &&
+      ['full-time', 'part-time', 'contract', 'internship'].includes(input.employmentType)
+        ? input.employmentType
+        : 'full-time';
+    const seniority: EmployerJobSeniority =
+      input.seniority &&
+      ['student', 'junior', 'mid', 'senior', 'lead', 'any'].includes(input.seniority)
+        ? input.seniority
+        : 'any';
+    const salary: EmployerJobSalary = {
+      min:
+        typeof input.salary?.min === 'number' && Number.isFinite(input.salary.min)
+          ? input.salary.min
+          : null,
+      max:
+        typeof input.salary?.max === 'number' && Number.isFinite(input.salary.max)
+          ? input.salary.max
+          : null,
+      currency:
+        typeof input.salary?.currency === 'string' && input.salary.currency.trim()
+          ? input.salary.currency.trim().toUpperCase()
+          : 'USD',
+      visible: Boolean(input.salary?.visible === true),
+    };
+    const status: EmployerJobStatus =
+      input.status &&
+      ['draft', 'pending', 'published', 'closed', 'expired'].includes(input.status)
+        ? input.status
+        : 'draft';
+
+    const nowIso = new Date().toISOString();
+    const publishedAt = status === 'published' ? nowIso : null;
+    const expiresAt = input.expiresAt
+      ? input.expiresAt instanceof Date
+        ? input.expiresAt.toISOString()
+        : String(input.expiresAt)
+      : null;
+
+    let baseSlug =
+      input.slug && input.slug.trim()
+        ? sanitizeProfileText(input.slug.trim().toLowerCase(), 100).replace(/[^a-z0-9\u0600-\u06FF-]+/g, '-')
+        : generateEmployerJobSlug(cleanTitle, org?.name);
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanOrgId)) {
+      try {
+        const existingSlug = await EmployerJob.findOne({ slug: baseSlug }).lean();
+        if (existingSlug) {
+          baseSlug = generateEmployerJobSlug(cleanTitle, org?.name, crypto.randomBytes(3).toString('hex'));
+        }
+
+        const created: any = await EmployerJob.create({
+          orgId: cleanOrgId,
+          title: cleanTitle,
+          description: cleanDescription,
+          requirements,
+          skills,
+          location,
+          remote,
+          employmentType,
+          seniority,
+          salary,
+          screeningQuestions,
+          applyMode: 'internal',
+          status,
+          publishedAt: publishedAt ? new Date(publishedAt) : null,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          applicantsCount: 0,
+          slug: baseSlug,
+        });
+
+        return {
+          id: created._id.toString(),
+          orgId: created.orgId.toString(),
+          title: created.title,
+          description: created.description,
+          requirements: created.requirements || [],
+          skills: created.skills || [],
+          location: created.location || '',
+          remote: Boolean(created.remote),
+          employmentType: created.employmentType,
+          seniority: created.seniority,
+          salary: created.salary,
+          screeningQuestions: created.screeningQuestions || [],
+          applyMode: 'internal',
+          status: created.status,
+          publishedAt: created.publishedAt ? created.publishedAt.toISOString() : null,
+          expiresAt: created.expiresAt ? created.expiresAt.toISOString() : null,
+          applicantsCount: created.applicantsCount || 0,
+          slug: created.slug,
+          createdAt: created.createdAt.toISOString(),
+          updatedAt: created.updatedAt.toISOString(),
+        };
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'createEmployerJob MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.employerJobs)) db.employerJobs = [];
+
+      if (db.employerJobs.some((j) => j.slug === baseSlug)) {
+        baseSlug = generateEmployerJobSlug(cleanTitle, org?.name, crypto.randomBytes(3).toString('hex'));
+      }
+
+      const jobRecord: EmployerJobRecord = {
+        id: `ejob_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
+        orgId: cleanOrgId,
+        title: cleanTitle,
+        description: cleanDescription,
+        requirements,
+        skills,
+        location,
+        remote,
+        employmentType,
+        seniority,
+        salary,
+        screeningQuestions,
+        applyMode: 'internal',
+        status,
+        publishedAt,
+        expiresAt,
+        applicantsCount: 0,
+        slug: baseSlug,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+
+      db.employerJobs.unshift(jobRecord);
+      writeLocalDb(db);
+      return { ...jobRecord };
+    });
+  },
+
+  async getEmployerJobById(jobId: string): Promise<EmployerJobRecord | null> {
+    const cleanId = (jobId || '').trim();
+    if (!cleanId) return null;
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanId)) {
+      try {
+        const j: any = await EmployerJob.findById(cleanId).lean();
+        if (j) {
+          return {
+            id: j._id.toString(),
+            orgId: j.orgId.toString(),
+            title: j.title,
+            description: j.description,
+            requirements: j.requirements || [],
+            skills: j.skills || [],
+            location: j.location || '',
+            remote: Boolean(j.remote),
+            employmentType: j.employmentType || 'full-time',
+            seniority: j.seniority || 'any',
+            salary: j.salary || { min: null, max: null, currency: 'USD', visible: false },
+            screeningQuestions: j.screeningQuestions || [],
+            applyMode: 'internal',
+            status: j.status || 'draft',
+            publishedAt: j.publishedAt ? new Date(j.publishedAt).toISOString() : null,
+            expiresAt: j.expiresAt ? new Date(j.expiresAt).toISOString() : null,
+            applicantsCount: j.applicantsCount || 0,
+            slug: j.slug,
+            createdAt: j.createdAt instanceof Date ? j.createdAt.toISOString() : String(j.createdAt),
+            updatedAt: j.updatedAt instanceof Date ? j.updatedAt.toISOString() : String(j.updatedAt),
+          };
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'getEmployerJobById MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const found = (db.employerJobs || []).find((j) => j.id === cleanId);
+    return found ? { ...found } : null;
+  },
+
+  async getEmployerJobBySlug(slug: string): Promise<EmployerJobRecord | null> {
+    const cleanSlug = (slug || '').trim().toLowerCase();
+    if (!cleanSlug) return null;
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const j: any = await EmployerJob.findOne({ slug: cleanSlug }).lean();
+        if (j) {
+          return this.getEmployerJobById(j._id.toString());
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'getEmployerJobBySlug MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    const found = (db.employerJobs || []).find((j) => j.slug.toLowerCase() === cleanSlug);
+    return found ? { ...found } : null;
+  },
+
+  async updateEmployerJob(
+    jobId: string,
+    orgId: string,
+    actorUserId: string,
+    updates: Partial<{
+      title: string;
+      description: string;
+      requirements: string[];
+      skills: string[];
+      location: string;
+      remote: boolean;
+      employmentType: EmploymentType;
+      seniority: EmployerJobSeniority;
+      salary: EmployerJobSalary;
+      screeningQuestions: string[];
+      status: EmployerJobStatus;
+      expiresAt: string | null;
+    }>
+  ): Promise<EmployerJobRecord | null> {
+    const isMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isMember) {
+      throw new Error('FORBIDDEN_ORG_MEMBER_REQUIRED');
+    }
+
+    const nowIso = new Date().toISOString();
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(jobId) && mongoose.Types.ObjectId.isValid(orgId)) {
+      try {
+        const setPayload: Record<string, any> = {};
+        if (updates.title !== undefined) setPayload.title = sanitizeProfileText(updates.title, 160);
+        if (updates.description !== undefined)
+          setPayload.description = sanitizeJobMarkdown(updates.description, 15000);
+        if (updates.requirements !== undefined)
+          setPayload.requirements = updates.requirements.map((r) => sanitizeProfileText(r, 300));
+        if (updates.skills !== undefined)
+          setPayload.skills = updates.skills.map((s) => sanitizeProfileText(s, 60));
+        if (updates.location !== undefined)
+          setPayload.location = sanitizeProfileText(updates.location, 120);
+        if (updates.remote !== undefined) setPayload.remote = Boolean(updates.remote);
+        if (updates.employmentType !== undefined) setPayload.employmentType = updates.employmentType;
+        if (updates.seniority !== undefined) setPayload.seniority = updates.seniority;
+        if (updates.salary !== undefined) setPayload.salary = updates.salary;
+        if (updates.screeningQuestions !== undefined)
+          setPayload.screeningQuestions = updates.screeningQuestions.map((q) =>
+            sanitizeProfileText(q, 240)
+          );
+        if (updates.status !== undefined) {
+          setPayload.status = updates.status;
+          if (updates.status === 'published') {
+            setPayload.publishedAt = new Date(nowIso);
+          }
+        }
+        if (updates.expiresAt !== undefined) {
+          setPayload.expiresAt = updates.expiresAt ? new Date(updates.expiresAt) : null;
+        }
+
+        const updated: any = await EmployerJob.findOneAndUpdate(
+          { _id: jobId, orgId },
+          { $set: setPayload },
+          { new: true }
+        ).lean();
+
+        if (updated) {
+          return this.getEmployerJobById(updated._id.toString());
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'updateEmployerJob MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const job = (db.employerJobs || []).find((j) => j.id === jobId && j.orgId === orgId);
+      if (!job) return null;
+
+      if (updates.title !== undefined) job.title = sanitizeProfileText(updates.title, 160);
+      if (updates.description !== undefined)
+        job.description = sanitizeJobMarkdown(updates.description, 15000);
+      if (updates.requirements !== undefined)
+        job.requirements = updates.requirements.map((r) => sanitizeProfileText(r, 300));
+      if (updates.skills !== undefined)
+        job.skills = updates.skills.map((s) => sanitizeProfileText(s, 60));
+      if (updates.location !== undefined)
+        job.location = sanitizeProfileText(updates.location, 120);
+      if (updates.remote !== undefined) job.remote = Boolean(updates.remote);
+      if (updates.employmentType !== undefined) job.employmentType = updates.employmentType;
+      if (updates.seniority !== undefined) job.seniority = updates.seniority;
+      if (updates.salary !== undefined) job.salary = updates.salary;
+      if (updates.screeningQuestions !== undefined)
+        job.screeningQuestions = updates.screeningQuestions.map((q) =>
+          sanitizeProfileText(q, 240)
+        );
+      if (updates.status !== undefined) {
+        job.status = updates.status;
+        if (updates.status === 'published' && !job.publishedAt) {
+          job.publishedAt = nowIso;
+        }
+      }
+      if (updates.expiresAt !== undefined) job.expiresAt = updates.expiresAt;
+      job.updatedAt = nowIso;
+
+      writeLocalDb(db);
+      return { ...job };
+    });
+  },
+
+  async listEmployerJobs(filters?: {
+    orgId?: string;
+    status?: EmployerJobStatus;
+    limit?: number;
+  }): Promise<EmployerJobRecord[]> {
+    const safeLimit = Math.min(200, Math.max(1, filters?.limit || 50));
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const query: Record<string, any> = {};
+        if (filters?.orgId && mongoose.Types.ObjectId.isValid(filters.orgId)) {
+          query.orgId = filters.orgId;
+        }
+        if (filters?.status) {
+          query.status = filters.status;
+        }
+        const docs: any[] = await EmployerJob.find(query)
+          .sort({ createdAt: -1 })
+          .limit(safeLimit)
+          .lean();
+
+        return docs.map((j) => ({
+          id: j._id.toString(),
+          orgId: j.orgId.toString(),
+          title: j.title,
+          description: j.description,
+          requirements: j.requirements || [],
+          skills: j.skills || [],
+          location: j.location || '',
+          remote: Boolean(j.remote),
+          employmentType: j.employmentType || 'full-time',
+          seniority: j.seniority || 'any',
+          salary: j.salary || { min: null, max: null, currency: 'USD', visible: false },
+          screeningQuestions: j.screeningQuestions || [],
+          applyMode: 'internal',
+          status: j.status || 'draft',
+          publishedAt: j.publishedAt ? new Date(j.publishedAt).toISOString() : null,
+          expiresAt: j.expiresAt ? new Date(j.expiresAt).toISOString() : null,
+          applicantsCount: j.applicantsCount || 0,
+          slug: j.slug,
+          createdAt: j.createdAt instanceof Date ? j.createdAt.toISOString() : String(j.createdAt),
+          updatedAt: j.updatedAt instanceof Date ? j.updatedAt.toISOString() : String(j.updatedAt),
+        }));
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'listEmployerJobs MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    let list = db.employerJobs || [];
+    if (filters?.orgId) {
+      list = list.filter((j) => j.orgId === filters.orgId);
+    }
+    if (filters?.status) {
+      list = list.filter((j) => j.status === filters.status);
+    }
+    return list.slice(0, safeLimit).map((j) => ({ ...j }));
+  },
+
+  /**
+   * Submits a candidate Application to an EmployerJob.
+   * - Enforces `unique(jobId, candidateId)` — throws `DUPLICATE_APPLICATION` if already applied.
+   * - Deep-clones `resumeSnapshot` so future CV changes never mutate the application's snapshot.
+   * - Records `consent { sharedAt, version }`.
+   * - Atomically increments `EmployerJob.applicantsCount`.
+   */
+  async createApplication(input: {
+    jobId: string;
+    candidateId: string;
+    resumeSnapshot: Record<string, any>;
+    coverLetter?: string;
+    answers?: ApplicationScreeningAnswer[];
+    consent: {
+      sharedAt?: string | Date;
+      version: string;
+      shareSalary?: boolean;
+      sharePhone?: boolean;
+    };
+  }): Promise<ApplicationRecord> {
+    const cleanJobId = (input.jobId || '').trim();
+    const cleanCandidateId = (input.candidateId || '').trim();
+
+    if (!cleanJobId || !cleanCandidateId) {
+      throw new Error('JOB_AND_CANDIDATE_REQUIRED');
+    }
+    if (!input.resumeSnapshot || typeof input.resumeSnapshot !== 'object') {
+      throw new Error('RESUME_SNAPSHOT_REQUIRED');
+    }
+    if (!input.consent || !input.consent.version) {
+      throw new Error('CONSENT_REQUIRED');
+    }
+
+    const job = await this.getEmployerJobById(cleanJobId);
+    if (!job) {
+      throw new Error('JOB_NOT_FOUND');
+    }
+
+    // Deep-clone resumeSnapshot to guarantee immutability from any subsequent resume edits
+    const immutableSnapshot = JSON.parse(JSON.stringify(input.resumeSnapshot));
+    const cleanCoverLetter = sanitizeJobMarkdown(input.coverLetter || '', 8000);
+    const cleanAnswers: ApplicationScreeningAnswer[] = Array.isArray(input.answers)
+      ? input.answers
+          .map((a) => ({
+            question: sanitizeProfileText(a.question || '', 240),
+            answer: sanitizeProfileText(a.answer || '', 2000),
+          }))
+          .filter((a) => a.question && a.answer)
+          .slice(0, 10)
+      : [];
+
+    const nowIso = new Date().toISOString();
+    const sharedAtIso = input.consent.sharedAt
+      ? input.consent.sharedAt instanceof Date
+        ? input.consent.sharedAt.toISOString()
+        : String(input.consent.sharedAt)
+      : nowIso;
+    const consentObj = {
+      sharedAt: sharedAtIso,
+      version: sanitizeProfileText(input.consent.version, 32),
+      shareSalary: Boolean(input.consent.shareSalary),
+      sharePhone: Boolean(input.consent.sharePhone),
+    };
+
+    const mongoUp = await isMongoAvailable();
+    if (
+      mongoUp &&
+      mongoose.Types.ObjectId.isValid(cleanJobId) &&
+      mongoose.Types.ObjectId.isValid(cleanCandidateId)
+    ) {
+      try {
+        const existingApp = await Application.findOne({
+          jobId: cleanJobId,
+          candidateId: cleanCandidateId,
+        }).lean();
+
+        if (existingApp) {
+          throw new Error('DUPLICATE_APPLICATION');
+        }
+
+        const created: any = await Application.create({
+          jobId: cleanJobId,
+          orgId: job.orgId,
+          candidateId: cleanCandidateId,
+          resumeSnapshot: immutableSnapshot,
+          coverLetter: cleanCoverLetter,
+          answers: cleanAnswers,
+          consent: {
+            sharedAt: new Date(sharedAtIso),
+            version: consentObj.version,
+            shareSalary: consentObj.shareSalary,
+            sharePhone: consentObj.sharePhone,
+          },
+          status: 'new',
+          notes: '',
+          analysis: null,
+        });
+
+        await EmployerJob.findByIdAndUpdate(cleanJobId, {
+          $inc: { applicantsCount: 1 },
+        });
+
+        return {
+          id: created._id.toString(),
+          jobId: created.jobId.toString(),
+          orgId: created.orgId.toString(),
+          candidateId: created.candidateId.toString(),
+          resumeSnapshot: created.resumeSnapshot,
+          coverLetter: created.coverLetter || '',
+          answers: created.answers || [],
+          consent: consentObj,
+          status: created.status,
+          analysis: null,
+          createdAt: created.createdAt.toISOString(),
+          updatedAt: created.updatedAt.toISOString(),
+        };
+      } catch (err: any) {
+        if (err?.message === 'DUPLICATE_APPLICATION' || err?.code === 11000) {
+          throw new Error('DUPLICATE_APPLICATION');
+        }
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'createApplication MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.applications)) db.applications = [];
+      if (!Array.isArray(db.employerJobs)) db.employerJobs = [];
+
+      // Enforce unique(jobId, candidateId)
+      const duplicate = db.applications.some(
+        (a) => a.jobId === cleanJobId && a.candidateId === cleanCandidateId
+      );
+      if (duplicate) {
+        throw new Error('DUPLICATE_APPLICATION');
+      }
+
+      const appRecord: ApplicationRecord = {
+        id: `app_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
+        jobId: cleanJobId,
+        orgId: job.orgId,
+        candidateId: cleanCandidateId,
+        resumeSnapshot: immutableSnapshot,
+        coverLetter: cleanCoverLetter,
+        answers: cleanAnswers,
+        consent: consentObj,
+        status: 'new',
+        notes: '',
+        analysis: null,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+
+      db.applications.unshift(appRecord);
+
+      const targetJob = db.employerJobs.find((j) => j.id === cleanJobId);
+      if (targetJob) {
+        targetJob.applicantsCount = (targetJob.applicantsCount || 0) + 1;
+        targetJob.updatedAt = nowIso;
+      }
+
+      writeLocalDb(db);
+      return formatApplicationForViewer(appRecord, 'candidate');
+    });
+  },
+
+  /**
+   * Fetches an Application by ID with role-based privacy enforcement:
+   * - HR organization members (`owner`/`recruiter`) see `notes` and full `analysis`.
+   * - The candidate who applied sees their application WITHOUT `notes` (HR-only).
+   * - Unrelated users receive `null`.
+   */
+  async getApplicationById(
+    applicationId: string,
+    viewerUserId: string
+  ): Promise<ApplicationRecord | null> {
+    const cleanAppId = (applicationId || '').trim();
+    const cleanViewerId = (viewerUserId || '').trim();
+    if (!cleanAppId || !cleanViewerId) return null;
+
+    let rawApp: ApplicationRecord | null = null;
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanAppId)) {
+      try {
+        const doc: any = await Application.findById(cleanAppId).lean();
+        if (doc) {
+          rawApp = {
+            id: doc._id.toString(),
+            jobId: doc.jobId.toString(),
+            orgId: doc.orgId.toString(),
+            candidateId: doc.candidateId.toString(),
+            resumeSnapshot: doc.resumeSnapshot,
+            coverLetter: doc.coverLetter || '',
+            answers: doc.answers || [],
+            consent: {
+              sharedAt:
+                doc.consent?.sharedAt instanceof Date
+                  ? doc.consent.sharedAt.toISOString()
+                  : String(doc.consent?.sharedAt || ''),
+              version: doc.consent?.version || '1.0',
+              shareSalary: Boolean(doc.consent?.shareSalary),
+              sharePhone: Boolean(doc.consent?.sharePhone),
+            },
+            status: doc.status || 'new',
+            notes: doc.notes || '',
+            manualRank: typeof doc.manualRank === 'number' ? doc.manualRank : null,
+            analysis: doc.analysis
+              ? {
+                  score: doc.analysis.score,
+                  matchedSkills: doc.analysis.matchedSkills || [],
+                  missingSkills: doc.analysis.missingSkills || [],
+                  strengths: doc.analysis.strengths || [],
+                  gaps: doc.analysis.gaps || [],
+                  interviewQuestions: doc.analysis.interviewQuestions || [],
+                  scoreBreakdown: doc.analysis.scoreBreakdown || undefined,
+                  jobDescriptionHash: doc.analysis.jobDescriptionHash || undefined,
+                  redactedCategories: doc.analysis.redactedCategories || [],
+                  summary: doc.analysis.summary || '',
+                  model: doc.analysis.model || '',
+                  createdAt:
+                    doc.analysis.createdAt instanceof Date
+                      ? doc.analysis.createdAt.toISOString()
+                      : String(doc.analysis.createdAt),
+                  creditsUsed: doc.analysis.creditsUsed ?? 1,
+                }
+              : null,
+            createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : String(doc.createdAt),
+            updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : String(doc.updatedAt),
+          };
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'getApplicationById MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    if (!rawApp) {
+      const db = readLocalDb();
+      const found = (db.applications || []).find((a) => a.id === cleanAppId);
+      if (found) {
+        rawApp = {
+          ...found,
+          resumeSnapshot: JSON.parse(JSON.stringify(found.resumeSnapshot)),
+        };
+      }
+    }
+
+    if (!rawApp) return null;
+
+    const isHrMember = await this.isOrganizationMember(rawApp.orgId, cleanViewerId);
+    if (isHrMember) {
+      return formatApplicationForViewer(rawApp, 'hr');
+    }
+
+    if (rawApp.candidateId === cleanViewerId) {
+      return formatApplicationForViewer(rawApp, 'candidate');
+    }
+
+    return null;
+  },
+
+  async listJobApplications(
+    jobId: string,
+    orgId: string,
+    actorUserId: string,
+    statusFilter?: ApplicationStatus
+  ): Promise<ApplicationRecord[]> {
+    const isHrMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isHrMember) {
+      throw new Error('FORBIDDEN_ORG_MEMBER_REQUIRED');
+    }
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(jobId) && mongoose.Types.ObjectId.isValid(orgId)) {
+      try {
+        const query: Record<string, any> = { jobId, orgId };
+        if (statusFilter) query.status = statusFilter;
+        const docs: any[] = await Application.find(query).sort({ createdAt: -1 }).lean();
+        return docs.map((doc) =>
+          formatApplicationForViewer(
+            {
+              id: doc._id.toString(),
+              jobId: doc.jobId.toString(),
+              orgId: doc.orgId.toString(),
+              candidateId: doc.candidateId.toString(),
+              resumeSnapshot: doc.resumeSnapshot,
+              coverLetter: doc.coverLetter || '',
+              answers: doc.answers || [],
+              consent: {
+                sharedAt:
+                  doc.consent?.sharedAt instanceof Date
+                    ? doc.consent.sharedAt.toISOString()
+                    : String(doc.consent?.sharedAt || ''),
+                version: doc.consent?.version || '1.0',
+                shareSalary: Boolean(doc.consent?.shareSalary),
+                sharePhone: Boolean(doc.consent?.sharePhone),
+              },
+              status: doc.status || 'new',
+              notes: doc.notes || '',
+              manualRank: typeof doc.manualRank === 'number' ? doc.manualRank : null,
+              analysis: doc.analysis
+                ? {
+                    score: doc.analysis.score,
+                    matchedSkills: doc.analysis.matchedSkills || [],
+                    missingSkills: doc.analysis.missingSkills || [],
+                    strengths: doc.analysis.strengths || [],
+                    gaps: doc.analysis.gaps || [],
+                    interviewQuestions: doc.analysis.interviewQuestions || [],
+                    scoreBreakdown: doc.analysis.scoreBreakdown || undefined,
+                    jobDescriptionHash: doc.analysis.jobDescriptionHash || undefined,
+                    redactedCategories: doc.analysis.redactedCategories || [],
+                    summary: doc.analysis.summary || '',
+                    model: doc.analysis.model || '',
+                    createdAt:
+                      doc.analysis.createdAt instanceof Date
+                        ? doc.analysis.createdAt.toISOString()
+                        : String(doc.analysis.createdAt),
+                    creditsUsed: doc.analysis.creditsUsed ?? 1,
+                  }
+                : null,
+              createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : String(doc.createdAt),
+              updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : String(doc.updatedAt),
+            },
+            'hr'
+          )
+        );
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'listJobApplications MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    let list = (db.applications || []).filter((a) => a.jobId === jobId && a.orgId === orgId);
+    if (statusFilter) {
+      list = list.filter((a) => a.status === statusFilter);
+    }
+    return list.map((a) => formatApplicationForViewer(a, 'hr'));
+  },
+
+  async listCandidateApplications(candidateId: string): Promise<ApplicationRecord[]> {
+    const cleanCandidateId = (candidateId || '').trim();
+    if (!cleanCandidateId) return [];
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanCandidateId)) {
+      try {
+        const docs: any[] = await Application.find({ candidateId: cleanCandidateId })
+          .select('-notes')
+          .sort({ createdAt: -1 })
+          .lean();
+        return docs.map((doc) =>
+          formatApplicationForViewer(
+            {
+              id: doc._id.toString(),
+              jobId: doc.jobId.toString(),
+              orgId: doc.orgId.toString(),
+              candidateId: doc.candidateId.toString(),
+              resumeSnapshot: doc.resumeSnapshot,
+              coverLetter: doc.coverLetter || '',
+              answers: doc.answers || [],
+              consent: {
+                sharedAt:
+                  doc.consent?.sharedAt instanceof Date
+                    ? doc.consent.sharedAt.toISOString()
+                    : String(doc.consent?.sharedAt || ''),
+                version: doc.consent?.version || '1.0',
+                shareSalary: Boolean(doc.consent?.shareSalary),
+                sharePhone: Boolean(doc.consent?.sharePhone),
+              },
+              status: doc.status || 'new',
+              analysis: doc.analysis
+                ? {
+                    score: doc.analysis.score,
+                    matchedSkills: doc.analysis.matchedSkills || [],
+                    missingSkills: doc.analysis.missingSkills || [],
+                    summary: doc.analysis.summary || '',
+                    model: doc.analysis.model || '',
+                    createdAt:
+                      doc.analysis.createdAt instanceof Date
+                        ? doc.analysis.createdAt.toISOString()
+                        : String(doc.analysis.createdAt),
+                    creditsUsed: doc.analysis.creditsUsed ?? 1,
+                  }
+                : null,
+              createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : String(doc.createdAt),
+              updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : String(doc.updatedAt),
+            },
+            'candidate'
+          )
+        );
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'listCandidateApplications MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    return (db.applications || [])
+      .filter((a) => a.candidateId === cleanCandidateId)
+      .map((a) => formatApplicationForViewer(a, 'candidate'));
+  },
+
+  /**
+   * Updates HR-only `notes`, `status`, and/or `manualRank` on an Application.
+   * Requires caller to be a member (`owner` or `recruiter`) of the organization.
+   */
+  async updateApplicationStatusAndNotes(
+    applicationId: string,
+    orgId: string,
+    actorUserId: string,
+    updates: {
+      status?: ApplicationStatus;
+      notes?: string;
+      manualRank?: number | null;
+    }
+  ): Promise<ApplicationRecord | null> {
+    const isHrMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isHrMember) {
+      throw new Error('FORBIDDEN_ORG_MEMBER_REQUIRED');
+    }
+
+    const nowIso = new Date().toISOString();
+
+    const mongoUp = await isMongoAvailable();
+    if (
+      mongoUp &&
+      mongoose.Types.ObjectId.isValid(applicationId) &&
+      mongoose.Types.ObjectId.isValid(orgId)
+    ) {
+      try {
+        const setPayload: Record<string, any> = {};
+        if (
+          updates.status &&
+          ['new', 'shortlisted', 'interview', 'rejected', 'hired'].includes(updates.status)
+        ) {
+          setPayload.status = updates.status;
+        }
+        if (updates.notes !== undefined) {
+          setPayload.notes = sanitizeProfileText(updates.notes, 4000);
+        }
+        if (updates.manualRank !== undefined) {
+          setPayload.manualRank =
+            typeof updates.manualRank === 'number' && Number.isFinite(updates.manualRank)
+              ? Math.max(1, Math.round(updates.manualRank))
+              : null;
+        }
+
+        const updated: any = await Application.findOneAndUpdate(
+          { _id: applicationId, orgId },
+          { $set: setPayload },
+          { new: true }
+        ).lean();
+
+        if (updated) {
+          return this.getApplicationById(applicationId, actorUserId);
+        }
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'updateApplicationStatusAndNotes MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const app = (db.applications || []).find(
+        (a) => a.id === applicationId && a.orgId === orgId
+      );
+      if (!app) return null;
+
+      if (
+        updates.status &&
+        ['new', 'shortlisted', 'interview', 'rejected', 'hired'].includes(updates.status)
+      ) {
+        app.status = updates.status;
+      }
+      if (updates.notes !== undefined) {
+        app.notes = sanitizeProfileText(updates.notes, 4000);
+      }
+      if (updates.manualRank !== undefined) {
+        app.manualRank =
+          typeof updates.manualRank === 'number' && Number.isFinite(updates.manualRank)
+            ? Math.max(1, Math.round(updates.manualRank))
+            : null;
+      }
+      app.updatedAt = nowIso;
+      writeLocalDb(db);
+      return formatApplicationForViewer(app, 'hr');
+    });
+  },
+
+  /**
+   * Counts net AI applicant analyses performed by an Organization in the last 24 hours.
+   * Refunds (`candidate_ai_analysis_refund`) offset deductions so failed calls don't count against the daily quota.
+   */
+  async getOrgDailyAiAnalysisCount(orgId: string): Promise<number> {
+    const ledger = await this.getHrCreditLedger(orgId, 300);
+    const dayAgoMs = Date.now() - 24 * 3600 * 1000;
+    let count = 0;
+    for (const entry of ledger) {
+      if (new Date(entry.createdAt).getTime() >= dayAgoMs) {
+        if (entry.reason === 'candidate_ai_analysis' && entry.delta < 0) {
+          count += Math.abs(entry.delta);
+        } else if (entry.reason === 'candidate_ai_analysis_refund' && entry.delta > 0) {
+          count = Math.max(0, count - entry.delta);
+        }
+      }
+    }
+    return count;
+  },
+
+  /**
+   * Analyzes a batch of applicants for a job posting (`jobId`) with:
+   * 1. Strict organization ownership check (`isOrganizationMember` + `job.orgId === orgId`).
+   * 2. Deduplication by `jobDescriptionHash`: if an applicant already has `analysis` with matching
+   *    `jobDescriptionHash` (and `!force`), skips credit deduction (`cached: true, creditsUsed: 0`).
+   * 3. Daily organization AI analysis cap (`ORG_DAILY_ANALYSIS_LIMIT`).
+   * 4. Atomic HR credit deduction BEFORE analysis, and **automatic atomic credit refund** (`addHrCredits`
+   *    with reason `'candidate_ai_analysis_refund'`) if the AI analysis fails!
+   * 5. Actual token/cost logging in `AiUsage` (`recordAiUsage`).
+   */
+  async analyzeApplicantsBatchForHr(params: {
+    jobId: string;
+    orgId: string;
+    actorUserId: string;
+    applicationIds?: string[];
+    onlyNew?: boolean;
+    force?: boolean;
+    dailyLimitOverride?: number;
+  }): Promise<{
+    ok: boolean;
+    error?:
+      | 'FORBIDDEN_ORG_MEMBER_REQUIRED'
+      | 'FORBIDDEN_JOB_OWNERSHIP_MISMATCH'
+      | 'JOB_NOT_FOUND'
+      | 'ORG_DAILY_LIMIT_EXCEEDED'
+      | 'MONTHLY_SPEND_CAP_EXCEEDED'
+      | 'INSUFFICIENT_HR_CREDITS';
+    analyzedCount: number;
+    cachedCount: number;
+    failedCount: number;
+    refundedCredits: number;
+    creditsCharged: number;
+    balanceAfter: number;
+    remainingIds: string[];
+    results: Array<{
+      applicationId: string;
+      status: 'analyzed' | 'cached' | 'failed';
+      cached: boolean;
+      creditsUsed: number;
+      refunded?: boolean;
+      error?: string;
+      analysis?: ApplicationAnalysis;
+    }>;
+  }> {
+    const { jobId, orgId, actorUserId } = params;
+    const isHrMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isHrMember) {
+      throw new Error('FORBIDDEN_ORG_MEMBER_REQUIRED');
+    }
+
+    const job = await this.getEmployerJobById(jobId);
+    if (!job) {
+      return {
+        ok: false,
+        error: 'JOB_NOT_FOUND',
+        analyzedCount: 0,
+        cachedCount: 0,
+        failedCount: 0,
+        refundedCredits: 0,
+        creditsCharged: 0,
+        balanceAfter: 0,
+        remainingIds: [],
+        results: [],
+      };
+    }
+    if (job.orgId !== orgId) {
+      throw new Error('FORBIDDEN_JOB_OWNERSHIP_MISMATCH');
+    }
+
+    const org = await this.getOrganizationById(orgId);
+    let currentBalance = org?.hrCredits ?? 0;
+
+    const allJobApps = await this.listJobApplications(jobId, orgId, actorUserId);
+    const currentJdHash = computeJobDescriptionHash(job);
+
+    let targetApps: ApplicationRecord[] = [];
+    if (Array.isArray(params.applicationIds) && params.applicationIds.length > 0) {
+      const idSet = new Set(params.applicationIds);
+      targetApps = allJobApps.filter((a) => idSet.has(a.id));
+    } else if (params.onlyNew) {
+      targetApps = allJobApps.filter(
+        (a) => !a.analysis || a.analysis.jobDescriptionHash !== currentJdHash
+      );
+    } else {
+      targetApps = allJobApps;
+    }
+
+    const batchApps = targetApps.slice(0, BULK_ANALYZE_MAX_BATCH_SIZE);
+    const remainingIds = targetApps.slice(BULK_ANALYZE_MAX_BATCH_SIZE).map((a) => a.id);
+
+    const dailyLimit = params.dailyLimitOverride ?? ORG_DAILY_ANALYSIS_LIMIT;
+    let dailyUsed = await this.getOrgDailyAiAnalysisCount(orgId);
+
+    const results: Array<{
+      applicationId: string;
+      status: 'analyzed' | 'cached' | 'failed';
+      cached: boolean;
+      creditsUsed: number;
+      refunded?: boolean;
+      error?: string;
+      analysis?: ApplicationAnalysis;
+    }> = [];
+
+    let analyzedCount = 0;
+    let cachedCount = 0;
+    let failedCount = 0;
+    let refundedCredits = 0;
+    let creditsCharged = 0;
+
+    for (const app of batchApps) {
+      // 1. Check if already analyzed for the exact same Job Description hash
+      const hasValidCache =
+        !params.force &&
+        app.analysis &&
+        typeof app.analysis.score === 'number' &&
+        app.analysis.jobDescriptionHash === currentJdHash &&
+        Array.isArray(app.analysis.strengths) &&
+        app.analysis.strengths.length > 0;
+
+      if (hasValidCache && app.analysis) {
+        cachedCount += 1;
+        results.push({
+          applicationId: app.id,
+          status: 'cached',
+          cached: true,
+          creditsUsed: 0,
+          analysis: app.analysis,
+        });
+        continue;
+      }
+
+      // 2. Check organization daily AI limit
+      if (dailyUsed >= dailyLimit) {
+        return {
+          ok: false,
+          error: 'ORG_DAILY_LIMIT_EXCEEDED',
+          analyzedCount,
+          cachedCount,
+          failedCount,
+          refundedCredits,
+          creditsCharged,
+          balanceAfter: currentBalance,
+          remainingIds: [
+            ...batchApps.slice(results.length).map((a) => a.id),
+            ...remainingIds,
+          ],
+          results,
+        };
+      }
+
+      // 3. Atomic credit deduction BEFORE running AI
+      const deductRes = await this.deductHrCredits(
+        orgId,
+        SINGLE_APPLICANT_ANALYSIS_CREDIT_COST,
+        'candidate_ai_analysis',
+        app.id,
+        actorUserId
+      );
+
+      if (!deductRes.success) {
+        currentBalance = deductRes.balanceAfter;
+        return {
+          ok: false,
+          error:
+            deductRes.error === 'MONTHLY_SPEND_CAP_EXCEEDED'
+              ? 'MONTHLY_SPEND_CAP_EXCEEDED'
+              : 'INSUFFICIENT_HR_CREDITS',
+          analyzedCount,
+          cachedCount,
+          failedCount,
+          refundedCredits,
+          creditsCharged,
+          balanceAfter: currentBalance,
+          remainingIds: [
+            ...batchApps.slice(results.length).map((a) => a.id),
+            ...remainingIds,
+          ],
+          results,
+        };
+      }
+
+      currentBalance = deductRes.balanceAfter;
+
+      // 4. Execute Fairness-Redacted Deterministic + AI Analysis, refunding atomically if AI fails
+      try {
+        const userRec = await this.findUserById(app.candidateId);
+        const snapName =
+          app.resumeSnapshot?.fullName ||
+          app.resumeSnapshot?.personalInfo?.fullName ||
+          userRec?.name ||
+          '';
+
+        const { analysis, usage } = await analyzeApplicantAgainstJob({
+          application: app,
+          job,
+          candidateName: snapName,
+        });
+
+        // Save analysis onto Application record
+        const nowIso = new Date().toISOString();
+        const mongoUp = await isMongoAvailable();
+        if (
+          mongoUp &&
+          mongoose.Types.ObjectId.isValid(app.id) &&
+          mongoose.Types.ObjectId.isValid(orgId)
+        ) {
+          try {
+            await Application.findOneAndUpdate(
+              { _id: app.id, orgId },
+              {
+                $set: {
+                  analysis: {
+                    ...analysis,
+                    createdAt: new Date(nowIso),
+                  },
+                },
+              }
+            );
+          } catch (err) {
+            Sentry.captureException(err, {
+              tags: { component: 'DataStore.analyzeApplicantsBatchForHr' },
+            });
+          }
+        }
+
+        await withOrderLock(async () => {
+          const db = readLocalDb();
+          const target = (db.applications || []).find(
+            (a) => a.id === app.id && a.orgId === orgId
+          );
+          if (target) {
+            target.analysis = analysis;
+            target.updatedAt = nowIso;
+            writeLocalDb(db);
+          }
+        });
+
+        // Record actual token & USD cost in AiUsage
+        await this.recordAiUsage({
+          userId: `org:${orgId}:${actorUserId}`,
+          endpoint: '/api/employer/jobs/[jobId]/analyze',
+          tokens: usage.tokens,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          costUsd: usage.costUsd,
+          latencyMs: usage.latencyMs,
+          status: usage.status,
+          provider: usage.provider,
+          model: usage.model,
+        });
+
+        analyzedCount += 1;
+        creditsCharged += SINGLE_APPLICANT_ANALYSIS_CREDIT_COST;
+        dailyUsed += SINGLE_APPLICANT_ANALYSIS_CREDIT_COST;
+
+        results.push({
+          applicationId: app.id,
+          status: 'analyzed',
+          cached: false,
+          creditsUsed: SINGLE_APPLICANT_ANALYSIS_CREDIT_COST,
+          analysis,
+        });
+      } catch (aiErr: any) {
+        // Automatic Atomic Refund on AI Failure!
+        const refundRes = await this.addHrCredits(
+          orgId,
+          SINGLE_APPLICANT_ANALYSIS_CREDIT_COST,
+          'candidate_ai_analysis_refund',
+          app.id,
+          actorUserId
+        );
+        currentBalance = refundRes.balanceAfter;
+        failedCount += 1;
+        refundedCredits += SINGLE_APPLICANT_ANALYSIS_CREDIT_COST;
+
+        await this.recordAiUsage({
+          userId: `org:${orgId}:${actorUserId}`,
+          endpoint: '/api/employer/jobs/[jobId]/analyze',
+          tokens: 0,
+          promptTokens: 0,
+          completionTokens: 0,
+          costUsd: 0,
+          latencyMs: 10,
+          status: 'fallback',
+          fallbackReason: aiErr?.message || 'AI_ANALYSIS_FAILED_REFUNDED',
+          provider: 'blind-ats-ai-hybrid',
+          model: 'gemini-2.5-flash',
+        });
+
+        results.push({
+          applicationId: app.id,
+          status: 'failed',
+          cached: false,
+          creditsUsed: 0,
+          refunded: true,
+          error: aiErr?.message || 'AI_ANALYSIS_FAILED',
+        });
+      }
+    }
+
+    return {
+      ok: failedCount === 0 || analyzedCount > 0 || cachedCount > 0,
+      analyzedCount,
+      cachedCount,
+      failedCount,
+      refundedCredits,
+      creditsCharged,
+      balanceAfter: currentBalance,
+      remainingIds,
+      results,
+    };
+  },
+
+  /**
+   * Generates a Top 10 Candidates Comparison Report for `jobId`.
+   * Costs `TOP_10_COMPARISON_CREDIT_COST` (2 HR credits) atomically, with automatic refund if generation fails.
+   */
+  async generateTop10ReportForHr(params: {
+    jobId: string;
+    orgId: string;
+    actorUserId: string;
+  }): Promise<{
+    ok: boolean;
+    error?:
+      | 'FORBIDDEN_ORG_MEMBER_REQUIRED'
+      | 'FORBIDDEN_JOB_OWNERSHIP_MISMATCH'
+      | 'JOB_NOT_FOUND'
+      | 'NO_ANALYZED_APPLICANTS'
+      | 'MONTHLY_SPEND_CAP_EXCEEDED'
+      | 'INSUFFICIENT_HR_CREDITS';
+    report?: Top10ComparisonReport;
+    balanceAfter: number;
+  }> {
+    const { jobId, orgId, actorUserId } = params;
+    const isHrMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isHrMember) {
+      throw new Error('FORBIDDEN_ORG_MEMBER_REQUIRED');
+    }
+
+    const job = await this.getEmployerJobById(jobId);
+    if (!job) {
+      return { ok: false, error: 'JOB_NOT_FOUND', balanceAfter: 0 };
+    }
+    if (job.orgId !== orgId) {
+      throw new Error('FORBIDDEN_JOB_OWNERSHIP_MISMATCH');
+    }
+
+    const apps = await this.listJobApplications(jobId, orgId, actorUserId);
+    const analyzedApps = apps.filter((a) => a.analysis && typeof a.analysis.score === 'number');
+    if (analyzedApps.length === 0) {
+      const org = await this.getOrganizationById(orgId);
+      return {
+        ok: false,
+        error: 'NO_ANALYZED_APPLICANTS',
+        balanceAfter: org?.hrCredits ?? 0,
+      };
+    }
+
+    const deductRes = await this.deductHrCredits(
+      orgId,
+      TOP_10_COMPARISON_CREDIT_COST,
+      'top10_comparison_report',
+      jobId,
+      actorUserId
+    );
+
+    if (!deductRes.success) {
+      return {
+        ok: false,
+        error:
+          deductRes.error === 'MONTHLY_SPEND_CAP_EXCEEDED'
+            ? 'MONTHLY_SPEND_CAP_EXCEEDED'
+            : 'INSUFFICIENT_HR_CREDITS',
+        balanceAfter: deductRes.balanceAfter,
+      };
+    }
+
+    try {
+      const report = buildTop10ComparisonReport({ job, applications: analyzedApps });
+
+      await this.recordAiUsage({
+        userId: `org:${orgId}:${actorUserId}`,
+        endpoint: '/api/employer/jobs/[jobId]/analyze#top10',
+        tokens: 420,
+        promptTokens: 260,
+        completionTokens: 160,
+        costUsd: 0.00032,
+        latencyMs: 25,
+        status: 'hit',
+        provider: 'blind-ats-ai-hybrid',
+        model: 'gemini-2.5-flash',
+      });
+
+      return {
+        ok: true,
+        report,
+        balanceAfter: deductRes.balanceAfter,
+      };
+    } catch (err) {
+      const refund = await this.addHrCredits(
+        orgId,
+        TOP_10_COMPARISON_CREDIT_COST,
+        'top10_comparison_refund',
+        jobId,
+        actorUserId
+      );
+      return {
+        ok: false,
+        balanceAfter: refund.balanceAfter,
+      };
+    }
+  },
+
+  /**
+   * Atomically deducts `creditsUsed` from the Organization's `hrCredits` (recording a ledger entry
+   * in `HrCreditLedger`) and saves the AI candidate `analysis` onto the Application.
+   */
+  async analyzeApplicationWithHrCredits(
+    applicationId: string,
+    orgId: string,
+    actorUserId: string,
+    analysisInput: {
+      score: number;
+      matchedSkills: string[];
+      missingSkills: string[];
+      summary: string;
+      model: string;
+      creditsUsed?: number;
+    }
+  ): Promise<{
+    success: boolean;
+    error?:
+      | 'INSUFFICIENT_HR_CREDITS'
+      | 'MONTHLY_SPEND_CAP_EXCEEDED'
+      | 'ORGANIZATION_NOT_FOUND'
+      | 'APPLICATION_NOT_FOUND';
+    application?: ApplicationRecord;
+    balanceAfter?: number;
+  }> {
+    const isHrMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isHrMember) {
+      throw new Error('FORBIDDEN_ORG_MEMBER_REQUIRED');
+    }
+
+    const existingApp = await this.getApplicationById(applicationId, actorUserId);
+    if (!existingApp || existingApp.orgId !== orgId) {
+      return { success: false, error: 'APPLICATION_NOT_FOUND' };
+    }
+
+    const creditsUsed =
+      typeof analysisInput.creditsUsed === 'number' && analysisInput.creditsUsed >= 0
+        ? Math.floor(analysisInput.creditsUsed)
+        : 1;
+
+    let balanceAfter = 0;
+    if (creditsUsed > 0) {
+      const deductRes = await this.deductHrCredits(
+        orgId,
+        creditsUsed,
+        'candidate_ai_analysis',
+        applicationId,
+        actorUserId
+      );
+      if (!deductRes.success) {
+        return {
+          success: false,
+          error: deductRes.error || 'INSUFFICIENT_HR_CREDITS',
+          balanceAfter: deductRes.balanceAfter,
+        };
+      }
+      balanceAfter = deductRes.balanceAfter;
+    }
+
+    const nowIso = new Date().toISOString();
+    const analysisObj: ApplicationAnalysis = {
+      score: Math.min(100, Math.max(0, Math.round(analysisInput.score))),
+      matchedSkills: (analysisInput.matchedSkills || []).map((s) => sanitizeProfileText(s, 60)),
+      missingSkills: (analysisInput.missingSkills || []).map((s) => sanitizeProfileText(s, 60)),
+      summary: sanitizeProfileText(analysisInput.summary || '', 2000),
+      model: sanitizeProfileText(analysisInput.model || 'gemini-2.5-flash', 80),
+      createdAt: nowIso,
+      creditsUsed,
+    };
+
+    const mongoUp = await isMongoAvailable();
+    if (
+      mongoUp &&
+      mongoose.Types.ObjectId.isValid(applicationId) &&
+      mongoose.Types.ObjectId.isValid(orgId)
+    ) {
+      try {
+        await Application.findOneAndUpdate(
+          { _id: applicationId, orgId },
+          {
+            $set: {
+              analysis: {
+                ...analysisObj,
+                createdAt: new Date(nowIso),
+              },
+            },
+          }
+        );
+        const updatedApp = await this.getApplicationById(applicationId, actorUserId);
+        return {
+          success: true,
+          application: updatedApp || undefined,
+          balanceAfter,
+        };
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'analyzeApplicationWithHrCredits MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const app = (db.applications || []).find(
+        (a) => a.id === applicationId && a.orgId === orgId
+      );
+      if (!app) {
+        return { success: false, error: 'APPLICATION_NOT_FOUND' };
+      }
+      app.analysis = analysisObj;
+      app.updatedAt = nowIso;
+      writeLocalDb(db);
+      return {
+        success: true,
+        application: formatApplicationForViewer(app, 'hr'),
+        balanceAfter,
+      };
+    });
+  },
+
+  /**
+   * Initiates Organization corporate domain email verification.
+   * Rejects free/consumer email providers (gmail, yahoo, hotmail, etc.).
+   */
+  async requestOrganizationDomainVerification(
+    orgId: string,
+    actorUserId: string,
+    workEmail: string
+  ): Promise<{
+    ok: boolean;
+    error?:
+      | 'FORBIDDEN_ORG_MEMBER_REQUIRED'
+      | 'ORGANIZATION_NOT_FOUND'
+      | 'INVALID_EMAIL'
+      | 'CONSUMER_EMAIL_DOMAIN_NOT_ALLOWED';
+    code?: string;
+    workEmail?: string;
+    domain?: string;
+  }> {
+    const isMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isMember) {
+      return { ok: false, error: 'FORBIDDEN_ORG_MEMBER_REQUIRED' };
+    }
+
+    const emailCheck = validateCompanyDomainEmail(workEmail);
+    if (!emailCheck.valid) {
+      return {
+        ok: false,
+        error: emailCheck.reason || 'CONSUMER_EMAIL_DOMAIN_NOT_ALLOWED',
+        domain: emailCheck.domain,
+      };
+    }
+
+    const code = String(crypto.randomInt(100000, 999999));
+    const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
+    const expiresAtIso = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(orgId)) {
+      try {
+        const updated = await Organization.findByIdAndUpdate(
+          orgId,
+          {
+            $set: {
+              workEmail: emailCheck.email,
+              verificationTokenHash: tokenHash,
+              verificationExpiresAt: new Date(expiresAtIso),
+            },
+          },
+          { new: true }
+        ).lean();
+        if (!updated) {
+          return { ok: false, error: 'ORGANIZATION_NOT_FOUND' };
+        }
+        return {
+          ok: true,
+          code,
+          workEmail: emailCheck.email,
+          domain: emailCheck.domain,
+        };
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'requestOrganizationDomainVerification MongoDB failed; falling back' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const org = (db.organizations || []).find((o) => o.id === orgId);
+      if (!org) {
+        return { ok: false, error: 'ORGANIZATION_NOT_FOUND' };
+      }
+      org.workEmail = emailCheck.email;
+      org.verificationTokenHash = tokenHash;
+      org.verificationExpiresAt = expiresAtIso;
+      org.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return {
+        ok: true,
+        code,
+        workEmail: emailCheck.email,
+        domain: emailCheck.domain,
+      };
+    });
+  },
+
+  /**
+   * Confirms Organization corporate domain verification using the 6-digit code.
+   */
+  async confirmOrganizationDomainVerification(
+    orgId: string,
+    actorUserId: string,
+    code: string
+  ): Promise<{
+    ok: boolean;
+    error?:
+      | 'FORBIDDEN_ORG_MEMBER_REQUIRED'
+      | 'ORGANIZATION_NOT_FOUND'
+      | 'INVALID_OR_EXPIRED_VERIFICATION_CODE';
+    organization?: OrganizationRecord;
+  }> {
+    const isMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isMember) {
+      return { ok: false, error: 'FORBIDDEN_ORG_MEMBER_REQUIRED' };
+    }
+
+    const cleanCode = (code || '').trim();
+    if (!cleanCode) {
+      return { ok: false, error: 'INVALID_OR_EXPIRED_VERIFICATION_CODE' };
+    }
+
+    const inputHash = crypto.createHash('sha256').update(cleanCode).digest('hex');
+    const nowMs = Date.now();
+    const nowIso = new Date(nowMs).toISOString();
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(orgId)) {
+      try {
+        const orgDoc: any = await Organization.findById(orgId).select(
+          '+verificationTokenHash +verificationExpiresAt'
+        );
+        if (!orgDoc) {
+          return { ok: false, error: 'ORGANIZATION_NOT_FOUND' };
+        }
+        const expMs = orgDoc.verificationExpiresAt
+          ? new Date(orgDoc.verificationExpiresAt).getTime()
+          : 0;
+        if (
+          !orgDoc.verificationTokenHash ||
+          orgDoc.verificationTokenHash !== inputHash ||
+          expMs < nowMs
+        ) {
+          return { ok: false, error: 'INVALID_OR_EXPIRED_VERIFICATION_CODE' };
+        }
+
+        orgDoc.verified = true;
+        orgDoc.verifiedAt = new Date(nowIso);
+        orgDoc.verificationTokenHash = null;
+        orgDoc.verificationExpiresAt = null;
+        await orgDoc.save();
+
+        const updatedOrg = await this.getOrganizationById(orgId);
+        return { ok: true, organization: updatedOrg || undefined };
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'confirmOrganizationDomainVerification MongoDB failed; falling back' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const org = (db.organizations || []).find((o) => o.id === orgId);
+      if (!org) {
+        return { ok: false, error: 'ORGANIZATION_NOT_FOUND' };
+      }
+      const expMs = org.verificationExpiresAt ? new Date(org.verificationExpiresAt).getTime() : 0;
+      if (
+        !org.verificationTokenHash ||
+        org.verificationTokenHash !== inputHash ||
+        expMs < nowMs
+      ) {
+        return { ok: false, error: 'INVALID_OR_EXPIRED_VERIFICATION_CODE' };
+      }
+
+      org.verified = true;
+      org.verifiedAt = nowIso;
+      org.verificationTokenHash = null;
+      org.verificationExpiresAt = null;
+      org.updatedAt = nowIso;
+      writeLocalDb(db);
+
+      return { ok: true, organization: { ...org } };
+    });
+  },
+
+  /**
+   * Publishes an EmployerJob with:
+   * 1. Strict organization membership check (`isOrganizationMember`).
+   * 2. Content moderation filter (`moderateJobContent`: blocks payment requests / scam keywords, flags suspicious links).
+   * 3. Unverified organization safeguard: max 2 job submissions per 24h, and enters `status = 'pending'` for Admin review.
+   * 4. Atomic 1 HR credit deduction (`deductHrCredits`), returning `INSUFFICIENT_HR_CREDITS` (whilst preserving draft) if balance is 0.
+   */
+  async publishEmployerJob(
+    jobId: string,
+    orgId: string,
+    actorUserId: string
+  ): Promise<{
+    success: boolean;
+    error?:
+      | 'FORBIDDEN_ORG_MEMBER_REQUIRED'
+      | 'ORGANIZATION_NOT_FOUND'
+      | 'JOB_NOT_FOUND'
+      | 'CONTENT_POLICY_VIOLATION'
+      | 'UNVERIFIED_DAILY_LIMIT_REACHED'
+      | 'MONTHLY_SPEND_CAP_EXCEEDED'
+      | 'INSUFFICIENT_HR_CREDITS';
+    moderationFlags?: ModerationFlagCode[];
+    moderationReasons?: string[];
+    balanceAfter?: number;
+    job?: EmployerJobRecord;
+  }> {
+    const isMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isMember) {
+      return { success: false, error: 'FORBIDDEN_ORG_MEMBER_REQUIRED' };
+    }
+
+    const org = await this.getOrganizationById(orgId);
+    if (!org) {
+      return { success: false, error: 'ORGANIZATION_NOT_FOUND' };
+    }
+
+    const job = await this.getEmployerJobById(jobId);
+    if (!job || job.orgId !== orgId) {
+      return { success: false, error: 'JOB_NOT_FOUND' };
+    }
+
+    // 1. Content moderation check
+    const modResult = moderateJobContent({
+      title: job.title,
+      description: job.description,
+      requirements: job.requirements,
+      screeningQuestions: job.screeningQuestions,
+    });
+
+    if (
+      modResult.flags.includes('PAYMENT_FROM_APPLICANT') ||
+      modResult.flags.includes('BANNED_SCAM_CONTENT')
+    ) {
+      return {
+        success: false,
+        error: 'CONTENT_POLICY_VIOLATION',
+        moderationFlags: modResult.flags,
+        moderationReasons: modResult.reasons,
+      };
+    }
+
+    // 2. Unverified organization daily submission cap (max 2 non-draft jobs in 24h)
+    if (!org.verified && !job.paidWithCredit) {
+      const orgJobs = await this.listEmployerJobs({ orgId, limit: 100 });
+      const dayAgoMs = Date.now() - 24 * 3600 * 1000;
+      const recentSubmittedCount = orgJobs.filter(
+        (j) =>
+          j.id !== job.id &&
+          (j.status === 'pending' || j.status === 'published') &&
+          new Date(j.createdAt).getTime() >= dayAgoMs
+      ).length;
+
+      if (recentSubmittedCount >= 2) {
+        return {
+          success: false,
+          error: 'UNVERIFIED_DAILY_LIMIT_REACHED',
+        };
+      }
+    }
+
+    // 3. Atomic HR credit deduction (1 credit per job posting unless already paid)
+    let balanceAfter = org.hrCredits;
+    if (!job.paidWithCredit) {
+      const deductRes = await this.deductHrCredits(
+        orgId,
+        1,
+        'job_publish',
+        job.id,
+        actorUserId
+      );
+      if (!deductRes.success) {
+        return {
+          success: false,
+          error:
+            deductRes.error === 'MONTHLY_SPEND_CAP_EXCEEDED'
+              ? 'MONTHLY_SPEND_CAP_EXCEEDED'
+              : 'INSUFFICIENT_HR_CREDITS',
+          balanceAfter: deductRes.balanceAfter,
+          job,
+        };
+      }
+      balanceAfter = deductRes.balanceAfter;
+    }
+
+    // 4. Determine target status:
+    // - Verified org + clean moderation -> 'published'
+    // - Unverified org OR suspicious link flag -> 'pending' (for Admin review)
+    const targetStatus: EmployerJobStatus =
+      org.verified && modResult.passed ? 'published' : 'pending';
+    const nowIso = new Date().toISOString();
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(jobId) && mongoose.Types.ObjectId.isValid(orgId)) {
+      try {
+        await EmployerJob.findOneAndUpdate(
+          { _id: jobId, orgId },
+          {
+            $set: {
+              status: targetStatus,
+              paidWithCredit: true,
+              moderationFlags: modResult.flags,
+              publishedAt: targetStatus === 'published' ? new Date(nowIso) : null,
+            },
+          }
+        );
+        const updatedJob = await this.getEmployerJobById(jobId);
+        return {
+          success: true,
+          balanceAfter,
+          moderationFlags: modResult.flags,
+          job: updatedJob || undefined,
+        };
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'publishEmployerJob MongoDB failed; falling back to local DB' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const target = (db.employerJobs || []).find((j) => j.id === jobId && j.orgId === orgId);
+      if (!target) {
+        return { success: false, error: 'JOB_NOT_FOUND' };
+      }
+      target.status = targetStatus;
+      target.paidWithCredit = true;
+      target.moderationFlags = modResult.flags;
+      if (targetStatus === 'published') {
+        target.publishedAt = nowIso;
+      }
+      target.updatedAt = nowIso;
+      writeLocalDb(db);
+      return {
+        success: true,
+        balanceAfter,
+        moderationFlags: modResult.flags,
+        job: { ...target },
+      };
+    });
+  },
+
+  /**
+   * Enriched job applicants list for HR with strict ownership check (`isOrganizationMember`)
+   * and strict candidate privacy:
+   * - ONLY returns candidates who actually applied to `jobId` (never queries all users).
+   * - Exposes `phone` or `expectedSalary` ONLY if the candidate consented (`consent.sharePhone` / `consent.shareSalary`).
+   * - Supports filtering by `status` and sorting by `score` | `date` | `status`.
+   */
+  async getJobApplicantsForHr(
+    jobId: string,
+    orgId: string,
+    actorUserId: string,
+    options?: {
+      status?: ApplicationStatus | 'all';
+      sortBy?: 'score' | 'date' | 'status';
+      sortOrder?: 'asc' | 'desc';
+    }
+  ): Promise<
+    Array<
+      ApplicationRecord & {
+        candidateName: string;
+        candidateEmail: string;
+        candidatePhone?: string;
+        candidateHeadline?: string;
+        computedScore: number;
+      }
+    >
+  > {
+    const isHrMember = await this.isOrganizationMember(orgId, actorUserId);
+    if (!isHrMember) {
+      throw new Error('FORBIDDEN_ORG_MEMBER_REQUIRED');
+    }
+
+    const job = await this.getEmployerJobById(jobId);
+    if (!job || job.orgId !== orgId) {
+      throw new Error('FORBIDDEN_JOB_OWNERSHIP_MISMATCH');
+    }
+
+    const statusFilter =
+      options?.status && options.status !== 'all' ? options.status : undefined;
+    const apps = await this.listJobApplications(jobId, orgId, actorUserId, statusFilter);
+
+    const jobSkillsLower = (job.skills || []).map((s) => s.toLowerCase().trim()).filter(Boolean);
+
+    const enriched = await Promise.all(
+      apps.map(async (app) => {
+        const snap = app.resumeSnapshot || {};
+        const snapPersonal = snap.personalInfo || snap.basics || {};
+        // Fetch basic name/email ONLY for this applicant's candidateId if not in snapshot
+        const userRecord = await this.findUserById(app.candidateId);
+
+        const candidateName =
+          snapPersonal.fullName ||
+          snapPersonal.name ||
+          snap.fullName ||
+          userRecord?.name ||
+          'Applicant';
+        const candidateEmail =
+          snapPersonal.email || snap.email || userRecord?.email || '';
+        const candidateHeadline =
+          snapPersonal.jobTitle || snap.headline || snap.targetRole || '';
+
+        // Privacy rule: only include phone if candidate consented or put it in the submitted resumeSnapshot
+        const candidatePhone = app.consent?.sharePhone
+          ? snapPersonal.phone || (userRecord as any)?.phone || ''
+          : snapPersonal.phone || '';
+
+        // Calculate score from AI analysis if available, or deterministic skill overlap on resumeSnapshot
+        let computedScore = app.analysis?.score ?? 0;
+        if (!app.analysis && jobSkillsLower.length > 0) {
+          const snapSkillsRaw: string[] = Array.isArray(snap.skills)
+            ? snap.skills.map((s: any) => (typeof s === 'string' ? s : s?.name || ''))
+            : [];
+          const snapText = JSON.stringify(snap).toLowerCase();
+          const matched = jobSkillsLower.filter(
+            (reqSkill) =>
+              snapSkillsRaw.some((cs) => cs.toLowerCase().includes(reqSkill)) ||
+              snapText.includes(reqSkill)
+          );
+          computedScore = Math.round((matched.length / jobSkillsLower.length) * 100);
+        }
+
+        return {
+          ...app,
+          notes: app.notes ?? '',
+          candidateName,
+          candidateEmail,
+          candidatePhone,
+          candidateHeadline,
+          computedScore,
+        };
+      })
+    );
+
+    const sortBy = options?.sortBy || 'date';
+    const sortOrder = options?.sortOrder || 'desc';
+    const dir = sortOrder === 'asc' ? 1 : -1;
+
+    enriched.sort((a, b) => {
+      if (sortBy === 'score') {
+        const mrA = typeof a.manualRank === 'number' ? a.manualRank : null;
+        const mrB = typeof b.manualRank === 'number' ? b.manualRank : null;
+        if (mrA !== null && mrB !== null && mrA !== mrB) return mrA - mrB;
+        if (mrA !== null && mrB === null) return -1;
+        if (mrA === null && mrB !== null) return 1;
+        return (a.computedScore - b.computedScore) * dir;
+      }
+      if (sortBy === 'status') {
+        return a.status.localeCompare(b.status) * dir;
+      }
+      const tA = new Date(a.createdAt).getTime();
+      const tB = new Date(b.createdAt).getTime();
+      return (tA - tB) * dir;
+    });
+
+    return enriched;
+  },
+
+  // ============================================================================
+  // User Job Reports & Admin Moderation
+  // ============================================================================
+
+  async createJobReport(input: {
+    jobId: string;
+    jobTitle?: string;
+    company?: string;
+    reporterUserId: string;
+    reason: JobReportReason;
+    details?: string;
+  }): Promise<JobReportRecord> {
+    const nowIso = new Date().toISOString();
+    const record: JobReportRecord = {
+      id: `jrep_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
+      jobId: sanitizeProfileText(input.jobId, 160),
+      jobTitle: sanitizeProfileText(input.jobTitle || '', 180),
+      company: sanitizeProfileText(input.company || '', 140),
+      reporterUserId: sanitizeProfileText(input.reporterUserId, 120),
+      reason: input.reason,
+      details: sanitizeProfileText(input.details || '', 1500),
+      status: 'open',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.jobReports)) db.jobReports = [];
+      db.jobReports.unshift(record);
+      writeLocalDb(db);
+      return { ...record };
+    });
+  },
+
+  async listJobReports(statusFilter?: 'open' | 'resolved' | 'dismissed'): Promise<JobReportRecord[]> {
+    const db = readLocalDb();
+    const list = db.jobReports || [];
+    if (!statusFilter) return [...list];
+    return list.filter((r) => r.status === statusFilter);
+  },
+
+  async updateJobReportStatus(
+    reportId: string,
+    status: 'resolved' | 'dismissed'
+  ): Promise<JobReportRecord | null> {
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const rep = (db.jobReports || []).find((r) => r.id === reportId);
+      if (!rep) return null;
+      rep.status = status;
+      rep.updatedAt = new Date().toISOString();
+      writeLocalDb(db);
+      return { ...rep };
+    });
+  },
+
+  async adminModerateEmployerJob(
+    jobId: string,
+    action: 'approve' | 'reject'
+  ): Promise<EmployerJobRecord | null> {
+    const nowIso = new Date().toISOString();
+    const nextStatus: EmployerJobStatus = action === 'approve' ? 'published' : 'closed';
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(jobId)) {
+      try {
+        await EmployerJob.findByIdAndUpdate(jobId, {
+          $set: {
+            status: nextStatus,
+            publishedAt: action === 'approve' ? new Date(nowIso) : null,
+          },
+        });
+        return this.getEmployerJobById(jobId);
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'adminModerateEmployerJob MongoDB failed; falling back' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const job = (db.employerJobs || []).find((j) => j.id === jobId);
+      if (!job) return null;
+      job.status = nextStatus;
+      if (action === 'approve') {
+        job.publishedAt = nowIso;
+      }
+      job.updatedAt = nowIso;
+      writeLocalDb(db);
+      return { ...job };
+    });
+  },
+
+  async adminVerifyOrganization(
+    orgId: string,
+    verified: boolean
+  ): Promise<OrganizationRecord | null> {
+    const nowIso = new Date().toISOString();
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(orgId)) {
+      try {
+        await Organization.findByIdAndUpdate(orgId, {
+          $set: {
+            verified,
+            verifiedAt: verified ? new Date(nowIso) : null,
+          },
+        });
+        return this.getOrganizationById(orgId);
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'adminVerifyOrganization MongoDB failed; falling back' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      const org = (db.organizations || []).find((o) => o.id === orgId);
+      if (!org) return null;
+      org.verified = verified;
+      org.verifiedAt = verified ? nowIso : null;
+      org.updatedAt = nowIso;
+      writeLocalDb(db);
+      return { ...org };
+    });
+  },
+
+  async listAllOrganizationsForAdmin(): Promise<OrganizationRecord[]> {
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp) {
+      try {
+        const docs: any[] = await Organization.find({}).sort({ createdAt: -1 }).limit(200).lean();
+        return docs.map((org) => ({
+          id: org._id.toString(),
+          name: org.name,
+          slug: org.slug || '',
+          website: org.website || '',
+          logo: org.logo || '',
+          industry: org.industry || '',
+          size: org.size || '1-10',
+          country: org.country || '',
+          verified: Boolean(org.verified),
+          workEmail: org.workEmail || '',
+          verifiedAt: org.verifiedAt ? new Date(org.verifiedAt).toISOString() : null,
+          ownerId: org.ownerId.toString(),
+          members: (org.members || []).map((m: any) => ({
+            userId: m.userId.toString(),
+            role: m.role,
+            addedAt: m.addedAt instanceof Date ? m.addedAt.toISOString() : String(m.addedAt),
+          })),
+          hrCredits: org.hrCredits || 0,
+          creditBalance: org.hrCredits || 0,
+          createdAt: org.createdAt instanceof Date ? org.createdAt.toISOString() : String(org.createdAt),
+          updatedAt: org.updatedAt instanceof Date ? org.updatedAt.toISOString() : String(org.updatedAt),
+        }));
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'listAllOrganizationsForAdmin MongoDB failed; falling back' },
+        });
+      }
+    }
+
+    const db = readLocalDb();
+    return (db.organizations || []).map((o) => ({ ...o }));
+  },
+
+  /**
+   * Returns enriched applications for a candidate (`candidateId`) with job & organization metadata,
+   * while strictly stripping private HR `notes`.
+   */
+  async getCandidateApplicationsEnriched(candidateId: string): Promise<
+    Array<
+      ApplicationRecord & {
+        jobTitle: string;
+        jobSlug: string;
+        jobLocation: string;
+        jobRemote: boolean;
+        jobEmploymentType: string;
+        orgName: string;
+        orgLogo: string;
+        orgVerified: boolean;
+      }
+    >
+  > {
+    const apps = await this.listCandidateApplications(candidateId);
+    const enriched = await Promise.all(
+      apps.map(async (app) => {
+        const [job, org] = await Promise.all([
+          this.getEmployerJobById(app.jobId),
+          this.getOrganizationById(app.orgId),
+        ]);
+        const safeApp = formatApplicationForViewer(app, 'candidate');
+        return {
+          ...safeApp,
+          jobTitle: job?.title || 'Job Posting',
+          jobSlug: job?.slug || '',
+          jobLocation: job?.location || '',
+          jobRemote: Boolean(job?.remote),
+          jobEmploymentType: job?.employmentType || 'full-time',
+          orgName: org?.name || 'Hiring Organization',
+          orgLogo: org?.logo || '',
+          orgVerified: Boolean(org?.verified),
+        };
+      })
+    );
+    return enriched;
+  },
+
+  /**
+   * Withdraws a candidate's application and permanently deletes their application record
+   * (`resumeSnapshot`, `coverLetter`, `answers`, `analysis`) while decrementing `EmployerJob.applicantsCount`.
+   * Strictly enforces that `application.candidateId === candidateId`.
+   */
+  async withdrawCandidateApplication(
+    applicationId: string,
+    candidateId: string
+  ): Promise<{
+    deleted: boolean;
+    error?: 'APPLICATION_NOT_FOUND' | 'FORBIDDEN';
+    jobId?: string;
+  }> {
+    const cleanAppId = (applicationId || '').trim();
+    const cleanCandidateId = (candidateId || '').trim();
+    if (!cleanAppId || !cleanCandidateId) {
+      return { deleted: false, error: 'APPLICATION_NOT_FOUND' };
+    }
+
+    const mongoUp = await isMongoAvailable();
+    if (mongoUp && mongoose.Types.ObjectId.isValid(cleanAppId)) {
+      try {
+        const doc: any = await Application.findById(cleanAppId).lean();
+        if (!doc) {
+          return { deleted: false, error: 'APPLICATION_NOT_FOUND' };
+        }
+        if (doc.candidateId.toString() !== cleanCandidateId) {
+          return { deleted: false, error: 'FORBIDDEN' };
+        }
+
+        await Application.findByIdAndDelete(cleanAppId);
+        await EmployerJob.findOneAndUpdate(
+          { _id: doc.jobId, applicantsCount: { $gt: 0 } },
+          { $inc: { applicantsCount: -1 } }
+        );
+
+        return { deleted: true, jobId: doc.jobId.toString() };
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { component: 'DataStore' },
+          extra: { context: 'withdrawCandidateApplication MongoDB failed; falling back' },
+        });
+      }
+    }
+
+    return withOrderLock(async () => {
+      const db = readLocalDb();
+      if (!Array.isArray(db.applications)) {
+        return { deleted: false, error: 'APPLICATION_NOT_FOUND' };
+      }
+
+      const idx = db.applications.findIndex((a) => a.id === cleanAppId);
+      if (idx === -1) {
+        return { deleted: false, error: 'APPLICATION_NOT_FOUND' };
+      }
+
+      const target = db.applications[idx];
+      if (target.candidateId !== cleanCandidateId) {
+        return { deleted: false, error: 'FORBIDDEN' };
+      }
+
+      const jobId = target.jobId;
+      db.applications.splice(idx, 1);
+
+      const job = (db.employerJobs || []).find((j) => j.id === jobId);
+      if (job && job.applicantsCount > 0) {
+        job.applicantsCount -= 1;
+        job.updatedAt = new Date().toISOString();
+      }
+
+      writeLocalDb(db);
+      return { deleted: true, jobId };
+    });
+  },
+
+  /**
+   * Searches published internal `EmployerJob` postings and maps them into standard `Job` objects
+   * with `source: 'Direct'` and `url: '/jobs/hire/' + slug` so they appear in `/jobs` results with the "Direct" badge.
+   */
+  async searchPublishedEmployerJobsAsDirectJobs(params: {
+    query?: string;
+    location?: string;
+    remote?: boolean;
+  }): Promise<Job[]> {
+    const published = await this.listEmployerJobs({ status: 'published', limit: 100 });
+    if (published.length === 0) return [];
+
+    const qLower = (params.query || '').trim().toLowerCase();
+    const qTokens = qLower
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 2);
+    const locLower = (params.location || '').trim().toLowerCase();
+
+    const matchedJobs = published.filter((ej) => {
+      if (params.remote && !ej.remote) {
+        return false;
+      }
+      if (locLower && !ej.remote) {
+        const ejLoc = (ej.location || '').toLowerCase();
+        if (ejLoc && !ejLoc.includes(locLower) && !locLower.includes(ejLoc)) {
+          return false;
+        }
+      }
+      if (qTokens.length === 0) return true;
+
+      const haystack = [
+        ej.title,
+        ej.description,
+        ...(ej.skills || []),
+        ...(ej.requirements || []),
+        ej.location,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return qTokens.some((tok) => haystack.includes(tok));
+    });
+
+    const mapped = await Promise.all(
+      matchedJobs.map(async (ej): Promise<Job> => {
+        const org = await this.getOrganizationById(ej.orgId);
+        let salaryStr: string | undefined;
+        if (
+          ej.salary?.visible &&
+          (typeof ej.salary.min === 'number' || typeof ej.salary.max === 'number')
+        ) {
+          const minPart = typeof ej.salary.min === 'number' ? ej.salary.min.toLocaleString() : '0';
+          const maxPart =
+            typeof ej.salary.max === 'number' ? ej.salary.max.toLocaleString() : '+';
+          salaryStr = `${minPart} - ${maxPart} ${ej.salary.currency || 'USD'}`;
+        }
+
+        return {
+          id: ej.id,
+          title: ej.title,
+          company: org?.name || 'Verified Employer',
+          location: ej.location || (ej.remote ? 'Remote' : 'On-site'),
+          remote: Boolean(ej.remote),
+          description: ej.description,
+          url: `/jobs/hire/${ej.slug}`,
+          source: 'Direct',
+          postedDate: (ej.publishedAt || ej.createdAt || new Date().toISOString()).slice(0, 10),
+          salary: salaryStr,
+          jobType: ej.employmentType,
+          tags: ej.skills || [],
+        };
+      })
+    );
+
+    return mapped;
   },
 };
 

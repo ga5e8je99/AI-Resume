@@ -15,7 +15,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Tabs } from '@/components/ui/Tabs';
 import { CircularGauge } from '@/components/ui/CircularGauge';
 import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton';
-import { ScrollReveal, Stagger } from '../components/landing/ScrollReveal';
+import { Reveal, Stagger } from '@/components/motion/Reveal';
 import { useToast } from '@/app/context/ToastContext';
 import ThemeToggle from '../components/ThemeToggle';
 import PrivacySettingsSection from '../components/PrivacySettingsSection';
@@ -695,7 +695,7 @@ export default function DashboardPage() {
         {/* TOP: Welcome & Next-Best-Action Card + Credits Widget */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Next-Best-Action Highlight Card */}
-          <ScrollReveal direction="up" className="lg:col-span-2 h-full">
+          <Reveal direction="up" className="lg:col-span-2 h-full">
             <div className="card-interactive h-full relative rounded-xl border border-brand/25 bg-gradient-to-br from-surface to-surface-2 p-5 sm:p-6 shadow-subtle flex flex-col justify-between overflow-hidden">
               {/* Background glow ornament */}
               <div className="absolute -top-12 -end-12 w-48 h-48 bg-brand/10 rounded-full blur-2xl pointer-events-none" />
@@ -755,10 +755,10 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-          </ScrollReveal>
+          </Reveal>
 
           {/* AI Credits & Plan Widget */}
-          <ScrollReveal direction="up" delay={60} className="h-full">
+          <Reveal direction="up" delay={60} className="h-full">
             <div className="card-interactive h-full rounded-xl border border-line-strong bg-surface p-5 sm:p-6 shadow-subtle flex flex-col justify-between">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -827,7 +827,7 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-          </ScrollReveal>
+          </Reveal>
         </div>
 
         {/* Hidden Direct CV Upload Input */}

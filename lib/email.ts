@@ -887,6 +887,11 @@ export function getPaymentReceiptEmailHtml({
   const isAr = lang === 'ar';
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const isPro = planId === 'pro';
+  const isHr50 = planId === 'hr_pack_50';
+  const isHr200 = planId === 'hr_pack_200';
+  const isHr1000 = planId === 'hr_pack_1000';
+  const isHrPack = isHr50 || isHr200 || isHr1000;
+  const hrCreditAmount = isHr50 ? 50 : isHr200 ? 200 : isHr1000 ? 1000 : 0;
 
   const copy: Record<
     SupportedEmailLanguage,
@@ -906,29 +911,41 @@ export function getPaymentReceiptEmailHtml({
       title: 'Payment Receipt - JobMatch AI',
       heading: 'Payment Receipt & Confirmation 🧾',
       body: `Thank you, ${name}! Your payment has been processed and your account entitlements are now active.`,
-      planName: isPro ? 'JobMatch Pro (Unlimited)' : '15 AI Credits (Pay-As-You-Go)',
+      planName: isHrPack
+        ? `${hrCreditAmount} HR Credits Pack`
+        : isPro
+        ? 'JobMatch Pro (Unlimited)'
+        : '15 AI Credits (Pay-As-You-Go)',
       planLabel: 'Purchased Plan:',
       amountLabel: 'Amount Paid:',
       txLabel: 'Transaction ID:',
       dateLabel: 'Date:',
-      cta: 'Open Dashboard →',
+      cta: isHrPack ? 'Open HR Billing →' : 'Open Dashboard →',
     },
     ar: {
       title: 'إيصال دفع اشتراك JobMatch AI',
       heading: 'إيصال الدفع وتأكيد الاشتراك 🧾',
       body: `شكراً لك ${name}! تم استلام دفعتك بنجاح وتفعيل مزايا باقتك في حسابك فوراً.`,
-      planName: isPro ? 'باقة JobMatch Pro غير المحدودة' : 'باقة 15 نقطة ذكاء اصطناعي (Pay-As-You-Go)',
+      planName: isHrPack
+        ? `باقة ${hrCreditAmount} كريدت للتوظيف (HR)`
+        : isPro
+        ? 'باقة JobMatch Pro غير المحدودة'
+        : 'باقة 15 نقطة ذكاء اصطناعي (Pay-As-You-Go)',
       planLabel: 'الخطة / الباقة:',
       amountLabel: 'المبلغ المدفوع:',
       txLabel: 'رقم المعاملة:',
       dateLabel: 'التاريخ:',
-      cta: 'الذهاب إلى لوحة التحكم ←',
+      cta: isHrPack ? 'الذهاب إلى فوترة الشركات ←' : 'الذهاب إلى لوحة التحكم ←',
     },
     fr: {
       title: 'Reçu de paiement - JobMatch AI',
       heading: 'Reçu de paiement et confirmation 🧾',
       body: `Merci ${name} ! Votre paiement a été traité avec succès et vos avantages sont désormais actifs.`,
-      planName: isPro ? 'JobMatch Pro (Illimité)' : 'Pack de 15 crédits IA (Pay-As-You-Go)',
+      planName: isHrPack
+        ? `Pack ${hrCreditAmount} Crédits RH`
+        : isPro
+        ? 'JobMatch Pro (Illimité)'
+        : 'Pack de 15 crédits IA (Pay-As-You-Go)',
       planLabel: 'Offre souscrite :',
       amountLabel: 'Montant payé :',
       txLabel: 'Référence :',
@@ -939,7 +956,11 @@ export function getPaymentReceiptEmailHtml({
       title: 'Zahlungsbeleg - JobMatch AI',
       heading: 'Zahlungsbeleg & Bestätigung 🧾',
       body: `Vielen Dank, ${name}! Ihre Zahlung wurde erfolgreich verarbeitet und Ihr Konto wurde freigeschaltet.`,
-      planName: isPro ? 'JobMatch Pro (Unbegrenzt)' : '15 KI-Credits (Pay-As-You-Go)',
+      planName: isHrPack
+        ? `${hrCreditAmount} HR-Credits Paket`
+        : isPro
+        ? 'JobMatch Pro (Unbegrenzt)'
+        : '15 KI-Credits (Pay-As-You-Go)',
       planLabel: 'Gewählter Tarif:',
       amountLabel: 'Gezahlter Betrag:',
       txLabel: 'Transaktions-ID:',
@@ -950,7 +971,11 @@ export function getPaymentReceiptEmailHtml({
       title: 'Recibo de pago - JobMatch AI',
       heading: 'Recibo de pago y confirmación 🧾',
       body: `¡Gracias, ${name}! Tu pago se ha procesado correctamente y los beneficios de tu cuenta ya están activos.`,
-      planName: isPro ? 'JobMatch Pro (Ilimitado)' : '15 Créditos de IA (Pay-As-You-Go)',
+      planName: isHrPack
+        ? `Paquete de ${hrCreditAmount} Créditos RRHH`
+        : isPro
+        ? 'JobMatch Pro (Ilimitado)'
+        : '15 Créditos de IA (Pay-As-You-Go)',
       planLabel: 'Plan adquirido:',
       amountLabel: 'Importe pagado:',
       txLabel: 'ID de transacción:',
@@ -961,7 +986,11 @@ export function getPaymentReceiptEmailHtml({
       title: 'Ödeme Makbuzu - JobMatch AI',
       heading: 'Ödeme Makbuzu ve Onay 🧾',
       body: `Teşekkürler ${name}! Ödemeniz başarıyla işlendi ve paket özellikleriniz hesabınızda etkinleştirildi.`,
-      planName: isPro ? 'JobMatch Pro (Sınırsız)' : '15 Yapay Zeka Kredisi (Kullandıkça Öde)',
+      planName: isHrPack
+        ? `${hrCreditAmount} İK Kredisi Paketi`
+        : isPro
+        ? 'JobMatch Pro (Sınırsız)'
+        : '15 Yapay Zeka Kredisi (Kullandıkça Öde)',
       planLabel: 'Satın Alınan Paket:',
       amountLabel: 'Ödenen Tutar:',
       txLabel: 'İşlem Numarası:',
@@ -972,6 +1001,7 @@ export function getPaymentReceiptEmailHtml({
 
   const c = copy[lang];
   const valueAlign = isAr ? 'left' : 'right';
+  const ctaHref = isHrPack ? `${appUrl}/employer/billing` : `${appUrl}/dashboard`;
 
   const content = `
     <h1 style="color: #14181F; font-size: 22px; font-weight: 700; margin: 0 0 16px 0;">${c.heading}</h1>
@@ -999,13 +1029,57 @@ export function getPaymentReceiptEmailHtml({
     </table>
 
     <div style="text-align: center; margin: 28px 0 12px 0;">
-      <a href="${appUrl}/dashboard" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 6px;">
+      <a href="${ctaHref}" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 6px;">
         ${c.cta}
       </a>
     </div>
   `;
 
   return emailWrapper(content, lang, c.title);
+}
+
+export function getHrLowBalanceAlertEmailSubject(
+  orgName: string,
+  remainingCredits: number,
+  language: SupportedEmailLanguage = 'en'
+): string {
+  const lang = normalizeEmailLang(language);
+  const subjects: Record<SupportedEmailLanguage, string> = {
+    en: `Low HR Credit Balance Alert (${remainingCredits} left) - ${orgName}`,
+    ar: `تنبيه انخفاض رصيد كريدت التوظيف (${remainingCredits} متبقية) - ${orgName}`,
+    fr: `Alerte solde crédits RH faible (${remainingCredits} restants) - ${orgName}`,
+    de: `Warnung: Niedriges HR-Credit-Guthaben (${remainingCredits} übrig) - ${orgName}`,
+    es: `Alerta de saldo bajo de créditos RRHH (${remainingCredits} restantes) - ${orgName}`,
+    tr: `Düşük İK Kredisi Bakiyesi Uyarısı (${remainingCredits} kaldı) - ${orgName}`,
+  };
+  return subjects[lang];
+}
+
+export function getHrLowBalanceAlertEmailHtml(params: {
+  orgName: string;
+  remainingCredits: number;
+  threshold: number;
+  language?: SupportedEmailLanguage;
+}): string {
+  const lang = normalizeEmailLang(params.language || 'en');
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const content = `
+    <h1 style="color: #14181F; font-size: 20px; font-weight: 700; margin: 0 0 14px 0;">
+      Low HR Credit Balance Alert — ${params.orgName}
+    </h1>
+    <p style="margin: 0 0 16px 0; color: #4A5160;">
+      Your organization's HR credit balance has reached <strong>${params.remainingCredits} credits</strong> (alert threshold: ${params.threshold} credits).
+    </p>
+    <p style="margin: 0 0 24px 0; color: #4A5160;">
+      Top up your HR credits anytime to ensure uninterrupted job publishing and AI applicant analysis.
+    </p>
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${appUrl}/employer/billing" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 26px; border-radius: 6px;">
+        Top Up HR Credits →
+      </a>
+    </div>
+  `;
+  return emailWrapper(content, lang, `Low HR Credit Balance - ${params.orgName}`);
 }
 
 /**
@@ -1553,6 +1627,151 @@ export function getAccountDeleteConfirmEmailHtml({
       <div style="font-family: monospace; font-size: 20px; font-weight: 700; letter-spacing: 2px; color: #14181F;">${confirmToken}</div>
     </div>
     <p style="font-size: 12px; color: #6B7280;">${c.notice}</p>
+  `;
+
+  return emailWrapper(content, lang, c.title);
+}
+
+
+/**
+ * 7. Job Alert Digest Email Template (6 Languages + Unsubscribe Link)
+ */
+export interface JobAlertDigestItem {
+  title: string;
+  company: string;
+  location: string;
+  url: string;
+  source: string;
+  salary?: string;
+  remote?: boolean;
+}
+
+export interface JobAlertEmailProps extends TemplateBaseProps {
+  query: string;
+  location?: string;
+  frequency: 'daily' | 'weekly';
+  jobs: JobAlertDigestItem[];
+  unsubscribeToken: string;
+}
+
+export function getJobAlertEmailHtml({
+  name = 'User',
+  language = 'en',
+  query,
+  location,
+  frequency,
+  jobs,
+  unsubscribeToken,
+}: JobAlertEmailProps): string {
+  const lang = normalizeEmailLang(language);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const searchUrl = `${appUrl}/jobs?query=${encodeURIComponent(query)}${
+    location ? `&location=${encodeURIComponent(location)}` : ''
+  }`;
+  const unsubscribeUrl = `${appUrl}/api/jobs/alerts/unsubscribe?token=${encodeURIComponent(
+    unsubscribeToken
+  )}`;
+
+  const copy: Record<
+    SupportedEmailLanguage,
+    {
+      title: string;
+      heading: string;
+      sub: string;
+      ctaAll: string;
+      applyBtn: string;
+      unsubText: string;
+      unsubLink: string;
+    }
+  > = {
+    en: {
+      title: `New Jobs for "${query}" - JobMatch AI`,
+      heading: `New ${frequency === 'daily' ? 'Daily' : 'Weekly'} Job Matches: "${query}"`,
+      sub: `Hi ${name}, here are the latest open roles matching your saved alert${location ? ` in ${location}` : ''}:`,
+      ctaAll: 'View All Matching Jobs →',
+      applyBtn: 'View & Apply →',
+      unsubText: 'You are receiving this email because you enabled a job alert on JobMatch AI.',
+      unsubLink: 'Unsubscribe with one click',
+    },
+    ar: {
+      title: `وظائف جديدة لـ "${query}" - JobMatch AI`,
+      heading: `تنبيه الوظائف (${frequency === 'daily' ? 'يومي' : 'أسبوعي'}): "${query}"`,
+      sub: `مرحباً ${name}، إليك أحدث الوظائف المطابقة لبحثك المحفوظ${location ? ` في ${location}` : ''}:`,
+      ctaAll: 'عرض كل الوظائف المطابقة ←',
+      applyBtn: 'عرض والتقديم ←',
+      unsubText: 'توصلك هذه الرسالة لأنك فعّلت تنبيه الوظائف على منصة JobMatch AI.',
+      unsubLink: 'إلغاء الاشتراك بضغطة واحدة',
+    },
+    fr: {
+      title: `Nouveaux emplois pour "${query}" - JobMatch AI`,
+      heading: `Alerte emploi (${frequency === 'daily' ? 'quotidienne' : 'hebdomadaire'}) : "${query}"`,
+      sub: `Bonjour ${name}, voici les dernières offres correspondant à votre recherche${location ? ` à ${location}` : ''} :`,
+      ctaAll: 'Voir toutes les offres →',
+      applyBtn: 'Voir et postuler →',
+      unsubText: 'Vous recevez cet e-mail car vous avez activé une alerte emploi sur JobMatch AI.',
+      unsubLink: 'Se désabonner en un clic',
+    },
+    de: {
+      title: `Neue Jobs für "${query}" - JobMatch AI`,
+      heading: `Job-Alarm (${frequency === 'daily' ? 'täglich' : 'wöchentlich'}): "${query}"`,
+      sub: `Hallo ${name}, hier sind die neuesten Stellenangebote für Ihre gespeicherte Suche${location ? ` in ${location}` : ''}:`,
+      ctaAll: 'Alle passenden Jobs ansehen →',
+      applyBtn: 'Ansehen & bewerben →',
+      unsubText: 'Sie erhalten diese E-Mail, weil Sie einen Job-Alarm auf JobMatch AI aktiviert haben.',
+      unsubLink: 'Mit einem Klick abbestellen',
+    },
+    es: {
+      title: `Nuevos empleos para "${query}" - JobMatch AI`,
+      heading: `Alerta de empleo (${frequency === 'daily' ? 'diaria' : 'semanal'}): "${query}"`,
+      sub: `Hola ${name}, aquí tienes las últimas ofertas para tu búsqueda guardada${location ? ` en ${location}` : ''}:`,
+      ctaAll: 'Ver todos los empleos →',
+      applyBtn: 'Ver y postular →',
+      unsubText: 'Recibes este correo porque activaste una alerta de empleo en JobMatch AI.',
+      unsubLink: 'Cancelar suscripción con un clic',
+    },
+    tr: {
+      title: `"${query}" için Yeni İş İlanları - JobMatch AI`,
+      heading: `İş Alarmı (${frequency === 'daily' ? 'Günlük' : 'Haftalık'}): "${query}"`,
+      sub: `Merhaba ${name}, kayıtlı aramanızla eşleşen en yeni açık pozisyonlar${location ? ` (${location})` : ''}:`,
+      ctaAll: 'Tüm Eşleşen İşleri Gör →',
+      applyBtn: 'İncele ve Başvur →',
+      unsubText: 'Bu e-postayı JobMatch AI üzerinde bir iş alarmı etkinleştirdiğiniz için alıyorsunuz.',
+      unsubLink: 'Tek tıkla abonelikten çık',
+    },
+  };
+
+  const c = copy[lang];
+  const jobsHtml = jobs
+    .slice(0, 8)
+    .map(
+      (j) => `
+      <div style="background-color: #FAF8F4; border: 1px solid #E4DFD5; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px;">
+        <div style="font-weight: 700; font-size: 15px; color: #14181F; margin-bottom: 4px;">${j.title}</div>
+        <div style="font-size: 13px; color: #4A5160; margin-bottom: 8px;">
+          <strong>${j.company}</strong> · ${j.location} ${j.salary ? `· <span style="color:#0F5C4D;">${j.salary}</span>` : ''} · <span style="font-size:11px; color:#6B7280;">[${j.source}]</span>
+        </div>
+        <a href="${j.url}" target="_blank" rel="noopener noreferrer" style="font-size: 13px; font-weight: 600; color: #0F5C4D; text-decoration: underline;">
+          ${c.applyBtn}
+        </a>
+      </div>
+    `
+    )
+    .join('');
+
+  const content = `
+    <h1 style="color: #14181F; font-size: 20px; font-weight: 700; margin: 0 0 12px 0;">${c.heading}</h1>
+    <p style="margin: 0 0 20px 0; color: #4A5160;">${c.sub}</p>
+    ${jobsHtml}
+    <div style="text-align: center; margin: 28px 0 20px 0;">
+      <a href="${searchUrl}" style="display: inline-block; background-color: #0F5C4D; color: #FFFFFF; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 26px; border-radius: 6px;">
+        ${c.ctaAll}
+      </a>
+    </div>
+    <hr style="border: none; border-top: 1px solid #E4DFD5; margin: 24px 0 14px 0;" />
+    <p style="font-size: 12px; color: #6B7280; margin: 0; text-align: center;">
+      ${c.unsubText}<br />
+      <a href="${unsubscribeUrl}" style="color: #9A5B00; text-decoration: underline; font-weight: 600;">${c.unsubLink}</a>
+    </p>
   `;
 
   return emailWrapper(content, lang, c.title);

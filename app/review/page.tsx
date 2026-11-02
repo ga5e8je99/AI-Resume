@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Script from 'next/script';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import { fetchUserProfileClient } from '@/lib/profile/client';
 import { useLanguage } from '../context/LanguageContext';
 import { trackAtsScored, trackResumeUploaded } from '@/lib/analytics';
 import { analyzeResumeText, ATSAnalysisResult } from '../lib/atsAnalyzer';
@@ -150,6 +151,26 @@ export default function ReviewResultPage() {
       toast.error(uploadError.message);
     }
   }, [uploadError, toast]);
+
+  // Prefill targetRole from User Profile (/api/profile) when no explicit sample/role query param is set
+  useEffect(() => {
+    if (!user || sampleParam) return;
+    let active = true;
+    fetchUserProfileClient(false, user.id).then((prof) => {
+      if (!active || !prof) return;
+      const role = (prof.targetRole || prof.headline || '').trim();
+      if (role) {
+        setTargetRole(role);
+        setAnalysisResult((prevResult) => {
+          const updated = analyzeResumeText(resumeText, role, targetJobDescription);
+          return updated || prevResult;
+        });
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [user, sampleParam]);
 
   // Sync state on query param or session storage
   useEffect(() => {

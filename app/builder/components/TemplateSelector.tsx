@@ -3,7 +3,7 @@
 import React from 'react';
 import { TemplateId } from '../types';
 import { Check } from 'lucide-react';
-import { Stagger } from '@/app/components/landing/ScrollReveal';
+import { Stagger } from '@/components/motion/Reveal';
 
 interface Props {
   selectedTemplate: TemplateId;

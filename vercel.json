@@ -14,5 +14,11 @@
     "app/api/jobs/search/route.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/job-alerts",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }

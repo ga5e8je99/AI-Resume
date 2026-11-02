@@ -3,7 +3,8 @@ import { LanguageCode } from '@/app/lib/translations/types';
 export type CurrencyCode = 'USD' | 'EGP';
 export type BillingCycle = 'monthly' | 'annual';
 export type PlanType = 'free' | 'subscription' | 'one_time';
-export type PlanId = 'free' | 'pro' | 'payg';
+export type HrPackId = 'hr_pack_50' | 'hr_pack_200' | 'hr_pack_1000';
+export type PlanId = 'free' | 'pro' | 'payg' | HrPackId;
 
 /**
  * Number of credits consumed per AI Resume or CV generation on Pay-As-You-Go
@@ -518,8 +519,231 @@ export const PLANS: PlanConfig[] = [
   },
 ];
 
+export const HR_CREDIT_PACKS: PlanConfig[] = [
+  {
+    id: 'hr_pack_50',
+    name: {
+      en: '50 HR Credits Pack',
+      ar: 'باقة 50 كريدت للتوظيف (HR)',
+      fr: 'Pack 50 Crédits RH',
+      de: '50 HR-Credits Paket',
+      es: 'Paquete de 50 Créditos RRHH',
+      tr: '50 İK Kredisi Paketi',
+    },
+    tagline: {
+      en: 'Ideal for startups hiring 1–3 roles',
+      ar: 'مثالية للشركات الناشئة لتوظيف 1–3 وظائف',
+      fr: 'Idéal pour les startups recrutant 1 à 3 postes',
+      de: 'Ideal für Startups mit 1–3 offenen Stellen',
+      es: 'Ideal para startups que contratan 1–3 puestos',
+      tr: '1–3 pozisyon için işe alım yapan girişimler için ideal',
+    },
+    description: {
+      en: '50 dedicated HR credits for job postings and bias-free AI applicant evaluations.',
+      ar: '50 نقطة مخصصة لنشر الوظائف وتحليل المتقدمين بالذكاء الاصطناعي الحيادي.',
+      fr: '50 crédits RH dédiés aux offres d’emploi et à l’analyse IA des candidats.',
+      de: '50 HR-Credits für Stellenanzeigen und faire KI-Bewerberanalysen.',
+      es: '50 créditos RRHH para publicar empleos y evaluar candidatos con IA.',
+      tr: 'İş ilanları ve tarafsız yapay zeka aday analizi için 50 İK kredisi.',
+    },
+    type: 'one_time',
+    popular: false,
+    credits: 50,
+    dailyAiLimit: 100,
+    pricing: {
+      USD: { oneTime: 29 },
+      EGP: { oneTime: 1399 },
+    },
+    features: [
+      {
+        text: {
+          en: '50 HR credits (never expire)',
+          ar: '50 كريدت HR (لا تنتهي صلاحيتها)',
+          fr: '50 crédits RH (sans expiration)',
+          de: '50 HR-Credits (kein Verfallsdatum)',
+          es: '50 créditos RRHH (nunca caducan)',
+          tr: '50 İK kredisi (süresi dolmaz)',
+        },
+        included: true,
+        highlight: true,
+      },
+      {
+        text: {
+          en: 'Publish jobs (1 credit / job) & analyze applicants (1 credit / candidate)',
+          ar: 'نشر وظائف (1 كريدت) وتحليل المتقدمين (1 كريدت لكل مرشح)',
+          fr: 'Publication d’offres (1 crédit) et analyse candidats (1 crédit)',
+          de: 'Jobs veröffentlichen (1 Credit) & Bewerber analysieren (1 Credit)',
+          es: 'Publicar empleos (1 crédito) y analizar candidatos (1 crédito)',
+          tr: 'İlan yayınlama (1 kredi) ve aday analizi (1 kredi)',
+        },
+        included: true,
+      },
+    ],
+    cta: {
+      en: 'Buy 50 Credits',
+      ar: 'شراء 50 كريدت',
+      fr: 'Acheter 50 Crédits',
+      de: '50 Credits kaufen',
+      es: 'Comprar 50 Créditos',
+      tr: '50 Kredi Satın Al',
+    },
+  },
+  {
+    id: 'hr_pack_200',
+    name: {
+      en: '200 HR Credits Pack',
+      ar: 'باقة 200 كريدت للتوظيف (HR)',
+      fr: 'Pack 200 Crédits RH',
+      de: '200 HR-Credits Paket',
+      es: 'Paquete de 200 Créditos RRHH',
+      tr: '200 İK Kredisi Paketi',
+    },
+    tagline: {
+      en: 'Most popular for growing HR teams',
+      ar: 'الأكثر اختياراً لفرق الموارد البشرية المتنامية',
+      fr: 'Le plus populaire pour les équipes RH en croissance',
+      de: 'Beliebteste Wahl für wachsende HR-Teams',
+      es: 'El más popular para equipos de RRHH en crecimiento',
+      tr: 'Büyüyen İK ekipleri için en popüler',
+    },
+    description: {
+      en: '200 HR credits with volume savings for active recruitment pipelines and Top-10 comparison reports.',
+      ar: '200 كريدت HR بتوفير أعلى لخطوط التوظيف النشطة وتقارير مقارنة أفضل 10 مرشحين.',
+      fr: '200 crédits RH avec économies sur volume et rapports comparatifs Top 10.',
+      de: '200 HR-Credits mit Mengenrabatt und Top-10-Vergleichsberichten.',
+      es: '200 créditos RRHH con descuento por volumen e informes Top 10.',
+      tr: 'Aktif işe alım ve İlk 10 karşılaştırma raporları için 200 İK kredisi.',
+    },
+    type: 'one_time',
+    popular: true,
+    badge: {
+      en: 'Best Value',
+      ar: 'الأفضل قيمة',
+      fr: 'Meilleure Valeur',
+      de: 'Bester Wert',
+      es: 'Mejor Valor',
+      tr: 'En İyi Değer',
+    },
+    credits: 200,
+    dailyAiLimit: 100,
+    pricing: {
+      USD: { oneTime: 99, savingsPercentage: 15 },
+      EGP: { oneTime: 4799, savingsPercentage: 15 },
+    },
+    features: [
+      {
+        text: {
+          en: '200 HR credits (save 15% per credit)',
+          ar: '200 كريدت HR (توفير 15% لكل نقطة)',
+          fr: '200 crédits RH (économisez 15%)',
+          de: '200 HR-Credits (15% sparen)',
+          es: '200 créditos RRHH (ahorra 15%)',
+          tr: '200 İK kredisi (%15 tasarruf)',
+        },
+        included: true,
+        highlight: true,
+      },
+      {
+        text: {
+          en: 'Includes Top-10 candidate comparison reports & CSV exports',
+          ar: 'يشمل تقارير مقارنة أفضل 10 مرشحين وتصدير CSV',
+          fr: 'Inclut les rapports Top 10 et exports CSV',
+          de: 'Inklusive Top-10-Berichte & CSV-Export',
+          es: 'Incluye informes Top 10 y exportación CSV',
+          tr: 'İlk 10 aday karşılaştırma raporları ve CSV dışa aktarma dahil',
+        },
+        included: true,
+      },
+    ],
+    cta: {
+      en: 'Buy 200 Credits',
+      ar: 'شراء 200 كريدت',
+      fr: 'Acheter 200 Crédits',
+      de: '200 Credits kaufen',
+      es: 'Comprar 200 Créditos',
+      tr: '200 Kredi Satın Al',
+    },
+  },
+  {
+    id: 'hr_pack_1000',
+    name: {
+      en: '1000 HR Credits Pack',
+      ar: 'باقة 1000 كريدت للتوظيف (HR)',
+      fr: 'Pack 1000 Crédits RH',
+      de: '1000 HR-Credits Paket',
+      es: 'Paquete de 1000 Créditos RRHH',
+      tr: '1000 İK Kredisi Paketi',
+    },
+    tagline: {
+      en: 'Enterprise scale for high-volume recruiting',
+      ar: 'للشركات الكبرى وحملات التوظيف المكثفة',
+      fr: 'Échelle entreprise pour recrutement à fort volume',
+      de: 'Enterprise-Paket für High-Volume-Recruiting',
+      es: 'Escala empresarial para reclutamiento de alto volumen',
+      tr: 'Yüksek hacimli işe alımlar için kurumsal paket',
+    },
+    description: {
+      en: '1000 HR credits at maximum discount for multi-recruiter organizations.',
+      ar: '1000 كريدت HR بأقصى خصم للمنظمات وفرق التوظيف الكبيرة.',
+      fr: '1000 crédits RH avec remise maximale pour les grandes organisations.',
+      de: '1000 HR-Credits mit maximalem Rabatt für große Organisationen.',
+      es: '1000 créditos RRHH con descuento máximo para grandes organizaciones.',
+      tr: 'Çoklu işe alım ekipleri için maksimum indirimli 1000 İK kredisi.',
+    },
+    type: 'one_time',
+    popular: false,
+    credits: 1000,
+    dailyAiLimit: 100,
+    pricing: {
+      USD: { oneTime: 399, savingsPercentage: 31 },
+      EGP: { oneTime: 18999, savingsPercentage: 31 },
+    },
+    features: [
+      {
+        text: {
+          en: '1000 HR credits (save 31% per credit)',
+          ar: '1000 كريدت HR (توفير 31% لكل نقطة)',
+          fr: '1000 crédits RH (économisez 31%)',
+          de: '1000 HR-Credits (31% sparen)',
+          es: '1000 créditos RRHH (ahorra 31%)',
+          tr: '1000 İK kredisi (%31 tasarruf)',
+        },
+        included: true,
+        highlight: true,
+      },
+      {
+        text: {
+          en: 'Shared across all organization recruiters with spend cap controls',
+          ar: 'رصيد مشترك لجميع مسؤولي التوظيف بالمنظمة مع تحكم بحد الإنفاق الشهري',
+          fr: 'Partagé entre tous les recruteurs avec plafond mensuel',
+          de: 'Gemeinsam nutzbar im gesamten Recruiting-Team mit Ausgabenlimit',
+          es: 'Compartido entre reclutadores con límite de gasto mensual',
+          tr: 'Harcama limiti kontrolüyle tüm İK ekibiyle paylaşılır',
+        },
+        included: true,
+      },
+    ],
+    cta: {
+      en: 'Buy 1000 Credits',
+      ar: 'شراء 1000 كريدت',
+      fr: 'Acheter 1000 Crédits',
+      de: '1000 Credits kaufen',
+      es: 'Comprar 1000 Créditos',
+      tr: '1000 Kredi Satın Al',
+    },
+  },
+];
+
+export function isHrPackId(id: string | null | undefined): id is HrPackId {
+  return id === 'hr_pack_50' || id === 'hr_pack_200' || id === 'hr_pack_1000';
+}
+
+export function getHrPackById(id: string): PlanConfig | undefined {
+  return HR_CREDIT_PACKS.find((pack) => pack.id === id);
+}
+
 export function getPlanById(id: string): PlanConfig | undefined {
-  return PLANS.find((plan) => plan.id === id);
+  return PLANS.find((plan) => plan.id === id) || HR_CREDIT_PACKS.find((pack) => pack.id === id);
 }
 
 /**

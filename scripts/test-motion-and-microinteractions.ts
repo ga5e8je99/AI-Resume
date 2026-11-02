@@ -32,32 +32,42 @@ function runTests() {
     'app/globals.css defines --duration-fast: 150ms, --duration-base: 250ms, --duration-slow: 400ms, --ease-out: cubic-bezier(.22, 1, .36, 1)'
   );
   assert(
-    globalsCss.includes('@media (prefers-reduced-motion: reduce)'),
-    'app/globals.css preserves prefers-reduced-motion block disabling motion'
+    globalsCss.includes('@media (prefers-reduced-motion: reduce)') &&
+      globalsCss.includes('html:not(.js-aos) [data-aos]'),
+    'app/globals.css preserves prefers-reduced-motion block and html:not(.js-aos) progressive enhancement'
   );
 
-  console.log('\n=== 2. ScrollReveal (direction, delay, once) & Stagger (60ms) ===');
-  const scrollRevealCode = readFile('app/components/landing/ScrollReveal.tsx');
+  console.log('\n=== 2. AosProvider & Reveal / Stagger (80ms, max 400ms) ===');
+  const aosProviderCode = readFile('components/motion/AosProvider.tsx');
   assert(
-    scrollRevealCode.includes("'up' | 'down' | 'start' | 'end' | 'fade'"),
-    'ScrollReveal supports direction: up | down | start | end | fade'
-  );
-  assert(
-    scrollRevealCode.includes('delay?: number') &&
-      scrollRevealCode.includes('once?: boolean') &&
-      scrollRevealCode.includes('once = true'),
-    'ScrollReveal supports delay and once (default true) props'
-  );
-  assert(
-    scrollRevealCode.includes('export function Stagger') &&
-      scrollRevealCode.includes('staggerMs = 60') &&
-      scrollRevealCode.includes('baseDelay + index * staggerMs'),
-    'Stagger wrapper exported and applies automatic 60ms delay per child'
+    aosProviderCode.includes('AOS.init') &&
+      aosProviderCode.includes('duration: 700') &&
+      aosProviderCode.includes("easing: 'ease-out-cubic'") &&
+      aosProviderCode.includes('once: true') &&
+      aosProviderCode.includes('offset: 80') &&
+      aosProviderCode.includes('AOS.refresh()'),
+    'AosProvider initializes AOS (700ms, ease-out-cubic, once: true, offset: 80) and refreshes on route/lang change'
   );
 
-  console.log('\n=== 3. Applied to Landing, Pricing, Jobs, Dashboard & Templates ===');
+  const revealCode = readFile('components/motion/Reveal.tsx');
+  assert(
+    revealCode.includes("'up' | 'down' | 'start' | 'end' | 'zoom' | 'fade'") &&
+      revealCode.includes("dir === 'rtl' ? 'fade-left' : 'fade-right'"),
+    'Reveal supports from: up | down | start | end | zoom | fade and flips fade-left <-> fade-right in RTL'
+  );
+  assert(
+    revealCode.includes('export function Stagger') &&
+      revealCode.includes('staggerMs = 80') &&
+      revealCode.includes('400'),
+    'Stagger wrapper exported and applies automatic 80ms delay per child capped at 400ms'
+  );
+  assert(
+    !fs.existsSync(path.join(ROOT, 'app/components/landing/ScrollReveal.tsx')),
+    'Legacy ScrollReveal.tsx has been removed'
+  );
+
+  console.log('\n=== 3. Applied to Landing, Pricing, Jobs, Dashboard, Templates, About & Contact ===');
   for (const landingFile of [
-    'app/components/HeroSection.tsx',
     'app/components/landing/TrustStrip.tsx',
     'app/components/landing/HowItWorks.tsx',
     'app/components/landing/FeatureShowcase.tsx',
@@ -65,11 +75,13 @@ function runTests() {
     'app/components/landing/PricingTeaser.tsx',
     'app/components/landing/FaqSection.tsx',
     'app/components/landing/CtaBand.tsx',
+    'app/about/page.tsx',
+    'app/contact/page.tsx',
   ]) {
     const code = readFile(landingFile);
     assert(
-      code.includes('ScrollReveal') || code.includes('Stagger'),
-      `${landingFile} uses ScrollReveal / Stagger`
+      code.includes('Reveal') || code.includes('Stagger'),
+      `${landingFile} uses Reveal / Stagger`
     );
   }
 
@@ -90,9 +102,9 @@ function runTests() {
   const dashboardPage = readFile('app/dashboard/page.tsx');
   assert(
     dashboardPage.includes('<Stagger') &&
-      dashboardPage.includes('<ScrollReveal') &&
+      dashboardPage.includes('<Reveal') &&
       dashboardPage.includes('card-interactive'),
-    'Dashboard cards use ScrollReveal / Stagger and .card-interactive'
+    'Dashboard cards use Reveal / Stagger and .card-interactive'
   );
 
   const templateSelector = readFile('app/builder/components/TemplateSelector.tsx');
@@ -142,14 +154,7 @@ function runTests() {
     'Modals animate fade + scale on both enter and exit'
   );
 
-  console.log('\n=== 7. Pure CSS Animation & HeroSection One-Time 800ms Count-Up ===');
-  const pkgJson = readFile('package.json');
-  const nextConfig = readFile('next.config.ts');
-  assert(
-    !pkgJson.includes('"framer-motion"') && !nextConfig.includes("'framer-motion'"),
-    'Unused framer-motion removed from package.json and next.config.ts'
-  );
-
+  console.log('\n=== 7. LCP-Safe HeroSection & One-Time 800ms Count-Up ===');
   const heroCode = readFile('app/components/HeroSection.tsx');
   assert(
     heroCode.includes('IntersectionObserver') &&
@@ -159,18 +164,11 @@ function runTests() {
     'HeroSection animates ATS score once via IntersectionObserver + useRef guard over 800ms'
   );
   assert(
-    !heroCode.includes('animate-in fade-in zoom-in-95') &&
-      heroCode.includes('delay={0}') &&
-      heroCode.includes('delay={100}') &&
-      heroCode.includes('delay={200}') &&
-      heroCode.includes('delay={300}'),
-    'HeroSection has sequential entrance (headline -> subtitle -> CTAs -> mockup) with no double animation'
-  );
-  assert(
-    heroCode.includes('prefers-reduced-motion: reduce') &&
-      scrollRevealCode.includes('prefers-reduced-motion: reduce') &&
-      !scrollRevealCode.includes('setTimeout'),
-    'HeroSection and ScrollReveal respect prefers-reduced-motion'
+    heroCode.includes('hero-lcp-enter') &&
+      heroCode.includes('hero-lcp-delay-100') &&
+      heroCode.includes('bento-float-1') &&
+      !heroCode.includes('data-aos='),
+    'HeroSection uses sequential CSS entrance (headline -> subtitle -> CTAs -> bento) without AOS'
   );
 
   console.log(`\nResults: ${passed} passed, ${failed} failed.`);
@@ -178,4 +176,3 @@ function runTests() {
 }
 
 runTests();
-

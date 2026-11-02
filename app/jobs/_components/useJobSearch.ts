@@ -10,8 +10,20 @@ import {
   CandidateProfileExtract,
   ProviderStatusEntry,
   JobProviderAttribution,
+  JobEmploymentTypeFilter,
+  JobDatePostedFilter,
+  JobAlertFrequency,
+  SavedJobItem,
+  SavedJobSearch,
 } from '@/lib/jobs/types';
+import {
+  filterAndSortJobs,
+} from '@/lib/jobs/matcher';
 import { JOB_MATCH_FREE_QUOTA } from '@/lib/plans';
+import {
+  fetchUserProfileClient,
+  resolveCountryCodeFromProfile,
+} from '@/lib/profile/client';
 import {
   trackResumeUploaded,
   trackJobSearchRun,
@@ -26,7 +38,10 @@ export interface SavedResumeOption {
 }
 
 export type SeniorityOption = 'junior' | 'mid' | 'senior' | 'lead' | 'any';
-export type SortByOption = 'score' | 'date';
+export type SortByOption = 'relevance' | 'newest' | 'match' | 'score' | 'date';
+export type JobsViewTab = 'all' | 'saved_jobs' | 'saved_searches';
+
+const PAGE_LIMIT = 12;
 
 export function useJobSearch() {
   const { user, refreshUser } = useAuth();
@@ -37,12 +52,18 @@ export function useJobSearch() {
   const [selectedResumeId, setSelectedResumeId] = useState<string>('');
   const [isLoadingResumes, setIsLoadingResumes] = useState<boolean>(true);
 
+  // Optional CV Match toggle (Search works WITHOUT a CV for free; CV Match is optional and adds Match %)
+  const [includeMatch, setIncludeMatch] = useState<boolean>(false);
+
   // Search parameters
   const [query, setQuery] = useState<string>('Software Engineer');
   const [location, setLocation] = useState<string>('Cairo, Egypt');
   const [country, setCountry] = useState<string>('eg');
   const [remoteOnly, setRemoteOnly] = useState<boolean>(false);
-  const [seniority, setSeniority] = useState<SeniorityOption>('mid');
+  const [seniority, setSeniority] = useState<SeniorityOption>('any');
+  const [employmentType, setEmploymentType] = useState<JobEmploymentTypeFilter>('any');
+  const [datePosted, setDatePosted] = useState<JobDatePostedFilter>('any');
+  const [minSalary, setMinSalary] = useState<number>(0);
   const [targetTitles, setTargetTitles] = useState<string[]>([
     'Software Engineer',
     'Full-Stack Developer',
@@ -58,10 +79,14 @@ export function useJobSearch() {
   ]);
   const [newSkillInput, setNewSkillInput] = useState<string>('');
 
-  // Results state
+  // Results & Cursor Pagination state
   const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [hasSearched, setHasSearched] = useState<boolean>(false);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [totalFound, setTotalFound] = useState<number>(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(false);
   const [smartLinks, setSmartLinks] = useState<SmartLinkPlatform[]>([]);
   const [attributions, setAttributions] = useState<JobProviderAttribution[]>([]);
   const [providerStatus, setProviderStatus] = useState<ProviderStatusEntry[]>([]);
@@ -69,12 +94,21 @@ export function useJobSearch() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCachedResult, setIsCachedResult] = useState<boolean>(false);
 
-  // Filter & Sort states
+  // Filter, Sort & Drawer states
   const [filterRemote, setFilterRemote] = useState<boolean>(false);
   const [filterMinScore, setFilterMinScore] = useState<number>(0);
   const [filterSource, setFilterSource] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<SortByOption>('score');
+  const [sortBy, setSortBy] = useState<SortByOption>('relevance');
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [selectedDrawerJob, setSelectedDrawerJob] = useState<Job | null>(null);
+
+  // Saved Jobs, Saved Searches, & Email Job Alerts states
+  const [activeTab, setActiveTab] = useState<JobsViewTab>('all');
+  const [savedJobs, setSavedJobs] = useState<SavedJobItem[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedJobSearch[]>([]);
+  const [alertFrequency, setAlertFrequency] = useState<JobAlertFrequency>('none');
+  const [isSavingSearch, setIsSavingSearch] = useState<boolean>(false);
+  const [searchSavedToast, setSearchSavedToast] = useState<boolean>(false);
 
   // Quota & Paywall states
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState<boolean>(false);
@@ -106,9 +140,11 @@ export function useJobSearch() {
     const countryParam = params.get('country');
     const remoteParam = params.get('remote');
     const seniorityParam = params.get('seniority');
+    const empParam = params.get('employmentType');
+    const dateParam = params.get('datePosted');
 
     if (qParam) setQuery(qParam);
-    if (locParam) setLocation(locParam);
+    if (locParam !== null) setLocation(locParam);
     if (countryParam) setCountry(countryParam);
     if (remoteParam === 'true' || remoteParam === '1') setRemoteOnly(true);
     if (
@@ -116,6 +152,15 @@ export function useJobSearch() {
       ['junior', 'mid', 'senior', 'lead', 'any'].includes(seniorityParam)
     ) {
       setSeniority(seniorityParam as SeniorityOption);
+    }
+    if (
+      empParam &&
+      ['any', 'full-time', 'part-time', 'contract', 'internship'].includes(empParam)
+    ) {
+      setEmploymentType(empParam as JobEmploymentTypeFilter);
+    }
+    if (dateParam && ['any', '24h', '7d', '30d'].includes(dateParam)) {
+      setDatePosted(dateParam as JobDatePostedFilter);
     }
   }, []);
 
@@ -137,6 +182,7 @@ export function useJobSearch() {
       abortControllerRef.current = null;
     }
     setIsSearching(false);
+    setIsLoadingMore(false);
   }, []);
 
   const applyExtractedProfile = useCallback((profile: CandidateProfileExtract) => {
@@ -188,32 +234,93 @@ export function useJobSearch() {
     [applyExtractedProfile]
   );
 
-  // 1. Fetch user's saved resumes on mount / user change
+  // 0. Prefill search parameters from User Profile (/api/profile) when logged in
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const hasExplicitQueryParam =
+      typeof window !== 'undefined' &&
+      Boolean(
+        new URLSearchParams(window.location.search).get('query') ||
+          new URLSearchParams(window.location.search).get('q')
+      );
+
+    fetchUserProfileClient(false, user.id).then((prof) => {
+      if (!active || !prof || hasCustomUploadRef.current) return;
+      const roleText = (prof.targetRole || prof.headline || '').trim();
+      if (roleText && !hasExplicitQueryParam) {
+        setQuery(roleText);
+        setTargetTitles([roleText, `Senior ${roleText}`, `${roleText} Specialist`]);
+      }
+      const locParts = [prof.city, prof.country].filter((x) => typeof x === 'string' && x.trim());
+      if (locParts.length > 0 && !hasExplicitQueryParam) {
+        setLocation(locParts.join(', '));
+        setCountry(resolveCountryCodeFromProfile(prof.country, prof.city));
+      }
+      if (prof.remotePreference === 'remote' && !hasExplicitQueryParam) {
+        setRemoteOnly(true);
+      }
+      if (prof.seniority && !hasExplicitQueryParam) {
+        const mappedSeniority = prof.seniority === 'student' ? 'junior' : prof.seniority;
+        setSeniority(mappedSeniority);
+      }
+      if (Array.isArray(prof.employmentTypes) && prof.employmentTypes.length > 0 && !hasExplicitQueryParam) {
+        setEmploymentType(prof.employmentTypes[0]);
+      }
+      if (Array.isArray(prof.skills) && prof.skills.length > 0) {
+        setSkills(prof.skills);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  // 1. Fetch user's saved resumes, saved jobs, and saved searches on mount
   useEffect(() => {
     let active = true;
-    async function loadResumes() {
+    async function loadUserData() {
       try {
         setIsLoadingResumes(true);
-        const res = await fetch('/api/resumes');
+        const [resResumes, resSavedJobs, resSavedSearches] = await Promise.all([
+          fetch('/api/resumes').catch(() => null),
+          fetch('/api/jobs/saved').catch(() => null),
+          fetch('/api/jobs/saved-searches').catch(() => null),
+        ]);
         if (!active) return;
-        if (res.ok) {
-          const data = await res.json();
-          if (!active) return;
-          const items: SavedResumeOption[] = (data.resumes || []).map((r: any) => ({
-            id: r.id || r._id,
-            title: r.title || 'Untitled Resume',
-            candidateName: r.candidateName,
-            candidateTitle: r.candidateTitle,
-          }));
-          setSavedResumes(items);
 
-          if (items.length > 0 && !hasCustomUploadRef.current) {
-            setSelectedResumeId(items[0].id);
-            extractProfileFromResume(items[0].id);
+        if (resResumes && resResumes.ok) {
+          const data = await resResumes.json();
+          if (active) {
+            const items: SavedResumeOption[] = (data.resumes || []).map((r: any) => ({
+              id: r.id || r._id,
+              title: r.title || 'Untitled Resume',
+              candidateName: r.candidateName,
+              candidateTitle: r.candidateTitle,
+            }));
+            setSavedResumes(items);
+            if (items.length > 0 && !hasCustomUploadRef.current) {
+              setSelectedResumeId(items[0].id);
+            }
+          }
+        }
+
+        if (resSavedJobs && resSavedJobs.ok) {
+          const data = await resSavedJobs.json();
+          if (active && Array.isArray(data.savedJobs)) {
+            setSavedJobs(data.savedJobs);
+          }
+        }
+
+        if (resSavedSearches && resSavedSearches.ok) {
+          const data = await resSavedSearches.json();
+          if (active && Array.isArray(data.savedSearches)) {
+            setSavedSearches(data.savedSearches);
           }
         }
       } catch (err) {
-        console.error('Failed to load user resumes:', err);
+        console.error('Failed to load user job search data:', err);
       } finally {
         if (active) {
           setIsLoadingResumes(false);
@@ -222,7 +329,7 @@ export function useJobSearch() {
     }
 
     if (user) {
-      loadResumes();
+      loadUserData();
     } else {
       setIsLoadingResumes(false);
     }
@@ -230,9 +337,9 @@ export function useJobSearch() {
     return () => {
       active = false;
     };
-  }, [user, extractProfileFromResume]);
+  }, [user]);
 
-  // Handle file upload extraction (PDF or DOCX)
+  // Handle file upload extraction (PDF or DOCX) -> automatically enables CV Match %
   const handleFileUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -244,6 +351,8 @@ export function useJobSearch() {
         hasCustomUploadRef.current = true;
         setUploadedFileName(file.name);
         setSelectedResumeId('custom_upload');
+        setIncludeMatch(true);
+        setSortBy('match');
 
         const text = await extractTextFromFile(file);
         if (!text || text.trim().length === 0) {
@@ -281,6 +390,13 @@ export function useJobSearch() {
   const handleSelectResume = useCallback(
     (resumeId: string) => {
       setSelectedResumeId(resumeId);
+      if (!resumeId) {
+        setIncludeMatch(false);
+        setSortBy('relevance');
+        return;
+      }
+      setIncludeMatch(true);
+      setSortBy('match');
       if (resumeId !== 'custom_upload') {
         extractProfileFromResume(resumeId);
       } else if (uploadedProfile) {
@@ -288,6 +404,21 @@ export function useJobSearch() {
       }
     },
     [extractProfileFromResume, uploadedProfile, applyExtractedProfile]
+  );
+
+  const handleToggleIncludeMatch = useCallback(
+    (enabled: boolean) => {
+      setIncludeMatch(enabled);
+      if (enabled) {
+        setSortBy('match');
+        if (selectedResumeId && selectedResumeId !== 'custom_upload') {
+          extractProfileFromResume(selectedResumeId);
+        }
+      } else if (sortBy === 'match' || sortBy === 'score') {
+        setSortBy('relevance');
+      }
+    },
+    [selectedResumeId, extractProfileFromResume, sortBy]
   );
 
   // Add / remove custom skill
@@ -303,126 +434,351 @@ export function useJobSearch() {
     setSkills((prev) => prev.filter((s) => s !== skillToRemove));
   }, []);
 
-  // Perform Job Match Search (cancels any previous in-flight request via AbortController)
-  const executeJobSearch = useCallback(async () => {
-    const trimmedQuery = query.trim();
-    if (!trimmedQuery) return;
+  // Perform Job Search (supports both fresh search and cursor load-more)
+  const runSearchRequest = useCallback(
+    async (cursorToLoad: string | null = null) => {
+      const trimmedQuery = query.trim();
+      if (!trimmedQuery) return;
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+      const isLoadMore = Boolean(cursorToLoad);
 
-    setIsSearching(true);
-    setErrorMessage(null);
-    setAllProvidersFailed(false);
-    setIsQuotaExhausted(false);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
-    try {
-      const res = await fetch('/api/jobs/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          query: trimmedQuery,
-          location: location.trim(),
-          remote: remoteOnly,
-          country,
-          skills,
-          seniority,
-        }),
-      });
-
-      if (controller.signal.aborted) return;
-
-      if (res.status === 402) {
-        trackFreeQuotaExhausted({
-          feature: 'job_search',
-          reason: 'job_match_quota_reached',
-        });
-        setIsQuotaExhausted(true);
-        setIsUpgradeModalOpen(true);
-        setFreeQuotaUsed(JOB_MATCH_FREE_QUOTA);
-        return;
+      if (isLoadMore) {
+        setIsLoadingMore(true);
+      } else {
+        setIsSearching(true);
+        setErrorMessage(null);
+        setAllProvidersFailed(false);
+        setIsQuotaExhausted(false);
+        setActiveTab('all');
       }
 
-      if (res.status === 401) {
+      try {
+        const res = await fetch('/api/jobs/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            query: trimmedQuery,
+            location: location.trim(),
+            remote: remoteOnly,
+            country,
+            skills,
+            seniority,
+            employmentType,
+            datePosted,
+            minSalary: minSalary > 0 ? minSalary : undefined,
+            source: filterSource,
+            sortBy,
+            includeMatch,
+            cursor: cursorToLoad,
+            limit: PAGE_LIMIT,
+          }),
+        });
+
+        if (controller.signal.aborted) return;
+
+        if (res.status === 402) {
+          trackFreeQuotaExhausted({
+            feature: 'job_search',
+            reason: 'job_match_quota_reached',
+          });
+          setIsQuotaExhausted(true);
+          setIsUpgradeModalOpen(true);
+          setFreeQuotaUsed(JOB_MATCH_FREE_QUOTA);
+          return;
+        }
+
+        if (res.status === 401) {
+          window.location.href = `/login?returnUrl=${encodeURIComponent('/jobs')}`;
+          return;
+        }
+
+        if (res.status === 502) {
+          const errData = await res.json().catch(() => ({}));
+          if (controller.signal.aborted) return;
+          setAllProvidersFailed(true);
+          if (!isLoadMore) setJobs([]);
+          if (Array.isArray(errData.smartLinks)) {
+            setSmartLinks(errData.smartLinks);
+          }
+          if (Array.isArray(errData.providerStatus)) {
+            setProviderStatus(errData.providerStatus);
+          }
+          setErrorMessage(t('jobs_all_providers_failed_desc'));
+          setHasSearched(true);
+          return;
+        }
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || t('jobs_all_providers_failed_desc'));
+        }
+
+        const data = await res.json();
+        if (controller.signal.aborted) return;
+
+        const incomingJobs: Job[] = Array.isArray(data.jobs) ? data.jobs : [];
+        if (isLoadMore) {
+          setJobs((prev) => {
+            const seen = new Set(prev.map((j) => j.id));
+            const next = [...prev];
+            incomingJobs.forEach((j) => {
+              if (!seen.has(j.id)) {
+                seen.add(j.id);
+                next.push(j);
+              }
+            });
+            return next;
+          });
+        } else {
+          setJobs(incomingJobs);
+        }
+
+        setTotalFound(
+          typeof data.totalFound === 'number' ? data.totalFound : incomingJobs.length
+        );
+        setNextCursor(data.nextCursor ?? null);
+        setHasMore(Boolean(data.hasMore));
+        setSmartLinks(data.smartLinks || []);
+        setAttributions(data.attributions || []);
+        setProviderStatus(Array.isArray(data.providerStatus) ? data.providerStatus : []);
+        setIsCachedResult(Boolean(data.cached));
+        setHasSearched(true);
+
+        if (!isLoadMore) {
+          trackJobSearchRun({
+            country,
+            remoteOnly,
+            seniority,
+            resultsCount: incomingJobs.length,
+            cached: Boolean(data.cached),
+          });
+        }
+
+        if (data.quota && typeof data.quota.freeUsed === 'number') {
+          setFreeQuotaUsed(data.quota.freeUsed);
+        } else if (typeof data.freeRemaining === 'number') {
+          setFreeQuotaUsed(Math.max(0, JOB_MATCH_FREE_QUOTA - data.freeRemaining));
+        }
+        if (data.charged || data.quota?.charged) {
+          refreshUser();
+        }
+      } catch (err: any) {
+        if (err?.name === 'AbortError' || controller.signal.aborted) return;
+        setErrorMessage(err?.message || t('jobs_all_providers_failed_desc'));
+      } finally {
+        if (abortControllerRef.current === controller) {
+          setIsSearching(false);
+          setIsLoadingMore(false);
+          abortControllerRef.current = null;
+        }
+      }
+    },
+    [
+      query,
+      location,
+      remoteOnly,
+      country,
+      skills,
+      seniority,
+      employmentType,
+      datePosted,
+      minSalary,
+      filterSource,
+      sortBy,
+      includeMatch,
+      t,
+      refreshUser,
+    ]
+  );
+
+  const executeJobSearch = useCallback(async () => {
+    await runSearchRequest(null);
+  }, [runSearchRequest]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (!nextCursor || isLoadingMore || isSearching) return;
+    await runSearchRequest(nextCursor);
+  }, [nextCursor, isLoadingMore, isSearching, runSearchRequest]);
+
+  // Automatically execute initial free search once when user is authenticated and resumes check finishes
+  useEffect(() => {
+    if (user && !isLoadingResumes && !hasSearched && query.trim()) {
+      executeJobSearch();
+    }
+  }, [user, isLoadingResumes, hasSearched, query, executeJobSearch]);
+
+  // Save / Unsave Job
+  const savedJobIds = useMemo(() => {
+    return new Set(savedJobs.map((item) => item.jobId));
+  }, [savedJobs]);
+
+  const handleToggleSaveJob = useCallback(
+    async (job: Job) => {
+      if (!user) {
         window.location.href = `/login?returnUrl=${encodeURIComponent('/jobs')}`;
         return;
       }
 
-      if (res.status === 502) {
-        const errData = await res.json().catch(() => ({}));
-        if (controller.signal.aborted) return;
-        setAllProvidersFailed(true);
-        setJobs([]);
-        if (Array.isArray(errData.smartLinks)) {
-          setSmartLinks(errData.smartLinks);
+      const isCurrentlySaved = savedJobIds.has(job.id);
+      if (isCurrentlySaved) {
+        setSavedJobs((prev) => prev.filter((item) => item.jobId !== job.id));
+        try {
+          await fetch(`/api/jobs/saved?jobId=${encodeURIComponent(job.id)}`, {
+            method: 'DELETE',
+          });
+        } catch (err) {
+          console.error('Failed to remove saved job:', err);
         }
-        if (Array.isArray(errData.providerStatus)) {
-          setProviderStatus(errData.providerStatus);
+      } else {
+        const optimisticItem: SavedJobItem = {
+          id: `temp_${Date.now()}`,
+          userId: user.id,
+          jobId: job.id,
+          job,
+          savedAt: new Date().toISOString(),
+        };
+        setSavedJobs((prev) => [optimisticItem, ...prev]);
+        try {
+          const res = await fetch('/api/jobs/saved', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.savedJob) {
+              setSavedJobs((prev) =>
+                prev.map((item) => (item.jobId === job.id ? data.savedJob : item))
+              );
+            }
+          }
+        } catch (err) {
+          console.error('Failed to save job:', err);
         }
-        setErrorMessage(t('jobs_all_providers_failed_desc'));
-        setHasSearched(true);
-        return;
       }
+    },
+    [user, savedJobIds]
+  );
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || t('jobs_all_providers_failed_desc'));
-      }
+  // Save Current Search & Email Alert
+  const handleSaveCurrentSearch = useCallback(async () => {
+    if (!user) {
+      window.location.href = `/login?returnUrl=${encodeURIComponent('/jobs')}`;
+      return;
+    }
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
 
-      const data = await res.json();
-      if (controller.signal.aborted) return;
-
-      setJobs(data.jobs || []);
-      setSmartLinks(data.smartLinks || []);
-      setAttributions(data.attributions || []);
-      setProviderStatus(Array.isArray(data.providerStatus) ? data.providerStatus : []);
-      setIsCachedResult(Boolean(data.cached));
-      setHasSearched(true);
-
-      trackJobSearchRun({
-        country,
-        remoteOnly,
-        seniority,
-        resultsCount: (data.jobs || []).length,
-        cached: Boolean(data.cached),
+    setIsSavingSearch(true);
+    try {
+      const res = await fetch('/api/jobs/saved-searches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: trimmedQuery,
+          location: location.trim(),
+          country,
+          remote: remoteOnly,
+          employmentType,
+          datePosted,
+          seniority,
+          minSalary: minSalary > 0 ? minSalary : null,
+          source: filterSource,
+          alertFrequency,
+          alertEnabled: alertFrequency !== 'none',
+        }),
       });
-
-      if (data.quota && typeof data.quota.freeUsed === 'number') {
-        setFreeQuotaUsed(data.quota.freeUsed);
-      } else if (typeof data.freeRemaining === 'number') {
-        setFreeQuotaUsed(Math.max(0, JOB_MATCH_FREE_QUOTA - data.freeRemaining));
+      if (res.ok) {
+        const data = await res.json();
+        if (data.savedSearch) {
+          setSavedSearches((prev) => {
+            const exists = prev.some((s) => s.id === data.savedSearch.id);
+            if (exists) {
+              return prev.map((s) => (s.id === data.savedSearch.id ? data.savedSearch : s));
+            }
+            return [data.savedSearch, ...prev];
+          });
+          setSearchSavedToast(true);
+          setTimeout(() => setSearchSavedToast(false), 3500);
+        }
       }
-      if (data.charged || data.quota?.charged) {
-        refreshUser();
-      }
-    } catch (err: any) {
-      if (err?.name === 'AbortError' || controller.signal.aborted) return;
-      setErrorMessage(err?.message || t('jobs_all_providers_failed_desc'));
+    } catch (err) {
+      console.error('Failed to save search:', err);
     } finally {
-      if (abortControllerRef.current === controller) {
-        setIsSearching(false);
-        abortControllerRef.current = null;
-      }
+      setIsSavingSearch(false);
     }
-  }, [query, location, remoteOnly, country, skills, seniority, t, refreshUser]);
+  }, [
+    user,
+    query,
+    location,
+    country,
+    remoteOnly,
+    employmentType,
+    datePosted,
+    seniority,
+    minSalary,
+    filterSource,
+    alertFrequency,
+  ]);
 
-  // Automatically execute first search once when saved resumes finish loading
-  useEffect(() => {
-    if (savedResumes.length > 0 && !hasSearched && query.trim()) {
-      executeJobSearch();
+  const handleDeleteSavedSearch = useCallback(async (searchId: string) => {
+    setSavedSearches((prev) => prev.filter((s) => s.id !== searchId));
+    try {
+      await fetch(`/api/jobs/saved-searches?id=${encodeURIComponent(searchId)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.error('Failed to delete saved search:', err);
     }
-  }, [savedResumes.length, hasSearched, query, executeJobSearch]);
+  }, []);
+
+  const handleApplySavedSearch = useCallback((s: SavedJobSearch) => {
+    setQuery(s.query);
+    setLocation(s.location || '');
+    if (s.country) setCountry(s.country);
+    setRemoteOnly(Boolean(s.remote));
+    if (s.employmentType) setEmploymentType(s.employmentType);
+    if (s.datePosted) setDatePosted(s.datePosted);
+    if (s.seniority) setSeniority(s.seniority);
+    setMinSalary(s.minSalary || 0);
+    if (s.source) setFilterSource(s.source);
+    setAlertFrequency(s.alertFrequency || 'none');
+    setActiveTab('all');
+  }, []);
+
+  // Outbound Apply Click Tracking
+  const handleRecordJobClick = useCallback((job: Job) => {
+    try {
+      fetch('/api/jobs/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          jobId: job.id,
+          title: job.title,
+          company: job.company,
+          source: job.source,
+          url: job.url,
+        }),
+      }).catch(() => {});
+    } catch {
+      // Non-blocking analytics click log
+    }
+  }, []);
 
   const hasPartialProviderFailure = useMemo(() => {
     return !allProvidersFailed && providerStatus.some((p) => p.status === 'failed');
   }, [allProvidersFailed, providerStatus]);
 
   const availableSources = useMemo(() => {
-    const s = new Set<string>();
+    const s = new Set<string>(['Remotive', 'Arbeitnow', 'RemoteOK', 'The Muse']);
     jobs.forEach((j) => {
       if (j.source) s.add(j.source);
     });
@@ -430,37 +786,40 @@ export function useJobSearch() {
   }, [jobs]);
 
   const displayJobs = useMemo(() => {
-    let list = [...jobs];
-
-    if (filterRemote) {
-      list = list.filter((j) => j.remote);
-    }
-
-    if (filterMinScore > 0) {
-      list = list.filter((j) => (j.matchScore || 0) >= filterMinScore);
-    }
-
-    if (filterSource !== 'all') {
-      list = list.filter((j) => j.source === filterSource);
-    }
-
-    if (sortBy === 'date') {
-      list.sort((a, b) => {
-        const dateA = a.postedDate ? new Date(a.postedDate).getTime() : 0;
-        const dateB = b.postedDate ? new Date(b.postedDate).getTime() : 0;
-        return dateB - dateA;
-      });
-    } else {
-      list.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
-    }
-
-    return list;
-  }, [jobs, filterRemote, filterMinScore, filterSource, sortBy]);
+    return filterAndSortJobs(jobs, {
+      query,
+      location,
+      remote: filterRemote || remoteOnly,
+      employmentType,
+      datePosted,
+      minSalary: minSalary > 0 ? minSalary : undefined,
+      source: filterSource,
+      minScore: includeMatch ? filterMinScore : 0,
+      sortBy,
+    });
+  }, [
+    jobs,
+    query,
+    location,
+    filterRemote,
+    remoteOnly,
+    employmentType,
+    datePosted,
+    minSalary,
+    filterSource,
+    includeMatch,
+    filterMinScore,
+    sortBy,
+  ]);
 
   const resetFilters = useCallback(() => {
     setFilterRemote(false);
     setFilterMinScore(0);
     setFilterSource('all');
+    setEmploymentType('any');
+    setDatePosted('any');
+    setMinSalary(0);
+    setRemoteOnly(false);
   }, []);
 
   const isProUser = user?.plan === 'pro' || user?.plan === 'enterprise';
@@ -475,6 +834,8 @@ export function useJobSearch() {
     uploadedFileName,
     handleFileUpload,
     handleSelectResume,
+    includeMatch,
+    handleToggleIncludeMatch,
 
     // Search parameters
     query,
@@ -487,6 +848,12 @@ export function useJobSearch() {
     setRemoteOnly,
     seniority,
     setSeniority,
+    employmentType,
+    setEmploymentType,
+    datePosted,
+    setDatePosted,
+    minSalary,
+    setMinSalary,
     targetTitles,
     skills,
     newSkillInput,
@@ -494,11 +861,16 @@ export function useJobSearch() {
     handleAddSkill,
     handleRemoveSkill,
 
-    // Search execution & results
+    // Search execution, pagination & results
     isSearching,
+    isLoadingMore,
     hasSearched,
     jobs,
     displayJobs,
+    totalFound,
+    nextCursor,
+    hasMore,
+    handleLoadMore,
     smartLinks,
     attributions,
     providerStatus,
@@ -509,7 +881,7 @@ export function useJobSearch() {
     executeJobSearch,
     handleCancelSearch,
 
-    // Filters & sorting
+    // Filters, sorting & drawer
     filterRemote,
     setFilterRemote,
     filterMinScore,
@@ -522,6 +894,24 @@ export function useJobSearch() {
     resetFilters,
     expandedJobId,
     setExpandedJobId,
+    selectedDrawerJob,
+    setSelectedDrawerJob,
+
+    // Saved jobs, saved searches & alerts, click tracking
+    activeTab,
+    setActiveTab,
+    savedJobs,
+    savedJobIds,
+    handleToggleSaveJob,
+    savedSearches,
+    alertFrequency,
+    setAlertFrequency,
+    isSavingSearch,
+    searchSavedToast,
+    handleSaveCurrentSearch,
+    handleDeleteSavedSearch,
+    handleApplySavedSearch,
+    handleRecordJobClick,
 
     // Quota & paywall
     isProUser,
@@ -531,4 +921,3 @@ export function useJobSearch() {
     setIsUpgradeModalOpen,
   };
 }
-

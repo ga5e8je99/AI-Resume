@@ -32,7 +32,7 @@ import { Toast } from '../components/ui/Toast';
 import { PlanCard } from './components/PlanCard';
 import { PaymentMethodPicker } from './components/PaymentMethodPicker';
 import { BillingToggle } from './components/BillingToggle';
-import { ScrollReveal, Stagger } from '../components/landing/ScrollReveal';
+import { Reveal, Stagger } from '@/components/motion/Reveal';
 import {
   Shield,
   Lock,
@@ -384,7 +384,7 @@ export default function PricingPage() {
         className="max-w-[1160px] mx-auto px-4 sm:px-6 py-12 md:py-20 w-full text-start"
       >
         {/* Header */}
-        <ScrollReveal direction="up">
+        <Reveal direction="up">
           <div className="max-w-2xl mx-auto text-center mb-10 space-y-3">
             <span className="text-xs font-mono uppercase tracking-wider text-accent font-semibold">
               {t('pricing_teaser_tag')}
@@ -457,7 +457,7 @@ export default function PricingPage() {
               </div>
             )}
           </div>
-        </ScrollReveal>
+        </Reveal>
 
         {/* Clear Checkout Error Alert Banner */}
         {checkoutError && (
@@ -547,7 +547,7 @@ export default function PricingPage() {
         </Stagger>
 
         {/* Trust Badges Strip (Lemon Squeezy Merchant of Record, Zero Card Storage, 256-bit SSL, 14-Day Refund) */}
-        <ScrollReveal direction="up">
+        <Reveal direction="up">
           <div
             data-testid="pricing-trust-badges"
             className="rounded-[10px] border border-line-strong bg-surface p-5 sm:p-6 space-y-4 text-xs text-ink-2 mb-16"
@@ -625,7 +625,7 @@ export default function PricingPage() {
               </div>
             </div>
           </div>
-        </ScrollReveal>
+        </Reveal>
 
         {/* Plan Comparison Section: Free / PAYG / Pro with Real Limits from plans.ts */}
         <div className="mb-16">

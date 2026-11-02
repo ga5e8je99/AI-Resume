@@ -21,7 +21,7 @@ import {
   setStoredDocumentLanguage,
   getDocumentFontFamily,
 } from '@/app/lib/documentI18n';
-import { Stagger } from '@/app/components/landing/ScrollReveal';
+import { Stagger } from '@/components/motion/Reveal';
 
 interface CvSidebarProps {
   selectedTemplate: CvTemplateId;

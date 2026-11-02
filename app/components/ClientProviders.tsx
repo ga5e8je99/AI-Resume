@@ -12,6 +12,7 @@ import Navbar from './Navbar';
 import EmailVerificationBanner from './EmailVerificationBanner';
 import RouteProgressBar from '@/components/navigation/RouteProgressBar';
 import FirstVisitSplash from '@/components/brand/FirstVisitSplash';
+import AosProvider from '@/components/motion/AosProvider';
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   // Suppress hydration mismatch warnings from browser extensions
@@ -28,6 +29,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
         <AuthProvider>
           <ToastProvider>
             <PostHogProvider>
+              <AosProvider />
               <RouteProgressBar />
               <FirstVisitSplash />
               <Navbar />

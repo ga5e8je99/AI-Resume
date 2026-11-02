@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
+import { fetchUserProfileClient } from '@/lib/profile/client';
 import { useLanguage } from '../context/LanguageContext';
 import { Button } from '@/components/ui/Button';
 import {
@@ -125,6 +126,27 @@ export default function CoverLetterPage() {
   };
 
   const isAr = uiLang === 'ar';
+
+  // Prefill sender & target role from User Profile (/api/profile)
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    fetchUserProfileClient(false, user.id).then((prof) => {
+      if (!active || !prof) return;
+      setSenderName((prev) => prev || prof.fullName || user.name || '');
+      setSenderEmail((prev) => prev || user.email || '');
+      if (prof.phone) {
+        setSenderPhone((prev) => prev || prof.phone || '');
+      }
+      const role = (prof.targetRole || prof.headline || '').trim();
+      if (role) {
+        setJobTitle((prev) => prev || role);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   // Restore cached form inputs
   useEffect(() => {

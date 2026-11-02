@@ -12,7 +12,9 @@ import {
   NormalizedEvent,
   NormalizedEventAction,
   WebhookSignatureError,
+  OrderPlanId,
 } from './types';
+import { isHrPackId } from '@/lib/plans';
 
 export const LEMONSQUEEZY_API_BASE = 'https://api.lemonsqueezy.com/v1';
 
@@ -29,11 +31,17 @@ export type LemonSqueezyEventName =
  * Resolves the Lemon Squeezy Variant ID for the requested plan and billing cycle.
  */
 export function getLemonSqueezyVariantId(
-  planId: 'pro' | 'payg',
+  planId: OrderPlanId,
   billingCycle: 'monthly' | 'annual' | 'once' = 'monthly'
 ): { variantId: string | null; envKey: string } {
   const envKey =
-    planId === 'payg'
+    planId === 'hr_pack_50'
+      ? 'LEMONSQUEEZY_VARIANT_HR_50'
+      : planId === 'hr_pack_200'
+      ? 'LEMONSQUEEZY_VARIANT_HR_200'
+      : planId === 'hr_pack_1000'
+      ? 'LEMONSQUEEZY_VARIANT_HR_1000'
+      : planId === 'payg'
       ? 'LEMONSQUEEZY_VARIANT_PAYG'
       : billingCycle === 'annual'
       ? 'LEMONSQUEEZY_VARIANT_PRO_ANNUAL'
@@ -50,7 +58,7 @@ export function getLemonSqueezyVariantId(
  * Checks whether Lemon Squeezy credentials & variant IDs are configured in environment.
  */
 export function isLemonSqueezyConfigured(
-  planId?: 'pro' | 'payg',
+  planId?: OrderPlanId,
   billingCycle: 'monthly' | 'annual' | 'once' = 'monthly'
 ): boolean {
   const apiKey = (process.env.LEMONSQUEEZY_API_KEY || '').trim();
@@ -69,11 +77,17 @@ export function isLemonSqueezyConfigured(
   const proMonthly = (process.env.LEMONSQUEEZY_VARIANT_PRO_MONTHLY || '').trim();
   const proAnnual = (process.env.LEMONSQUEEZY_VARIANT_PRO_ANNUAL || '').trim();
   const payg = (process.env.LEMONSQUEEZY_VARIANT_PAYG || '').trim();
+  const hr50 = (process.env.LEMONSQUEEZY_VARIANT_HR_50 || '').trim();
+  const hr200 = (process.env.LEMONSQUEEZY_VARIANT_HR_200 || '').trim();
+  const hr1000 = (process.env.LEMONSQUEEZY_VARIANT_HR_1000 || '').trim();
 
   return (
     !isUnconfiguredEnvValue(proMonthly) ||
     !isUnconfiguredEnvValue(proAnnual) ||
-    !isUnconfiguredEnvValue(payg)
+    !isUnconfiguredEnvValue(payg) ||
+    !isUnconfiguredEnvValue(hr50) ||
+    !isUnconfiguredEnvValue(hr200) ||
+    !isUnconfiguredEnvValue(hr1000)
   );
 }
 
@@ -143,7 +157,7 @@ export class LemonSqueezyProvider implements PaymentProvider {
   public readonly name = 'lemonsqueezy' as const;
 
   public isConfigured(
-    planId?: 'pro' | 'payg',
+    planId?: OrderPlanId,
     billingCycle?: 'monthly' | 'annual' | 'once'
   ): boolean {
     return isLemonSqueezyConfigured(planId, billingCycle);
@@ -151,7 +165,7 @@ export class LemonSqueezyProvider implements PaymentProvider {
 
   /**
    * Creates a Lemon Squeezy checkout via POST /v1/checkouts
-   * Sends custom_data: { orderId, userId } in the checkout payload (never in query).
+   * Sends custom_data: { orderId, userId, orgId? } in the checkout payload (never in query).
    */
   public async createCheckout(
     order: CheckoutOrderInput,
@@ -169,9 +183,11 @@ export class LemonSqueezyProvider implements PaymentProvider {
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
     const reference = order.reference || order.id;
-    const redirectUrl =
-      order.successUrl ||
-      `${appUrl}/payment/success?reference=${encodeURIComponent(reference)}&provider=lemonsqueezy`;
+    const isHrPack = isHrPackId(order.planId) || Boolean(order.metadata?.orgId);
+    const defaultRedirect = isHrPack
+      ? `${appUrl}/employer/billing?reference=${encodeURIComponent(reference)}&provider=lemonsqueezy`
+      : `${appUrl}/payment/success?reference=${encodeURIComponent(reference)}&provider=lemonsqueezy`;
+    const redirectUrl = order.successUrl || defaultRedirect;
 
     if (
       isUnconfiguredEnvValue(apiKey) ||
@@ -185,18 +201,28 @@ export class LemonSqueezyProvider implements PaymentProvider {
         );
       }
 
-      // Mock mode allowed ONLY when ALLOW_MOCK_PAYMENTS=true outside production
-      await DataStore.completeOrder(order.id, {
-        actor: 'mock_lemonsqueezy',
-        note: 'Mock Lemon Squeezy checkout completed in non-production test mode',
-        provider: 'lemonsqueezy',
-      });
+      // HR credit packs are STRICTLY activated via verified webhook only — never during checkout creation
+      if (!isHrPack) {
+        await DataStore.completeOrder(order.id, {
+          actor: 'mock_lemonsqueezy',
+          note: 'Mock Lemon Squeezy checkout completed in non-production test mode',
+          provider: 'lemonsqueezy',
+        });
+      }
 
-      const mockUrl = `${appUrl}/payment/success?reference=${encodeURIComponent(reference)}&provider=lemonsqueezy&mock=true`;
+      const mockUrl = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}mock=true`;
       return {
         url: mockUrl,
         externalId: `ls_mock_${order.id}`,
       };
+    }
+
+    const customPayload: Record<string, string> = {
+      orderId: String(order.id),
+      userId: String(user.id),
+    };
+    if (order.metadata?.orgId) {
+      customPayload.orgId = String(order.metadata.orgId);
     }
 
     const requestBody = {
@@ -206,10 +232,7 @@ export class LemonSqueezyProvider implements PaymentProvider {
           checkout_data: {
             email: user.email,
             ...(user.name ? { name: user.name } : {}),
-            custom: {
-              orderId: String(order.id),
-              userId: String(user.id),
-            },
+            custom: customPayload,
           },
           product_options: {
             redirect_url: redirectUrl,
@@ -313,11 +336,17 @@ export class LemonSqueezyProvider implements PaymentProvider {
     const orderId = customData.orderId || customData.order_id
       ? String(customData.orderId || customData.order_id).trim()
       : undefined;
-    const orderReference = customData.reference
-      ? String(customData.reference).trim()
-      : undefined;
+    const orderReference =
+      customData.reference || customData.order_reference || customData.orderReference
+        ? String(
+            customData.reference || customData.order_reference || customData.orderReference
+          ).trim()
+        : undefined;
     const userId = customData.userId || customData.user_id
       ? String(customData.userId || customData.user_id).trim()
+      : undefined;
+    const orgId = customData.orgId || customData.org_id
+      ? String(customData.orgId || customData.org_id).trim()
       : undefined;
 
     const resourceId = data.id ? String(data.id).trim() : '';
@@ -436,6 +465,7 @@ export class LemonSqueezyProvider implements PaymentProvider {
       orderReference,
       userId,
       userEmail,
+      orgId,
       amount,
       amountCents,
       currency,

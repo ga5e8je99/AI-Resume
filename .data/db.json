@@ -2211,6 +2211,37 @@
       "termsVersion": "2026-10-31",
       "createdAt": "2026-10-31T22:44:09.149Z",
       "updatedAt": "2026-10-31T22:44:09.149Z"
+    },
+    {
+      "id": "usr_mvz5wgp0stki",
+      "name": "Gamal Ahmed",
+      "email": "gama.ahmed.dev@gmail.com",
+      "password": "$2b$10$dZ/iaP3lJ9sdffc.2YBCl.PE1NtqQxPxb0/giwPte5H5GSrqIYwSq",
+      "role": "user",
+      "accountType": "candidate",
+      "accountTypes": [
+        "candidate"
+      ],
+      "isDemo": false,
+      "plan": "free",
+      "aiCredits": 3,
+      "billingCycle": "none",
+      "planExpiresAt": null,
+      "proExpiresAt": null,
+      "paymentProvider": "none",
+      "providerCustomerId": "",
+      "providerSubscriptionId": "",
+      "stripeCustomerId": "",
+      "stripeSubscriptionId": "",
+      "lemonCustomerId": "",
+      "lemonSubscriptionId": "",
+      "emailVerified": null,
+      "emailVerifyTokenHash": "2bbcb53763e087c05059073a3c1c30c0c594ad5740d04ea4ba49123b0f4773f7",
+      "emailVerifyExpires": "2026-11-03T11:20:34.074Z",
+      "termsAcceptedAt": "2026-11-02T11:14:50.189Z",
+      "termsVersion": "2026-10-31",
+      "createdAt": "2026-11-02T11:14:51.396Z",
+      "updatedAt": "2026-11-02T11:20:34.079Z"
     }
   ],
   "resumes": [

@@ -14,7 +14,7 @@ export type ResolvedTheme = 'light' | 'dark';
 interface ThemeContextType {
   theme: ThemePreference;
   resolvedTheme: ResolvedTheme;
-  setTheme: (theme: ThemePreference) => void;
+  setTheme: (theme: ResolvedTheme) => void;
 }
 
 const THEME_STORAGE_KEY = 'jobmatch_theme';
@@ -45,7 +45,7 @@ function getThemePreferenceSnapshot(): ThemePreference {
   if (typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem(THEME_STORAGE_KEY);
-      if (saved === 'light' || saved === 'dark' || saved === 'system') {
+      if (saved === 'light' || saved === 'dark') {
         return saved;
       }
     } catch {
@@ -115,7 +115,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [resolvedTheme]);
 
-  const setTheme = useCallback((newTheme: ThemePreference) => {
+  const setTheme = useCallback((newTheme: ResolvedTheme) => {
     try {
       localStorage.setItem(THEME_STORAGE_KEY, newTheme);
     } catch {

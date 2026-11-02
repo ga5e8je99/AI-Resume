@@ -6,7 +6,7 @@ import { Check, X, ArrowRight } from 'lucide-react';
 import { PLANS, formatPrice, getLocalized } from '@/lib/plans';
 import { useLanguage } from '@/app/context/LanguageContext';
 import { Button } from '@/components/ui/Button';
-import { ScrollReveal, Stagger } from './ScrollReveal';
+import { Reveal, Stagger } from '@/components/motion/Reveal';
 
 export function PricingTeaser() {
   const { language, t } = useLanguage();
@@ -17,7 +17,7 @@ export function PricingTeaser() {
       className="overflow-x-clip py-16 sm:py-24 lg:py-28 border-t border-line-strong bg-surface-2 text-start"
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
-        <ScrollReveal direction="up">
+        <Reveal from="up">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12 text-start">
             <div>
               <span className="text-xs font-mono uppercase tracking-widest text-brand font-semibold">
@@ -39,12 +39,12 @@ export function PricingTeaser() {
               <ArrowRight className="w-4 h-4 rtl:rotate-180 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
             </Link>
           </div>
-        </ScrollReveal>
+        </Reveal>
 
         <Stagger
           className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch"
           itemClassName="h-full"
-          direction="up"
+          from="up"
         >
           {PLANS.map((plan) => {
             const isFree = plan.id === 'free';

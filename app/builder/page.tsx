@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import { ResumePreview } from './components/ResumePreview';
 const TemplateSelector = dynamic(() => import('./components/TemplateSelector'), { ssr: false });
 import { useAuth } from '../context/AuthContext';
+import { fetchUserProfileClient } from '@/lib/profile/client';
 import {
   ArrowLeft,
   Download,
@@ -230,8 +231,40 @@ export default function BuilderPage() {
           }
         })
         .catch((err) => console.error('Failed to load resume by id:', err));
+    } else if (user) {
+      // Prefill builder from user's Career Profile when creating a new resume
+      fetchUserProfileClient(false, user.id).then((prof) => {
+        if (!prof) return;
+        const loc = [prof.city, prof.country].filter(Boolean).join(', ');
+        setResumeData((prev) => ({
+          ...prev,
+          personalInfo: {
+            ...prev.personalInfo,
+            fullName: prof.fullName || user.name || prev.personalInfo.fullName,
+            jobTitle: prof.targetRole || prof.headline || prev.personalInfo.jobTitle,
+            email: user.email || prev.personalInfo.email,
+            phone: prof.phone || prev.personalInfo.phone,
+            location: loc || prev.personalInfo.location,
+            linkedin: prof.links?.linkedin || prev.personalInfo.linkedin,
+            github: prof.links?.github || prev.personalInfo.github,
+            website: prof.links?.portfolio || prev.personalInfo.website,
+          },
+          skills:
+            Array.isArray(prof.skills) && prof.skills.length > 0
+              ? prof.skills
+              : prev.skills,
+          languages:
+            Array.isArray(prof.languages) && prof.languages.length > 0
+              ? prof.languages.map((l, idx) => ({
+                  id: `lang_prof_${idx}`,
+                  name: l,
+                  proficiency: 'Fluent',
+                }))
+              : prev.languages,
+        }));
+      });
     }
-  }, [searchParams]);
+  }, [searchParams, user]);
 
   // Core Cloud / Local Persistence Function
   const persistResume = useCallback(

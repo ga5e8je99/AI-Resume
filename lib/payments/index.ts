@@ -1,4 +1,4 @@
-import { CurrencyCode, BillingCycle, getPlanById, getPlanPrice } from '../plans';
+import { CurrencyCode, BillingCycle, getPlanById, getPlanPrice, isHrPackId } from '../plans';
 import {
   ProviderNotConfiguredError,
   isMockPaymentsAllowed,
@@ -112,6 +112,8 @@ export interface CreateCheckoutParams {
   provider?: PaymentProviderName;
   successUrl?: string;
   cancelUrl?: string;
+  orgId?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface CheckoutResult {
@@ -140,6 +142,8 @@ export async function createCheckout({
   provider,
   successUrl,
   cancelUrl,
+  orgId,
+  metadata,
 }: CreateCheckoutParams): Promise<CheckoutResult> {
   if (!user || !user.id || !user.email) {
     throw new Error('Authenticated user with valid ID and email is required to create checkout.');
@@ -167,6 +171,9 @@ export async function createCheckout({
   let selectedProviderName: PaymentProviderName;
   let targetCurrency: CurrencyCode = currency;
 
+  const isOneTimePlan = plan.id === 'payg' || isHrPackId(plan.id);
+  const resolvedCycle: 'monthly' | 'annual' | 'once' = isOneTimePlan ? 'once' : billingCycle;
+
   if (currency === 'EGP' || requestedProvider === 'paymob') {
     selectedProviderName = 'paymob';
     targetCurrency = 'EGP';
@@ -178,16 +185,17 @@ export async function createCheckout({
     targetCurrency = 'USD';
   } else if (
     isLemonSqueezyConfigured(
-      plan.id as 'pro' | 'payg',
-      plan.id === 'payg' ? 'once' : billingCycle
+      plan.id as any,
+      resolvedCycle
     )
   ) {
     selectedProviderName = 'lemonsqueezy';
     targetCurrency = 'USD';
   } else if (
+    !isHrPackId(plan.id) &&
     isStripeConfigured(
       plan.id as 'pro' | 'payg',
-      plan.id === 'payg' ? 'once' : billingCycle
+      resolvedCycle
     )
   ) {
     selectedProviderName = 'stripe';
@@ -208,17 +216,24 @@ export async function createCheckout({
   const orderRef = `${refPrefix}_${user.id}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
+  const orderMetadata = {
+    ...(metadata || {}),
+    ...(orgId ? { orgId } : {}),
+    ...(isHrPackId(plan.id) ? { isHrPack: true, hrCredits: Number(plan.credits) } : {}),
+  };
+
   const storedOrder = await DataStore.createOrder({
     userId: user.id,
     userEmail: user.email,
-    planId: plan.id as 'pro' | 'payg',
-    billingCycle: plan.id === 'payg' ? 'once' : billingCycle,
+    planId: plan.id as any,
+    billingCycle: resolvedCycle,
     baseAmount: canonicalPrice,
     amount: canonicalPrice,
     currency: targetCurrency,
     method: selectedProviderName,
     reference: orderRef,
     expiresAt,
+    metadata: orderMetadata,
   });
 
   const session = await selectedProvider.createCheckout(
@@ -231,6 +246,7 @@ export async function createCheckout({
       currency: targetCurrency,
       successUrl,
       cancelUrl,
+      metadata: orderMetadata,
     },
     user
   );

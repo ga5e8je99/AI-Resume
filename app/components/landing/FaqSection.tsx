@@ -3,7 +3,7 @@
 import React from 'react';
 import { useLanguage } from '@/app/context/LanguageContext';
 import { Accordion } from '@/components/ui/Accordion';
-import { ScrollReveal } from './ScrollReveal';
+import { Reveal } from '@/components/motion/Reveal';
 
 export default function FaqSection() {
   const { t } = useLanguage();
@@ -22,7 +22,7 @@ export default function FaqSection() {
   return (
     <section className="overflow-x-clip py-16 sm:py-24 bg-paper">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-10">
-        <ScrollReveal direction="up" className="text-center space-y-3">
+        <Reveal from="up" className="text-center space-y-3">
           <span className="inline-block text-xs font-mono uppercase tracking-wider px-3 py-1 rounded-full bg-brand-soft text-brand font-semibold">
             {t('faq_tag')}
           </span>
@@ -32,11 +32,11 @@ export default function FaqSection() {
           <p className="text-sm sm:text-base text-ink-2 leading-relaxed">
             {t('faq_desc')}
           </p>
-        </ScrollReveal>
+        </Reveal>
 
-        <ScrollReveal direction="up" delay={100}>
+        <Reveal from="up" delay={100}>
           <Accordion items={items} />
-        </ScrollReveal>
+        </Reveal>
       </div>
     </section>
   );

@@ -95,6 +95,24 @@ import {
   clearOperationalAlertsForTesting,
 } from '@/lib/sentry';
 import { reconcilePayments } from '../scripts/reconcile-payments';
+import Organization from '@/app/models/Organization';
+import EmployerJob from '@/app/models/EmployerJob';
+import Application from '@/app/models/Application';
+import HrCreditLedger from '@/app/models/HrCreditLedger';
+import {
+  hasAccountRole,
+  sanitizeJobMarkdown,
+  resolveAccountRoleState,
+} from '@/lib/hr';
+import { GET as employerOverviewGET, POST as employerOverviewPOST } from '@/app/api/employer/overview/route';
+import { POST as verifyOrgPOST } from '@/app/api/employer/organizations/[orgId]/verify/route';
+import { GET as employerJobsGET, POST as employerJobsPOST } from '@/app/api/employer/jobs/route';
+import { GET as employerJobDetailGET, PUT as employerJobDetailPUT } from '@/app/api/employer/jobs/[jobId]/route';
+import { GET as jobApplicantsGET } from '@/app/api/employer/jobs/[jobId]/applicants/route';
+import { PATCH as applicationPATCH } from '@/app/api/employer/applications/[applicationId]/route';
+import { POST as applicationEmailPOST } from '@/app/api/employer/applications/[applicationId]/email/route';
+import { POST as jobReportPOST } from '@/app/api/jobs/report/route';
+import { GET as adminModerationGET, POST as adminModerationPOST } from '@/app/api/admin/moderation/route';
 
 const DB_FILE = path.join(process.cwd(), '.data', 'db.json');
 
@@ -3315,6 +3333,2888 @@ ahmed@example.com | +20 100 123 4567 | القاهرة، مصر
       }
     });
   });
+
+  // =========================================================================
+  // 14. User Profile, Onboarding Skip, Multilingual Autosuggest & Privacy
+  // =========================================================================
+  describe('14. User Profile (/api/profile, /api/profile/skip, /api/profile/suggest & Privacy)', () => {
+    it('enforces auth, Zod validation (max 30 skills, salary bounds, safe URLs), XSS sanitization, profileCompletion & onboardingCompletedAt', async () => {
+      const { GET: profileGET, PUT: profilePUT } = await import('@/app/api/profile/route');
+      const { POST: profileSkipPOST } = await import('@/app/api/profile/skip/route');
+
+      // 1. Unauthenticated GET / PUT / SKIP must return 401
+      const unauthGetRes = await profileGET(new NextRequest('http://localhost:3000/api/profile'));
+      assert.equal(unauthGetRes.status, 401);
+
+      const unauthPutRes = await profilePUT(
+        new NextRequest('http://localhost:3000/api/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', origin: 'http://localhost:3000' },
+          body: JSON.stringify({ fullName: 'Test' }),
+        })
+      );
+      assert.equal(unauthPutRes.status, 401);
+
+      const unauthSkipRes = await profileSkipPOST(
+        new NextRequest('http://localhost:3000/api/profile/skip', {
+          method: 'POST',
+          headers: { origin: 'http://localhost:3000' },
+        })
+      );
+      assert.equal(unauthSkipRes.status, 401);
+
+      // 2. Create two users (owner & third-party HR viewer)
+      const ownerUser = await DataStore.createUserAccount({
+        name: 'Karim Nabil',
+        email: `profile_owner_${Date.now()}@test.com`,
+        password: 'hashed_password',
+        role: 'user',
+      });
+      const viewerUser = await DataStore.createUserAccount({
+        name: 'HR Viewer',
+        email: `hr_viewer_${Date.now()}@test.com`,
+        password: 'hashed_password',
+        role: 'user',
+      });
+
+      const ownerToken = signToken({
+        userId: ownerUser.id,
+        email: ownerUser.email,
+        name: ownerUser.name,
+      });
+      const viewerToken = signToken({
+        userId: viewerUser.id,
+        email: viewerUser.email,
+        name: viewerUser.name,
+      });
+
+      // 3. Reject > 30 skills via Zod validation
+      const tooManySkills = Array.from({ length: 31 }, (_, i) => `Skill_${i + 1}`);
+      const overSkillsRes = await profilePUT(
+        new NextRequest('http://localhost:3000/api/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${ownerToken}`,
+          },
+          body: JSON.stringify({ skills: tooManySkills }),
+        })
+      );
+      assert.equal(overSkillsRes.status, 400);
+      const overSkillsBody = await overSkillsRes.json();
+      assert.equal(overSkillsBody.error, 'VALIDATION_ERROR');
+
+      // 4. Reject ownership violation (updating another user's userId)
+      const CrossUserRes = await profilePUT(
+        new NextRequest('http://localhost:3000/api/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${ownerToken}`,
+          },
+          body: JSON.stringify({ userId: viewerUser.id, fullName: 'Hacked' }),
+        })
+      );
+      assert.equal(CrossUserRes.status, 403);
+
+      // 5. Update full profile with HTML/XSS payload to verify sanitization + completion calculation
+      const updateRes = await profilePUT(
+        new NextRequest('http://localhost:3000/api/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${ownerToken}`,
+          },
+          body: JSON.stringify({
+            fullName: '  Karim <script>alert(1)</script>Nabil  ',
+            targetRole: 'Senior Full Stack Developer <b>React</b>',
+            seniority: 'senior',
+            yearsOfExperience: 6,
+            industries: ['Technology', 'FinTech', 'technology'],
+            skills: ['TypeScript', 'React.js', 'Node.js', 'MongoDB'],
+            country: 'Egypt',
+            city: 'Cairo',
+            willingToRelocate: true,
+            remotePreference: 'hybrid',
+            employmentTypes: ['full-time', 'contract'],
+            expectedSalary: {
+              min: 2500,
+              max: 4000,
+              currency: 'usd',
+              visible: false,
+            },
+            languages: ['Arabic', 'English'],
+            phone: '+20 100 123 4567 <script>evil()</script>',
+            phoneVisible: false,
+            links: {
+              linkedin: 'linkedin.com/in/karim-nabil',
+              github: 'https://github.com/karim-nabil',
+              portfolio: 'https://karim.dev',
+            },
+          }),
+        })
+      );
+      assert.equal(updateRes.status, 200);
+      const updateData = await updateRes.json();
+      assert.equal(updateData.ok, true);
+      const prof = updateData.profile;
+
+      assert.equal(prof.fullName, 'Karim Nabil');
+      assert.equal(prof.targetRole, 'Senior Full Stack Developer React');
+      assert.equal(prof.headline, 'Senior Full Stack Developer React');
+      assert.equal(prof.seniority, 'senior');
+      assert.equal(prof.yearsOfExperience, 6);
+      assert.deepEqual(prof.industries, ['Technology', 'FinTech']);
+      assert.equal(prof.skills.length, 4);
+      assert.equal(prof.country, 'Egypt');
+      assert.equal(prof.city, 'Cairo');
+      assert.equal(prof.willingToRelocate, true);
+      assert.equal(prof.remotePreference, 'hybrid');
+      assert.deepEqual(prof.employmentTypes, ['full-time', 'contract']);
+      assert.equal(prof.expectedSalary.min, 2500);
+      assert.equal(prof.expectedSalary.max, 4000);
+      assert.equal(prof.expectedSalary.currency, 'USD');
+      assert.equal(prof.expectedSalary.visible, false);
+      assert.equal(prof.phone, '+20 100 123 4567');
+      assert.equal(prof.phoneVisible, false);
+      assert.equal(prof.links.linkedin, 'https://linkedin.com/in/karim-nabil');
+      assert.equal(prof.profileCompletion, 100);
+      assert.ok(prof.onboardingCompletedAt, 'onboardingCompletedAt must be set upon PUT /api/profile');
+      assert.equal(prof.isOwner, true);
+
+      // 6. Privacy Enforcement: Third-party viewer (viewerToken) requesting owner's profile
+      // Sensitive fields (expectedSalary, phone) MUST be hidden (null) because visible=false / phoneVisible=false
+      const thirdPartyRes = await profileGET(
+        new NextRequest(`http://localhost:3000/api/profile?userId=${ownerUser.id}`, {
+          headers: { Authorization: `Bearer ${viewerToken}` },
+        })
+      );
+      assert.equal(thirdPartyRes.status, 200);
+      const thirdPartyBody = await thirdPartyRes.json();
+      assert.equal(thirdPartyBody.profile.isOwner, false);
+      assert.equal(
+        thirdPartyBody.profile.expectedSalary,
+        null,
+        'expectedSalary must be null for non-owner when visible is false'
+      );
+      assert.equal(
+        thirdPartyBody.profile.phone,
+        null,
+        'phone must be null for non-owner when phoneVisible is false'
+      );
+      assert.equal(thirdPartyBody.profile.fullName, 'Karim Nabil');
+
+      // 7. Explicit Consent: Owner enables expectedSalary.visible = true and phoneVisible = true
+      await profilePUT(
+        new NextRequest('http://localhost:3000/api/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${ownerToken}`,
+          },
+          body: JSON.stringify({
+            expectedSalary: { min: 2500, max: 4000, currency: 'USD', visible: true },
+            phoneVisible: true,
+          }),
+        })
+      );
+
+      const consentedViewRes = await profileGET(
+        new NextRequest(`http://localhost:3000/api/profile?userId=${ownerUser.id}`, {
+          headers: { Authorization: `Bearer ${viewerToken}` },
+        })
+      );
+      const consentedViewBody = await consentedViewRes.json();
+      assert.equal(consentedViewBody.profile.isOwner, false);
+      assert.equal(consentedViewBody.profile.expectedSalary?.min, 2500);
+      assert.equal(consentedViewBody.profile.expectedSalary?.max, 4000);
+      assert.equal(consentedViewBody.profile.phone, '+20 100 123 4567');
+
+      // 8. Onboarding Skip endpoint (/api/profile/skip)
+      const skipRes = await profileSkipPOST(
+        new NextRequest('http://localhost:3000/api/profile/skip', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${viewerToken}`,
+          },
+          body: JSON.stringify({ reason: 'later' }),
+        })
+      );
+      assert.equal(skipRes.status, 200);
+      const skipBody = await skipRes.json();
+      assert.equal(skipBody.ok, true);
+      assert.equal(skipBody.skipped, true);
+      assert.ok(skipBody.profile.onboardingCompletedAt);
+      assert.ok(skipBody.profile.onboardingSkippedAt);
+    });
+
+    it('provides static multilingual role and skill autosuggest (/api/profile/suggest) with validation & rate limit', async () => {
+      const { GET: suggestGET } = await import('@/app/api/profile/suggest/route');
+
+      // 1. Invalid type returns 400
+      const badTypeRes = await suggestGET(
+        new NextRequest('http://localhost:3000/api/profile/suggest?type=invalid&q=react')
+      );
+      assert.equal(badTypeRes.status, 400);
+
+      // 2. Role search in English
+      const roleEnRes = await suggestGET(
+        new NextRequest('http://localhost:3000/api/profile/suggest?type=role&q=frontend&lang=en')
+      );
+      assert.equal(roleEnRes.status, 200);
+      const roleEnBody = await roleEnRes.json();
+      assert.equal(roleEnBody.ok, true);
+      assert.ok(roleEnBody.suggestions.length >= 1);
+      assert.ok(roleEnBody.items.some((item: string) => item.toLowerCase().includes('frontend')));
+
+      // 3. Role search in Arabic
+      const roleArRes = await suggestGET(
+        new NextRequest(
+          `http://localhost:3000/api/profile/suggest?type=role&q=${encodeURIComponent('محاسب')}&lang=ar`
+        )
+      );
+      assert.equal(roleArRes.status, 200);
+      const roleArBody = await roleArRes.json();
+      assert.equal(roleArBody.ok, true);
+      assert.equal(roleArBody.locale, 'ar');
+      assert.ok(roleArBody.items.some((item: string) => item.includes('محاسب')));
+
+      // 4. Skill search
+      const skillRes = await suggestGET(
+        new NextRequest('http://localhost:3000/api/profile/suggest?type=skill&q=type&lang=en')
+      );
+      assert.equal(skillRes.status, 200);
+      const skillBody = await skillRes.json();
+      assert.equal(skillBody.ok, true);
+      assert.ok(skillBody.items.includes('TypeScript'));
+      assert.ok(skillRes.headers.get('X-RateLimit-Limit'));
+    });
+
+    it('supports 4-step onboarding draft saves (completeOnboarding: false -> true), CV profile extraction, and 6-locale onboarding/settings i18n keys', async () => {
+      const { PUT: profilePUT } = await import('@/app/api/profile/route');
+      const { extractProfileFromResume, extractProfileFromText } = await import('@/lib/jobs/extractor');
+      const en = (await import('@/app/lib/translations/en')).default;
+      const ar = (await import('@/app/lib/translations/ar')).default;
+      const fr = (await import('@/app/lib/translations/fr')).default;
+      const de = (await import('@/app/lib/translations/de')).default;
+      const es = (await import('@/app/lib/translations/es')).default;
+      const tr = (await import('@/app/lib/translations/tr')).default;
+
+      // 1. Verify draft save keeps onboardingCompletedAt null until step 4 completion
+      const wizardUser = await DataStore.createUserAccount({
+        name: 'Nour Hassan',
+        email: `wizard_${Date.now()}@test.com`,
+        password: 'hashed_password',
+        role: 'user',
+      });
+      const wizardToken = signToken({
+        userId: wizardUser.id,
+        email: wizardUser.email,
+        name: wizardUser.name,
+      });
+
+      const step1DraftRes = await profilePUT(
+        new NextRequest('http://localhost:3000/api/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${wizardToken}`,
+          },
+          body: JSON.stringify({
+            fullName: 'Nour Hassan',
+            country: 'Egypt',
+            city: 'Alexandria',
+            completeOnboarding: false,
+          }),
+        })
+      );
+      assert.equal(step1DraftRes.status, 200);
+      const step1DraftBody = await step1DraftRes.json();
+      assert.equal(
+        step1DraftBody.profile.onboardingCompletedAt,
+        null,
+        'Draft step save must keep onboardingCompletedAt null'
+      );
+
+      // Final step 4 save marks onboardingCompletedAt
+      const step4FinalRes = await profilePUT(
+        new NextRequest('http://localhost:3000/api/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${wizardToken}`,
+          },
+          body: JSON.stringify({
+            targetRole: 'Product Manager',
+            seniority: 'mid',
+            yearsOfExperience: 4,
+            skills: ['Product Strategy', 'Agile', 'SQL'],
+            completeOnboarding: true,
+          }),
+        })
+      );
+      assert.equal(step4FinalRes.status, 200);
+      const step4FinalBody = await step4FinalRes.json();
+      assert.ok(
+        step4FinalBody.profile.onboardingCompletedAt,
+        'Final wizard step must set onboardingCompletedAt'
+      );
+
+      // 2. Verify extractProfileFromResume / extractProfileFromText populates onboarding review fields
+      const extracted = extractProfileFromText(
+        'Nour Hassan\nSenior Frontend Engineer with 5 years of experience in Cairo, Egypt.\nSkills: React, TypeScript, Next.js, Tailwind CSS.\nLanguages: Arabic, English'
+      );
+      assert.equal(extracted.fullName, 'Nour Hassan');
+      assert.ok(extracted.targetRole?.toLowerCase().includes('frontend'));
+      assert.equal(extracted.yearsOfExperience, 5);
+      assert.equal(extracted.city, 'Cairo');
+      assert.equal(extracted.countryName, 'Egypt');
+      assert.ok(extracted.topSkills.includes('React'));
+      assert.ok(typeof extractProfileFromResume === 'function');
+
+      // 3. Verify all 6 locales have the onboarding & /settings/profile translation keys
+      const onboardingKeys = [
+        'onboarding_step_of',
+        'onboarding_step1_title',
+        'onboarding_step2_title',
+        'onboarding_step3_title',
+        'onboarding_step4_title',
+        'onboarding_cv_autofill_title',
+        'onboarding_success_title',
+        'onboarding_cta_find_jobs',
+        'onboarding_cta_build_resume',
+        'settings_profile_nav_label',
+      ];
+      for (const [loc, dict] of Object.entries({ en, ar, fr, de, es, tr })) {
+        for (const k of onboardingKeys) {
+          assert.ok(
+            typeof (dict as any)[k] === 'string' && (dict as any)[k].trim().length > 0,
+            `Locale ${loc} must define ${k}`
+          );
+        }
+      }
+    });
+  });
+
+  // =========================================================================
+  // 37. Full Job Search Engine: Fuzzy Dedupe, Filters, Cursor Pagination, Rate Limit, Saved Jobs & Alerts
+  // =========================================================================
+  describe('37. Full Job Search Engine: fuzzy dedupe, filters, cursor pagination, rate limit, saved jobs & alerts', () => {
+    it('deduplicates fuzzy job listings across sources, applies all filters/sorting, paginates with cursor, and enforces rate limits & free vs match quota', async () => {
+      const {
+        deduplicateJobs,
+        filterAndSortJobs,
+        paginateJobsWithCursor,
+      } = await import('@/lib/jobs/matcher');
+      const { generateSmartLinks } = await import('@/lib/jobs/smart-links');
+      const { POST: savedJobsPOST, GET: savedJobsGET, DELETE: savedJobsDELETE } = await import(
+        '@/app/api/jobs/saved/route'
+      );
+      const {
+        POST: savedSearchesPOST,
+        GET: savedSearchesGET,
+        DELETE: savedSearchesDELETE,
+      } = await import('@/app/api/jobs/saved-searches/route');
+      const { POST: jobClickPOST } = await import('@/app/api/jobs/click/route');
+      const { GET: cronJobAlertsGET } = await import('@/app/api/cron/job-alerts/route');
+      const { POST: unsubscribePOST } = await import(
+        '@/app/api/jobs/alerts/unsubscribe/route'
+      );
+
+      // 1. Fuzzy Deduplication across sources (title + company + location)
+      const duplicateCrossSourceJobs: Job[] = [
+        {
+          id: 'rem_1',
+          title: 'Sr. Frontend Developer (Remote)',
+          company: 'Acme Technologies Inc.',
+          location: 'Cairo, Egypt',
+          remote: true,
+          description: 'Short description.',
+          url: 'https://remotive.com/jobs/101?utm_source=feed',
+          source: 'Remotive',
+          jobType: 'Full-time',
+        },
+        {
+          id: 'arb_1',
+          title: 'Senior Front-End Developer',
+          company: 'Acme Technologies LLC',
+          location: 'Cairo',
+          remote: true,
+          description:
+            'Detailed description of the Senior Frontend Developer role building React & TypeScript web apps.',
+          url: 'https://arbeitnow.com/jobs/202',
+          source: 'Arbeitnow',
+          salary: '$70,000 - $90,000',
+          postedDate: new Date().toISOString().split('T')[0],
+          tags: ['React', 'TypeScript'],
+        },
+        {
+          id: 'muse_1',
+          title: 'Backend Python Intern',
+          company: 'BetaData GmbH',
+          location: 'Berlin, Germany',
+          remote: false,
+          description: 'Internship working with Python and SQL.',
+          url: 'https://themuse.com/jobs/303',
+          source: 'The Muse',
+          jobType: 'Internship',
+          salary: '$25,000 - $35,000',
+          postedDate: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString().split('T')[0],
+        },
+      ];
+
+      const deduped = deduplicateJobs(duplicateCrossSourceJobs);
+      assert.equal(deduped.length, 2, 'Fuzzy duplicate across Remotive and Arbeitnow must merge into 1');
+      assert.equal(
+        deduped[0].salary,
+        '$70,000 - $90,000',
+        'Merged primary job must inherit missing salary from duplicate'
+      );
+      assert.ok(
+        deduped[0].description.length > 40,
+        'Merged primary job must inherit richer description from duplicate'
+      );
+
+      // 2. Filters: employmentType, datePosted, seniority, minSalary, source, remote
+      const onlyInternships = filterAndSortJobs(deduped, {
+        query: 'Python',
+        employmentType: 'internship',
+      });
+      assert.equal(onlyInternships.length, 1);
+      assert.equal(onlyInternships[0].id, 'muse_1');
+
+      const only24h = filterAndSortJobs(deduped, {
+        query: 'Developer',
+        datePosted: '24h',
+      });
+      assert.equal(only24h.length, 1);
+      assert.equal(only24h[0].id, 'rem_1');
+
+      const onlyHighSalary = filterAndSortJobs(deduped, {
+        query: 'Developer',
+        minSalary: 60000,
+      });
+      assert.equal(onlyHighSalary.length, 1);
+      assert.equal(onlyHighSalary[0].id, 'rem_1');
+
+      const onlySourceMuse = filterAndSortJobs(deduped, {
+        query: '',
+        source: 'The Muse',
+      });
+      assert.equal(onlySourceMuse.length, 1);
+      assert.equal(onlySourceMuse[0].source, 'The Muse');
+
+      // 3. Cursor Pagination
+      const fiveJobs: Job[] = Array.from({ length: 5 }, (_, idx) => ({
+        id: `page_job_${idx + 1}`,
+        title: `Software Engineer ${idx + 1}`,
+        company: `Company ${idx + 1}`,
+        location: 'Cairo, Egypt',
+        remote: true,
+        description: 'Engineering role',
+        url: `https://example.com/jobs/${idx + 1}`,
+        source: 'Remotive',
+      }));
+
+      const page1 = paginateJobsWithCursor(fiveJobs, null, 2);
+      assert.equal(page1.items.length, 2);
+      assert.equal(page1.items[0].id, 'page_job_1');
+      assert.equal(page1.hasMore, true);
+      assert.ok(page1.nextCursor);
+
+      const page2 = paginateJobsWithCursor(fiveJobs, page1.nextCursor, 2);
+      assert.equal(page2.items.length, 2);
+      assert.equal(page2.items[0].id, 'page_job_3');
+      assert.equal(page2.hasMore, true);
+
+      const page3 = paginateJobsWithCursor(fiveJobs, page2.nextCursor, 2);
+      assert.equal(page3.items.length, 1);
+      assert.equal(page3.items[0].id, 'page_job_5');
+      assert.equal(page3.hasMore, false);
+      assert.equal(page3.nextCursor, null);
+
+      // 4. Smart Deep-Links verification (10 platforms, public search URLs)
+      const links = generateSmartLinks({
+        query: 'Frontend Developer',
+        location: 'Cairo',
+        remote: true,
+      });
+      assert.equal(links.length, 10);
+      assert.ok(links.some((l) => l.id === 'linkedin' && l.url.includes('linkedin.com/jobs/search')));
+      assert.ok(links.some((l) => l.id === 'wuzzuf' && l.url.includes('wuzzuf.net/search/jobs')));
+      assert.ok(links.some((l) => l.id === 'bayt' && l.url.includes('bayt.com')));
+
+      // 5. Free CV-less search (includeMatch: false) does NOT deduct quota/credits, while includeMatch: true does
+      await clearAllRateLimits();
+      const searchUser = await DataStore.createUserAccount({
+        name: 'Free Search User',
+        email: `free_job_engine_${Date.now()}@test.com`,
+        password: 'password123',
+        plan: 'free',
+        aiCredits: 0,
+        emailVerified: new Date().toISOString(),
+      });
+      const userToken = signToken({
+        userId: searchUser.id,
+        email: searchUser.email,
+        name: searchUser.name,
+      });
+
+      const cachedKeyQuery = `engine_test_query_${Date.now()}`;
+      await setCachedJobResults(
+        { query: cachedKeyQuery, location: 'Cairo', remote: true, country: 'eg' },
+        {
+          jobs: fiveJobs,
+          totalFound: 5,
+          attributions: [],
+          sourcesQueried: ['Remotive'],
+        }
+      );
+
+      const freeSearchRes = await jobSearchPOST(
+        new NextRequest('http://localhost:3000/api/jobs/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify({
+            query: cachedKeyQuery,
+            location: 'Cairo',
+            remote: true,
+            country: 'eg',
+            includeMatch: false,
+            limit: 2,
+          }),
+        })
+      );
+      assert.equal(freeSearchRes.status, 200);
+      const freeSearchData = await freeSearchRes.json();
+      assert.equal(freeSearchData.includeMatch, false);
+      assert.equal(freeSearchData.jobs.length, 2);
+      assert.equal(freeSearchData.jobs[0].matchScore, undefined, 'Free CV-less search must omit matchScore');
+      assert.equal(freeSearchData.hasMore, true);
+      assert.ok(freeSearchData.nextCursor);
+      assert.equal(freeSearchData.quota.freeUsed, 0, 'Free CV-less search must not consume jobMatchFreeUsed');
+
+      // 6. Save Job, Saved Searches, Job Alerts Cron & One-Click Unsubscribe, and Click Logging
+      const saveJobRes = await savedJobsPOST(
+        new NextRequest('http://localhost:3000/api/jobs/saved', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify({ job: fiveJobs[0] }),
+        })
+      );
+      assert.equal(saveJobRes.status, 200);
+
+      const listSavedRes = await savedJobsGET(
+        new NextRequest('http://localhost:3000/api/jobs/saved', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${userToken}` },
+        })
+      );
+      const listSavedData = await listSavedRes.json();
+      assert.equal(listSavedData.savedJobs.length, 1);
+      assert.equal(listSavedData.savedJobs[0].jobId, fiveJobs[0].id);
+
+      const delSavedRes = await savedJobsDELETE(
+        new NextRequest(`http://localhost:3000/api/jobs/saved?jobId=${fiveJobs[0].id}`, {
+          method: 'DELETE',
+          headers: {
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${userToken}`,
+          },
+        })
+      );
+      assert.equal(delSavedRes.status, 200);
+
+      // Saved search with daily alert
+      const saveSearchRes = await savedSearchesPOST(
+        new NextRequest('http://localhost:3000/api/jobs/saved-searches', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify({
+            query: cachedKeyQuery,
+            location: 'Cairo',
+            country: 'eg',
+            remote: true,
+            alertFrequency: 'daily',
+          }),
+        })
+      );
+      assert.equal(saveSearchRes.status, 200);
+      const savedSearchBody = await saveSearchRes.json();
+      const unsubToken = savedSearchBody.savedSearch.unsubscribeToken;
+      assert.ok(unsubToken);
+
+      // Trigger Cron endpoint to send due alert
+      const cronRes = await cronJobAlertsGET(
+        new NextRequest('http://localhost:3000/api/cron/job-alerts?frequency=daily', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${process.env.CRON_SECRET || 'local_test_cron_secret_token'}`,
+          },
+        })
+      );
+      assert.equal(cronRes.status, 200);
+      const cronData = await cronRes.json();
+      assert.ok(cronData.processed >= 1);
+
+      // Unsubscribe using the one-click token
+      const unsubRes = await unsubscribePOST(
+        new NextRequest(`http://localhost:3000/api/jobs/alerts/unsubscribe?token=${unsubToken}`, {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+        })
+      );
+      assert.equal(unsubRes.status, 200);
+      const unsubData = await unsubRes.json();
+      assert.equal(unsubData.unsubscribed, true);
+
+      // Record outbound Apply click
+      const clickRes = await jobClickPOST(
+        new NextRequest('http://localhost:3000/api/jobs/click', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify({
+            jobId: fiveJobs[0].id,
+            title: fiveJobs[0].title,
+            company: fiveJobs[0].company,
+            source: fiveJobs[0].source,
+            url: fiveJobs[0].url,
+          }),
+        })
+      );
+      assert.equal(clickRes.status, 200);
+
+      // Clean up saved search
+      const listSearchesRes = await savedSearchesGET(
+        new NextRequest('http://localhost:3000/api/jobs/saved-searches', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${userToken}` },
+        })
+      );
+      const listSearchesData = await listSearchesRes.json();
+      assert.equal(listSearchesData.savedSearches[0].alertEnabled, false);
+
+      await savedSearchesDELETE(
+        new NextRequest(
+          `http://localhost:3000/api/jobs/saved-searches?id=${savedSearchBody.savedSearch.id}`,
+          {
+            method: 'DELETE',
+            headers: {
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${userToken}`,
+            },
+          }
+        )
+      );
+    });
+  });
+
+  // =========================================================================
+  // 21. Employer / HR Recruitment Models, Organization, EmployerJob, Application, HrCreditLedger & Unique Constraints
+  // =========================================================================
+  describe('21. Employer / HR Recruitment Models, Organization, EmployerJob, Application, HrCreditLedger & Unique Constraints', () => {
+    it('supports User accountType (candidate | employer | both), Organization model with members & separate hrCredits, and Mongoose schema indexes', async () => {
+      // Verify Mongoose schema indexes are registered properly
+      const appIndexes = Application.schema.indexes();
+      const hasUniqueJobCandidateIdx = appIndexes.some(
+        ([fields, opts]: any) =>
+          fields.jobId === 1 && fields.candidateId === 1 && opts?.unique === true
+      );
+      assert.equal(
+        hasUniqueJobCandidateIdx,
+        true,
+        'Application schema must have unique(jobId, candidateId) index'
+      );
+
+      const jobIndexes = EmployerJob.schema.indexes();
+      const hasOrgStatusIdx = jobIndexes.some(
+        ([fields]: any) => fields.orgId === 1 && fields.status === 1
+      );
+      assert.equal(hasOrgStatusIdx, true, 'EmployerJob schema must index orgId + status');
+
+      const ledgerIndexes = HrCreditLedger.schema.indexes();
+      const hasOrgCreatedAtIdx = ledgerIndexes.some(
+        ([fields]: any) => fields.orgId === 1 && fields.createdAt === -1
+      );
+      assert.equal(hasOrgCreatedAtIdx, true, 'HrCreditLedger schema must index orgId + createdAt');
+
+      // Create a candidate user who also becomes an employer ('both')
+      const ownerUser = await DataStore.createUserAccount({
+        name: 'Nour Employer & Candidate',
+        email: `nour_hr_${Date.now()}@test.com`,
+        password: 'password123',
+        accountType: 'candidate',
+      });
+      assert.equal(ownerUser.accountType, 'candidate');
+      assert.equal(hasAccountRole(ownerUser, 'candidate'), true);
+      assert.equal(hasAccountRole(ownerUser, 'employer'), false);
+
+      const recruiterUser = await DataStore.createUserAccount({
+        name: 'Recruiter Teammate',
+        email: `recruiter_${Date.now()}@test.com`,
+        password: 'password123',
+        accountType: 'employer',
+      });
+      assert.equal(recruiterUser.accountType, 'employer');
+      assert.equal(hasAccountRole(recruiterUser, 'employer'), true);
+
+      // Creating an Organization automatically enables 'employer' on ownerUser -> becomes 'both'
+      const org = await DataStore.createOrganization(ownerUser.id, {
+        name: 'Jade Tech Solutions',
+        website: 'https://jadetech.example.com',
+        logo: 'https://jadetech.example.com/logo.png',
+        industry: 'Software Development',
+        size: '51-200',
+        country: 'EG',
+        initialHrCredits: 5,
+      });
+
+      assert.equal(org.name, 'Jade Tech Solutions');
+      assert.equal(org.verified, false, 'New organizations must default to verified: false');
+      assert.equal(org.ownerId, ownerUser.id);
+      assert.equal(org.hrCredits, 5);
+      assert.equal(org.creditBalance, 5);
+      assert.equal(org.members.length, 1);
+      assert.equal(org.members[0].userId, ownerUser.id);
+      assert.equal(org.members[0].role, 'owner');
+
+      const updatedOwner = await DataStore.findUserById(ownerUser.id);
+      assert.equal(
+        updatedOwner?.accountType,
+        'both',
+        'Candidate who creates an organization should hold both candidate and employer roles'
+      );
+      assert.equal(hasAccountRole(updatedOwner, 'candidate'), true);
+      assert.equal(hasAccountRole(updatedOwner, 'employer'), true);
+
+      // Add recruiter member to organization
+      const orgWithRecruiter = await DataStore.addOrganizationMember(
+        org.id,
+        ownerUser.id,
+        recruiterUser.id,
+        'recruiter'
+      );
+      assert.equal(orgWithRecruiter?.members.length, 2);
+      assert.equal(await DataStore.isOrganizationMember(org.id, recruiterUser.id), true);
+      assert.equal(
+        await DataStore.isOrganizationMember(org.id, recruiterUser.id, 'owner'),
+        false
+      );
+    });
+
+    it('sanitizes EmployerJob markdown descriptions, enforces Application unique(jobId, candidateId), preserves immutable resumeSnapshot, and hides HR notes from candidates', async () => {
+      const hrOwner = await DataStore.createUserAccount({
+        name: 'HR Director',
+        email: `hr_dir_${Date.now()}@test.com`,
+        password: 'password123',
+        accountType: 'employer',
+      });
+      const candidate = await DataStore.createUserAccount({
+        name: 'Candidate Applicant',
+        email: `applicant_${Date.now()}@test.com`,
+        password: 'password123',
+        accountType: 'candidate',
+      });
+      const outsider = await DataStore.createUserAccount({
+        name: 'Outsider User',
+        email: `outsider_${Date.now()}@test.com`,
+        password: 'password123',
+      });
+
+      const org = await DataStore.createOrganization(hrOwner.id, {
+        name: 'Amber Cloud Corp',
+        industry: 'Cloud Infrastructure',
+        size: '201-500',
+        country: 'AE',
+        initialHrCredits: 4,
+      });
+
+      // Create EmployerJob with malicious XSS in markdown description
+      const job = await DataStore.createEmployerJob(org.id, hrOwner.id, {
+        title: 'Senior Full-Stack TypeScript Engineer',
+        description:
+          '## Role Overview\nWe need a **TypeScript** engineer.\n<script>alert("xss")</script>\n<iframe src="https://evil.com"></iframe>\n[Click Here](javascript:alert(1))\n- Build scalable APIs',
+        requirements: ['5+ years TypeScript', 'Next.js & Node.js'],
+        skills: ['TypeScript', 'React', 'Node.js', 'MongoDB'],
+        location: 'Dubai',
+        remote: true,
+        employmentType: 'full-time',
+        seniority: 'senior',
+        salary: { min: 4000, max: 6500, currency: 'USD', visible: true },
+        screeningQuestions: ['How many years of TypeScript experience do you have?'],
+        status: 'published',
+      });
+
+      assert.equal(job.applyMode, 'internal');
+      assert.equal(job.status, 'published');
+      assert.ok(job.publishedAt);
+      assert.ok(job.slug.includes('senior-full-stack-typescript-engineer'));
+      assert.ok(!job.description.includes('<script>'), 'Script tags must be stripped');
+      assert.ok(!job.description.includes('<iframe'), 'Iframe tags must be stripped');
+      assert.ok(!job.description.includes('javascript:'), 'javascript: URIs must be neutralized');
+      assert.ok(job.description.includes('## Role Overview'), 'Safe Markdown must be preserved');
+
+      // Candidate submits application with a resume object
+      const mutableResumeObj = {
+        personalInfo: { fullName: 'Candidate Applicant', jobTitle: 'Full-Stack Developer' },
+        skills: ['TypeScript', 'React', 'Node.js'],
+      };
+
+      const application = await DataStore.createApplication({
+        jobId: job.id,
+        candidateId: candidate.id,
+        resumeSnapshot: mutableResumeObj,
+        coverLetter: 'I am excited to apply for this Senior Engineer role.<script>evil()</script>',
+        answers: [
+          {
+            question: 'How many years of TypeScript experience do you have?',
+            answer: '6 years in production.',
+          },
+        ],
+        consent: {
+          version: '1.0',
+          shareSalary: true,
+          sharePhone: false,
+        },
+      });
+
+      assert.equal(application.jobId, job.id);
+      assert.equal(application.candidateId, candidate.id);
+      assert.equal(application.status, 'new');
+      assert.ok(!application.coverLetter.includes('<script>'));
+      assert.equal(application.consent.version, '1.0');
+      assert.ok(application.consent.sharedAt);
+
+      // Mutate original resume object after applying — snapshot in DB must remain unchanged!
+      mutableResumeObj.personalInfo.fullName = 'MUTATED AFTER APPLICATION';
+      mutableResumeObj.skills.push('HackedSkill');
+
+      const checkJobAfterApply = await DataStore.getEmployerJobById(job.id);
+      assert.equal(checkJobAfterApply?.applicantsCount, 1, 'applicantsCount must increment to 1');
+
+      // Duplicate application by same candidate to same job MUST fail with DUPLICATE_APPLICATION
+      await assert.rejects(
+        async () => {
+          await DataStore.createApplication({
+            jobId: job.id,
+            candidateId: candidate.id,
+            resumeSnapshot: mutableResumeObj,
+            consent: { version: '1.0' },
+          });
+        },
+        (err: any) => err?.message === 'DUPLICATE_APPLICATION',
+        'Duplicate application to the same job by the same candidate must be rejected'
+      );
+
+      // HR updates status to 'shortlisted' and adds confidential HR-only notes
+      const updatedByHr = await DataStore.updateApplicationStatusAndNotes(
+        application.id,
+        org.id,
+        hrOwner.id,
+        {
+          status: 'shortlisted',
+          notes: 'CONFIDENTIAL HR NOTE: Strong system design, schedule panel interview.',
+        }
+      );
+      assert.equal(updatedByHr?.status, 'shortlisted');
+      assert.equal(
+        updatedByHr?.notes,
+        'CONFIDENTIAL HR NOTE: Strong system design, schedule panel interview.'
+      );
+
+      // When candidate views their own application, `notes` MUST be stripped and `resumeSnapshot` must be immutable
+      const candidateView = await DataStore.getApplicationById(application.id, candidate.id);
+      assert.ok(candidateView);
+      assert.equal(candidateView?.status, 'shortlisted');
+      assert.equal(
+        candidateView?.resumeSnapshot.personalInfo.fullName,
+        'Candidate Applicant',
+        'resumeSnapshot must remain immutable after candidate edits their CV'
+      );
+      assert.equal(
+        'notes' in (candidateView as any),
+        false,
+        'HR notes must NEVER be exposed to the candidate'
+      );
+
+      const candidateList = await DataStore.listCandidateApplications(candidate.id);
+      assert.equal(candidateList.length, 1);
+      assert.equal('notes' in (candidateList[0] as any), false);
+
+      // Unrelated outsider cannot view application
+      const outsiderView = await DataStore.getApplicationById(application.id, outsider.id);
+      assert.equal(outsiderView, null);
+
+      // HR runs AI analysis on application (atomically deducts 1 HR credit and records ledger entry)
+      const analysisRes = await DataStore.analyzeApplicationWithHrCredits(
+        application.id,
+        org.id,
+        hrOwner.id,
+        {
+          score: 91,
+          matchedSkills: ['TypeScript', 'React', 'Node.js'],
+          missingSkills: ['MongoDB'],
+          summary: 'Strong match with 6 years of TypeScript experience.',
+          model: 'gemini-2.5-flash',
+          creditsUsed: 1,
+        }
+      );
+      assert.equal(analysisRes.success, true);
+      assert.equal(analysisRes.balanceAfter, 3);
+      assert.equal(analysisRes.application?.analysis?.score, 91);
+      assert.deepEqual(analysisRes.application?.analysis?.matchedSkills, [
+        'TypeScript',
+        'React',
+        'Node.js',
+      ]);
+      assert.equal(analysisRes.application?.analysis?.creditsUsed, 1);
+    });
+
+    it('records all HR credit additions/deductions in HrCreditLedger and enforces atomic deduction under concurrency', async () => {
+      const owner = await DataStore.createUserAccount({
+        name: 'Atomic Ledger Owner',
+        email: `ledger_${Date.now()}@test.com`,
+        password: 'password123',
+      });
+
+      const org = await DataStore.createOrganization(owner.id, {
+        name: 'Atomic Credits Org',
+        initialHrCredits: 2,
+      });
+
+      // Add 3 HR credits -> balance becomes 5
+      const addRes = await DataStore.addHrCredits(
+        org.id,
+        3,
+        'credit_purchase',
+        'order_hr_101',
+        owner.id
+      );
+      assert.equal(addRes.success, true);
+      assert.equal(addRes.balanceAfter, 5);
+      assert.equal(addRes.ledgerEntry.delta, 3);
+
+      // Fire 4 concurrent deductions of 2 credits each (total 8 requested, but only 5 available)
+      // Exactly 2 deductions (4 credits total) should succeed, and 2 must fail with INSUFFICIENT_HR_CREDITS!
+      const concurrentResults = await Promise.all([
+        DataStore.deductHrCredits(org.id, 2, 'candidate_ai_analysis', 'app_c1', owner.id),
+        DataStore.deductHrCredits(org.id, 2, 'candidate_ai_analysis', 'app_c2', owner.id),
+        DataStore.deductHrCredits(org.id, 2, 'candidate_ai_analysis', 'app_c3', owner.id),
+        DataStore.deductHrCredits(org.id, 2, 'candidate_ai_analysis', 'app_c4', owner.id),
+      ]);
+
+      const succeeded = concurrentResults.filter((r) => r.success);
+      const failed = concurrentResults.filter((r) => !r.success);
+
+      assert.equal(succeeded.length, 2, 'Only 2 deductions of 2 credits can succeed from balance 5');
+      assert.equal(failed.length, 2, 'Remaining 2 deductions must fail atomically');
+      for (const f of failed) {
+        assert.equal(f.error, 'INSUFFICIENT_HR_CREDITS');
+      }
+
+      const orgAfter = await DataStore.getOrganizationById(org.id);
+      assert.equal(orgAfter?.hrCredits, 1, 'Final HR credit balance must be 5 - 4 = 1 (never negative)');
+      assert.equal(orgAfter?.creditBalance, 1);
+
+      const ledger = await DataStore.getHrCreditLedger(org.id);
+      // 1 initial_grant (+2) + 1 credit_purchase (+3) + 2 deductions (-2, -2) = 4 ledger entries
+      assert.equal(ledger.length, 4);
+      const netSum = ledger.reduce((acc, item) => acc + item.delta, 0);
+      assert.equal(netSum, 1, 'Sum of HrCreditLedger deltas must equal current org.hrCredits');
+    });
+  });
+
+  // =========================================================================
+  // 22. Employer Dashboard, Job Publishing, Domain Verification, Content Moderation, Applicants CSV/Email & IDOR Protection
+  // =========================================================================
+  describe('22. Employer Dashboard, Job Publishing, Domain Verification, Content Moderation, Applicants CSV/Email & IDOR Protection', () => {
+    it('verifies company domain emails (rejecting Gmail/Yahoo), enforces pending status & daily limit for unverified orgs, and deducts 1 credit atomically on publish (402 when insufficient)', async () => {
+      await clearAllRateLimits();
+
+      const ownerA = await DataStore.createUserAccount({
+        name: 'Employer Owner A',
+        email: `emp_owner_a_${Date.now()}@test.com`,
+        password: 'password123',
+      });
+      const tokenA = signToken({ userId: ownerA.id, email: ownerA.email, name: ownerA.name });
+
+      // 1. Create Organization via POST /api/employer/overview (starts with 2 HR credits, verified: false)
+      const createOrgRes = await employerOverviewPOST(
+        new NextRequest('http://localhost:3000/api/employer/overview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${tokenA}`,
+          },
+          body: JSON.stringify({
+            name: 'Unverified Startup LLC',
+            website: 'https://startup-llc.io',
+            industry: 'SaaS',
+            size: '11-50',
+            country: 'EG',
+          }),
+        })
+      );
+      assert.equal(createOrgRes.status, 201);
+      const createOrgData = await createOrgRes.json();
+      const orgId = createOrgData.organization.id;
+      assert.equal(createOrgData.organization.verified, false);
+      assert.equal(createOrgData.organization.hrCredits, 2);
+
+      // 2. Reject consumer Gmail/Yahoo email during domain verification
+      const gmailVerifyRes = await verifyOrgPOST(
+        new NextRequest(`http://localhost:3000/api/employer/organizations/${orgId}/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${tokenA}`,
+          },
+          body: JSON.stringify({
+            action: 'request',
+            workEmail: 'founder@gmail.com',
+          }),
+        }),
+        { params: Promise.resolve({ orgId }) }
+      );
+      assert.equal(gmailVerifyRes.status, 400);
+      const gmailVerifyData = await gmailVerifyRes.json();
+      assert.equal(gmailVerifyData.error, 'CONSUMER_EMAIL_DOMAIN_NOT_ALLOWED');
+
+      // 3. Reject > 5 screening questions on job creation
+      const tooManyQuestionsRes = await employerJobsPOST(
+        new NextRequest('http://localhost:3000/api/employer/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${tokenA}`,
+          },
+          body: JSON.stringify({
+            orgId,
+            title: 'Backend Engineer',
+            description: 'Build distributed services in Node.js and TypeScript.',
+            screeningQuestions: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6'],
+          }),
+        })
+      );
+      assert.equal(tooManyQuestionsRes.status, 400, 'Must reject more than 5 screening questions');
+
+      // 4. Unverified organization publishing a clean job -> enters status='pending' and deducts 1 HR credit (2 -> 1)
+      const pubJob1Res = await employerJobsPOST(
+        new NextRequest('http://localhost:3000/api/employer/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${tokenA}`,
+          },
+          body: JSON.stringify({
+            orgId,
+            title: 'Product Designer',
+            description: 'Design intuitive user experiences for our SaaS suite.',
+            skills: ['Figma', 'UI/UX', 'Design Systems'],
+            screeningQuestions: ['Share your portfolio link', 'Years of SaaS experience?'],
+            publishNow: true,
+          }),
+        })
+      );
+      assert.equal(pubJob1Res.status, 201);
+      const pubJob1Data = await pubJob1Res.json();
+      assert.equal(
+        pubJob1Data.job.status,
+        'pending',
+        'Unverified organization jobs must enter pending status for admin review'
+      );
+      assert.equal(pubJob1Data.balanceAfter, 1);
+
+      // 5. Publish 2nd job (uses last remaining credit: 1 -> 0)
+      const pubJob2Res = await employerJobsPOST(
+        new NextRequest('http://localhost:3000/api/employer/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${tokenA}`,
+          },
+          body: JSON.stringify({
+            orgId,
+            title: 'QA Automation Engineer',
+            description: 'Write end-to-end Playwright and integration tests.',
+            publishNow: true,
+          }),
+        })
+      );
+      assert.equal(pubJob2Res.status, 201);
+      const pubJob2Data = await pubJob2Res.json();
+      assert.equal(pubJob2Data.balanceAfter, 0);
+
+      // 6. Verify corporate domain email (`hr@startup-llc.io`) so daily unverified limit is lifted,
+      // then attempt to publish 3rd job with 0 credits -> returns 402 INSUFFICIENT_HR_CREDITS + saves draft!
+      let capturedCode = '';
+      setCustomResendSenderForTests(async (payload) => {
+        const match = payload.html.match(/\b(\d{6})\b/);
+        if (match) capturedCode = match[1];
+        return { data: { id: 'verify_email_1' }, error: null };
+      });
+
+      try {
+        const reqVerifyRes = await verifyOrgPOST(
+          new NextRequest(`http://localhost:3000/api/employer/organizations/${orgId}/verify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${tokenA}`,
+            },
+            body: JSON.stringify({
+              action: 'request',
+              workEmail: 'hr@startup-llc.io',
+            }),
+          }),
+          { params: Promise.resolve({ orgId }) }
+        );
+        assert.equal(reqVerifyRes.status, 200);
+        assert.equal(capturedCode.length, 6);
+
+        const confirmVerifyRes = await verifyOrgPOST(
+          new NextRequest(`http://localhost:3000/api/employer/organizations/${orgId}/verify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${tokenA}`,
+            },
+            body: JSON.stringify({
+              action: 'confirm',
+              code: capturedCode,
+            }),
+          }),
+          { params: Promise.resolve({ orgId }) }
+        );
+        assert.equal(confirmVerifyRes.status, 200);
+        const confirmData = await confirmVerifyRes.json();
+        assert.equal(confirmData.organization.verified, true);
+      } finally {
+        setCustomResendSenderForTests(null);
+      }
+
+      // Now org is verified, but has 0 HR credits -> publishing returns 402 + purchaseUrl while saving draft!
+      const noCreditRes = await employerJobsPOST(
+        new NextRequest('http://localhost:3000/api/employer/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${tokenA}`,
+          },
+          body: JSON.stringify({
+            orgId,
+            title: 'DevOps Engineer',
+            description: 'Manage Kubernetes clusters and CI/CD pipelines.',
+            publishNow: true,
+          }),
+        })
+      );
+      assert.equal(noCreditRes.status, 402);
+      const noCreditData = await noCreditRes.json();
+      assert.equal(noCreditData.error, 'INSUFFICIENT_HR_CREDITS');
+      assert.equal(noCreditData.purchaseUrl, '/employer/billing');
+      assert.equal(noCreditData.job.status, 'draft', 'Draft must be preserved when credits are insufficient');
+    });
+
+    it('blocks scam/payment-requesting job posts, handles user job reports, and supports Admin moderation review', async () => {
+      await clearAllRateLimits();
+
+      const employer = await DataStore.createUserAccount({
+        name: 'Moderation Test Employer',
+        email: `mod_emp_${Date.now()}@test.com`,
+        password: 'password123',
+      });
+      const empToken = signToken({ userId: employer.id, email: employer.email, name: employer.name });
+
+      const adminUser = await DataStore.createUserAccount({
+        name: 'Platform Admin',
+        email: `admin_mod_${Date.now()}@test.com`,
+        password: 'password123',
+        role: 'admin',
+      });
+      const adminToken = signToken({
+        userId: adminUser.id,
+        email: adminUser.email,
+        name: adminUser.name,
+        role: 'admin',
+      });
+
+      const org = await DataStore.createOrganization(employer.id, {
+        name: 'Verified Corp',
+        initialHrCredits: 5,
+      });
+      await DataStore.adminVerifyOrganization(org.id, true);
+
+      // 1. Job asking applicant for payment fee -> blocked with 400 CONTENT_POLICY_VIOLATION (and credit NOT deducted)
+      const scamJobRes = await employerJobsPOST(
+        new NextRequest('http://localhost:3000/api/employer/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${empToken}`,
+          },
+          body: JSON.stringify({
+            orgId: org.id,
+            title: 'Data Entry Clerk',
+            description: 'Candidates must pay a registration fee of $50 before onboarding.',
+            publishNow: true,
+          }),
+        })
+      );
+      assert.equal(scamJobRes.status, 400);
+      const scamData = await scamJobRes.json();
+      assert.equal(scamData.error, 'CONTENT_POLICY_VIOLATION');
+      assert.ok(scamData.flags.includes('PAYMENT_FROM_APPLICANT'));
+
+      const orgAfterBlocked = await DataStore.getOrganizationById(org.id);
+      assert.equal(
+        orgAfterBlocked?.hrCredits,
+        5,
+        'HR credits must not be deducted when content policy blocks publishing'
+      );
+
+      // 2. Job with suspicious shortened link -> flagged & held in status='pending' for Admin review
+      const suspiciousLinkJobRes = await employerJobsPOST(
+        new NextRequest('http://localhost:3000/api/employer/jobs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${empToken}`,
+          },
+          body: JSON.stringify({
+            orgId: org.id,
+            title: 'Marketing Specialist',
+            description: 'Great marketing role. Apply also via https://bit.ly/suspicious123 for fast track.',
+            publishNow: true,
+          }),
+        })
+      );
+      assert.equal(suspiciousLinkJobRes.status, 201);
+      const suspiciousJobData = await suspiciousLinkJobRes.json();
+      assert.equal(suspiciousJobData.job.status, 'pending');
+      assert.ok(suspiciousJobData.moderationFlags.includes('SUSPICIOUS_LINK'));
+
+      // 3. User reports a job via POST /api/jobs/report
+      const reportRes = await jobReportPOST(
+        new NextRequest('http://localhost:3000/api/jobs/report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${empToken}`,
+          },
+          body: JSON.stringify({
+            jobId: suspiciousJobData.job.id,
+            jobTitle: suspiciousJobData.job.title,
+            company: org.name,
+            reason: 'suspicious_links',
+            details: 'Contains a shortened bit.ly link.',
+          }),
+        })
+      );
+      assert.equal(reportRes.status, 201);
+      const reportData = await reportRes.json();
+      assert.equal(reportData.report.status, 'open');
+
+      // 4. Admin fetches moderation queue and approves job + resolves report
+      const adminQueueRes = await adminModerationGET(
+        new NextRequest('http://localhost:3000/api/admin/moderation', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        })
+      );
+      assert.equal(adminQueueRes.status, 200);
+      const adminQueueData = await adminQueueRes.json();
+      assert.ok(
+        adminQueueData.pendingJobs.some((j: any) => j.id === suspiciousJobData.job.id)
+      );
+      assert.ok(adminQueueData.reports.some((r: any) => r.id === reportData.report.id));
+
+      const approveRes = await adminModerationPOST(
+        new NextRequest('http://localhost:3000/api/admin/moderation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            targetType: 'job',
+            jobId: suspiciousJobData.job.id,
+            action: 'approve',
+          }),
+        })
+      );
+      assert.equal(approveRes.status, 200);
+      const approveData = await approveRes.json();
+      assert.equal(approveData.job.status, 'published');
+    });
+
+    it('filters/sorts job applicants, exports CSV, sends candidate email via Resend without leaking HR email unless opted in, and blocks all IDOR attacks with 403', async () => {
+      await clearAllRateLimits();
+
+      // Create Org A (legitimate owner) and Org B (attacker trying IDOR)
+      const hrUserA = await DataStore.createUserAccount({
+        name: 'HR Manager Org A',
+        email: `hr_secret_a_${Date.now()}@org-a.com`,
+        password: 'password123',
+      });
+      const tokenA = signToken({ userId: hrUserA.id, email: hrUserA.email, name: hrUserA.name });
+
+      const hrUserB = await DataStore.createUserAccount({
+        name: 'Attacker HR Org B',
+        email: `hr_attacker_b_${Date.now()}@org-b.com`,
+        password: 'password123',
+      });
+      const tokenB = signToken({ userId: hrUserB.id, email: hrUserB.email, name: hrUserB.name });
+
+      const candidate1 = await DataStore.createUserAccount({
+        name: 'Sara Candidate',
+        email: `sara_cand_${Date.now()}@example.com`,
+        password: 'password123',
+      });
+      const cand1Token = signToken({
+        userId: candidate1.id,
+        email: candidate1.email,
+        name: candidate1.name,
+      });
+
+      const candidate2 = await DataStore.createUserAccount({
+        name: 'Karim Candidate',
+        email: `karim_cand_${Date.now()}@example.com`,
+        password: 'password123',
+      });
+
+      const orgA = await DataStore.createOrganization(hrUserA.id, {
+        name: 'Org A Enterprise',
+        initialHrCredits: 5,
+      });
+      await DataStore.adminVerifyOrganization(orgA.id, true);
+
+      const orgB = await DataStore.createOrganization(hrUserB.id, {
+        name: 'Org B Competitor',
+        initialHrCredits: 5,
+      });
+
+      const jobA = await DataStore.createEmployerJob(orgA.id, hrUserA.id, {
+        title: 'Lead Cloud Architect',
+        description: 'Architect scalable cloud systems on AWS and Kubernetes.',
+        skills: ['AWS', 'Kubernetes', 'Terraform', 'Go'],
+        status: 'published',
+      });
+
+      // Candidate 1 (matches 4/4 skills = 100%) and Candidate 2 (matches 1/4 skills = 25%) apply to Job A
+      const app1 = await DataStore.createApplication({
+        jobId: jobA.id,
+        candidateId: candidate1.id,
+        resumeSnapshot: {
+          personalInfo: {
+            fullName: 'Sara Candidate',
+            email: candidate1.email,
+            jobTitle: 'Cloud Architect',
+          },
+          skills: ['AWS', 'Kubernetes', 'Terraform', 'Go'],
+        },
+        answers: [{ question: 'AWS experience?', answer: '7 years' }],
+        consent: { version: '1.0', sharePhone: false },
+      });
+
+      await DataStore.createApplication({
+        jobId: jobA.id,
+        candidateId: candidate2.id,
+        resumeSnapshot: {
+          personalInfo: {
+            fullName: 'Karim Candidate',
+            email: candidate2.email,
+            jobTitle: 'Junior Dev',
+          },
+          skills: ['AWS'],
+        },
+        consent: { version: '1.0', sharePhone: false },
+      });
+
+      // 1. HR of Org A lists applicants sorted by score DESC -> Sara (100%) comes before Karim (25%)
+      const listRes = await jobApplicantsGET(
+        new NextRequest(
+          `http://localhost:3000/api/employer/jobs/${jobA.id}/applicants?sortBy=score&sortOrder=desc`,
+          {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${tokenA}` },
+          }
+        ),
+        { params: Promise.resolve({ jobId: jobA.id }) }
+      );
+      assert.equal(listRes.status, 200);
+      const listData = await listRes.json();
+      assert.equal(listData.applicants.length, 2);
+      assert.equal(listData.applicants[0].candidateName, 'Sara Candidate');
+      assert.equal(listData.applicants[0].computedScore, 100);
+      assert.equal(listData.applicants[1].candidateName, 'Karim Candidate');
+      assert.equal(listData.applicants[1].computedScore, 25);
+
+      // 2. Export CSV (`?format=csv`)
+      const csvRes = await jobApplicantsGET(
+        new NextRequest(
+          `http://localhost:3000/api/employer/jobs/${jobA.id}/applicants?format=csv`,
+          {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${tokenA}` },
+          }
+        ),
+        { params: Promise.resolve({ jobId: jobA.id }) }
+      );
+      assert.equal(csvRes.status, 200);
+      assert.ok(csvRes.headers.get('content-type')?.includes('text/csv'));
+      const csvText = await csvRes.text();
+      assert.ok(csvText.includes('Sara Candidate'));
+      assert.ok(csvText.includes('Karim Candidate'));
+
+      // 3. Send templated email to Candidate 1 WITHOUT revealing HR email (default revealHrEmail: false)
+      let sentPayloads: Array<{ from: string; to: string | string[]; subject: string; html: string }> = [];
+      setCustomResendSenderForTests(async (payload) => {
+        sentPayloads.push(payload);
+        return { data: { id: `msg_${sentPayloads.length}` }, error: null };
+      });
+
+      try {
+        const emailHiddenRes = await applicationEmailPOST(
+          new NextRequest(
+            `http://localhost:3000/api/employer/applications/${app1.id}/email`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                origin: 'http://localhost:3000',
+                Authorization: `Bearer ${tokenA}`,
+              },
+              body: JSON.stringify({
+                template: 'interview',
+                customMessage: 'Are you available Tuesday at 2 PM UTC?',
+                revealHrEmail: false,
+              }),
+            }
+          ),
+          { params: Promise.resolve({ applicationId: app1.id }) }
+        );
+        assert.equal(emailHiddenRes.status, 200);
+        assert.equal(sentPayloads.length, 1);
+        assert.equal(
+          sentPayloads[0].html.includes(hrUserA.email),
+          false,
+          'HR email address MUST NOT be revealed when revealHrEmail is false'
+        );
+        assert.equal(
+          sentPayloads[0].from.includes(hrUserA.email),
+          false,
+          'Sender header must use platform noreply address, not HR personal email'
+        );
+
+        // Now send with revealHrEmail: true -> HR email IS included in the body
+        const emailRevealedRes = await applicationEmailPOST(
+          new NextRequest(
+            `http://localhost:3000/api/employer/applications/${app1.id}/email`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                origin: 'http://localhost:3000',
+                Authorization: `Bearer ${tokenA}`,
+              },
+              body: JSON.stringify({
+                template: 'interview',
+                revealHrEmail: true,
+              }),
+            }
+          ),
+          { params: Promise.resolve({ applicationId: app1.id }) }
+        );
+        assert.equal(emailRevealedRes.status, 200);
+        assert.equal(sentPayloads.length, 2);
+        assert.equal(
+          sentPayloads[1].html.includes(hrUserA.email),
+          true,
+          'HR email address should be included when revealHrEmail is explicitly true'
+        );
+      } finally {
+        setCustomResendSenderForTests(null);
+      }
+
+      // 4. IDOR SECURITY TESTS:
+      // 4a. Org B member trying to view Org A's overview -> 403
+      const idorOverviewRes = await employerOverviewGET(
+        new NextRequest(`http://localhost:3000/api/employer/overview?orgId=${orgA.id}`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${tokenB}` },
+        })
+      );
+      assert.equal(idorOverviewRes.status, 403);
+
+      // 4b. Org B member trying to read or edit Org A's job -> 403
+      const idorJobGetRes = await employerJobDetailGET(
+        new NextRequest(`http://localhost:3000/api/employer/jobs/${jobA.id}`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${tokenB}` },
+        }),
+        { params: Promise.resolve({ jobId: jobA.id }) }
+      );
+      assert.equal(idorJobGetRes.status, 403);
+
+      const idorJobPutRes = await employerJobDetailPUT(
+        new NextRequest(`http://localhost:3000/api/employer/jobs/${jobA.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${tokenB}`,
+          },
+          body: JSON.stringify({ title: 'Hacked Title by Org B' }),
+        }),
+        { params: Promise.resolve({ jobId: jobA.id }) }
+      );
+      assert.equal(idorJobPutRes.status, 403);
+
+      // 4c. Org B member trying to list/export applicants of Org A's job -> 403
+      const idorApplicantsRes = await jobApplicantsGET(
+        new NextRequest(`http://localhost:3000/api/employer/jobs/${jobA.id}/applicants`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${tokenB}` },
+        }),
+        { params: Promise.resolve({ jobId: jobA.id }) }
+      );
+      assert.equal(idorApplicantsRes.status, 403);
+
+      // 4d. Org B member trying to PATCH status/notes or email Org A's applicant -> 403
+      const idorPatchAppRes = await applicationPATCH(
+        new NextRequest(`http://localhost:3000/api/employer/applications/${app1.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${tokenB}`,
+          },
+          body: JSON.stringify({ status: 'rejected', notes: 'IDOR injection' }),
+        }),
+        { params: Promise.resolve({ applicationId: app1.id }) }
+      );
+      assert.equal(idorPatchAppRes.status, 403);
+
+      const idorEmailAppRes = await applicationEmailPOST(
+        new NextRequest(`http://localhost:3000/api/employer/applications/${app1.id}/email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${tokenB}`,
+          },
+          body: JSON.stringify({ template: 'rejected' }),
+        }),
+        { params: Promise.resolve({ applicationId: app1.id }) }
+      );
+      assert.equal(idorEmailAppRes.status, 403);
+
+      // 4e. Candidate trying to PATCH their own application status to 'hired' -> 403
+      const candSelfPatchRes = await applicationPATCH(
+        new NextRequest(`http://localhost:3000/api/employer/applications/${app1.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${cand1Token}`,
+          },
+          body: JSON.stringify({ status: 'hired' }),
+        }),
+        { params: Promise.resolve({ applicationId: app1.id }) }
+      );
+      assert.equal(candSelfPatchRes.status, 403);
+    });
+  });
+
+  // =========================================================================
+  // 23. Direct Job Page (/jobs/hire/[slug]), Apply Flow, Candidate Applications & 'Direct' Search Badge
+  // =========================================================================
+  describe('23. Public Hire Job Page, Apply Flow, File Validation, Withdraw & Direct Jobs Search', () => {
+    it('validates uploaded resume files (size, extension, MIME, executable/script rejection, PDF/DOCX magic bytes)', async () => {
+      const { validateUploadedResumeFile } = await import('../lib/hr/applyValidation');
+
+      // 1. Empty file -> EMPTY_FILE
+      assert.equal(
+        validateUploadedResumeFile({ name: 'cv.pdf', size: 0, type: 'application/pdf' }).error,
+        'EMPTY_FILE'
+      );
+
+      // 2. Oversized file (> 5MB) -> FILE_TOO_LARGE
+      assert.equal(
+        validateUploadedResumeFile({
+          name: 'cv.pdf',
+          size: 6 * 1024 * 1024,
+          type: 'application/pdf',
+        }).error,
+        'FILE_TOO_LARGE'
+      );
+
+      // 3. Unsupported extension (.exe) -> UNSUPPORTED_FILE_TYPE
+      assert.equal(
+        validateUploadedResumeFile({
+          name: 'malware.exe',
+          size: 1024,
+          type: 'application/octet-stream',
+        }).error,
+        'UNSUPPORTED_FILE_TYPE'
+      );
+
+      // 4. Executable MZ magic bytes disguised as .txt -> MALICIOUS_FILE_CONTENT
+      const mzBytes = new Uint8Array([0x4d, 0x5a, 0x90, 0x00, 0x03]);
+      assert.equal(
+        validateUploadedResumeFile({
+          name: 'resume.txt',
+          size: mzBytes.byteLength,
+          type: 'text/plain',
+          bytes: mzBytes,
+        }).error,
+        'MALICIOUS_FILE_CONTENT'
+      );
+
+      // 5. Script tag disguised inside .txt -> MALICIOUS_FILE_CONTENT
+      const scriptBytes = new TextEncoder().encode('Hello <script>alert(1)</script>');
+      assert.equal(
+        validateUploadedResumeFile({
+          name: 'resume.txt',
+          size: scriptBytes.byteLength,
+          type: 'text/plain',
+          bytes: scriptBytes,
+        }).error,
+        'MALICIOUS_FILE_CONTENT'
+      );
+
+      // 6. Invalid PDF signature -> INVALID_FILE_SIGNATURE
+      const fakePdfBytes = new TextEncoder().encode('NOT_A_PDF_HEADER_12345');
+      assert.equal(
+        validateUploadedResumeFile({
+          name: 'resume.pdf',
+          size: fakePdfBytes.byteLength,
+          type: 'application/pdf',
+          bytes: fakePdfBytes,
+        }).error,
+        'INVALID_FILE_SIGNATURE'
+      );
+
+      // 7. Valid PDF with %PDF- header -> valid: true
+      const validPdfBytes = new TextEncoder().encode('%PDF-1.7\n1 0 obj\n<<>>\nendobj');
+      const validPdfResult = validateUploadedResumeFile({
+        name: 'my-resume.pdf',
+        size: validPdfBytes.byteLength,
+        type: 'application/pdf',
+        bytes: validPdfBytes,
+      });
+      assert.equal(validPdfResult.valid, true);
+      assert.equal(validPdfResult.extension, '.pdf');
+    });
+
+    it('serves /api/jobs/hire/[slug] with JobPosting JSON-LD, enforces explicit consent & duplicate prevention on Apply, lists/withdraws Candidate Applications without HR notes, and surfaces Direct jobs in /jobs', async () => {
+      await clearAllRateLimits();
+      const { GET: hireJobGET } = await import('../app/api/jobs/hire/[slug]/route');
+      const { POST: hireJobApplyPOST } = await import('../app/api/jobs/hire/[slug]/apply/route');
+      const { GET: candidateAppsGET } = await import('../app/api/applications/route');
+      const { DELETE: candidateAppDELETE } = await import(
+        '../app/api/applications/[applicationId]/route'
+      );
+      const { PATCH: employerAppPATCH } = await import(
+        '../app/api/employer/applications/[applicationId]/route'
+      );
+
+      // 1. Create Employer Organization & Published Job
+      const hrOwner = await DataStore.createUserAccount({
+        name: 'Direct Hire HR',
+        email: `direct_hr_${Date.now()}@company-direct.io`,
+        password: 'password123',
+        accountType: 'employer',
+      });
+      const hrToken = signToken({
+        userId: hrOwner.id,
+        email: hrOwner.email,
+        name: hrOwner.name,
+        role: 'user',
+      });
+
+      const org = await DataStore.createOrganization(hrOwner.id, {
+        name: 'DirectTech Solutions',
+        website: 'https://company-direct.io',
+        country: 'Egypt',
+        industry: 'Software',
+        size: '51-200',
+        initialHrCredits: 5,
+      });
+      await DataStore.adminVerifyOrganization(org.id, true);
+
+      const publishedJob = await DataStore.createEmployerJob(org.id, hrOwner.id, {
+        title: 'Senior Full Stack TypeScript Engineer',
+        description:
+          'Join DirectTech Solutions to build scalable Next.js and Node.js applications with TypeScript and MongoDB.',
+        requirements: ['5+ years TypeScript', 'Next.js App Router experience'],
+        skills: ['TypeScript', 'Next.js', 'Node.js', 'MongoDB'],
+        location: 'Cairo, Egypt',
+        remote: true,
+        employmentType: 'full-time',
+        seniority: 'senior',
+        salary: { min: 3000, max: 4500, currency: 'USD', visible: true },
+        screeningQuestions: ['How many years of production TypeScript experience do you have?'],
+        status: 'published',
+      });
+
+      // 2. GET /api/jobs/hire/[slug] returns job details + Schema.org JobPosting JSON-LD
+      const getJobRes: any = await hireJobGET(
+        new NextRequest(`http://localhost:3000/api/jobs/hire/${publishedJob.slug}`, {
+          method: 'GET',
+        }),
+        { params: Promise.resolve({ slug: publishedJob.slug }) }
+      );
+      assert.equal(getJobRes.status, 200);
+      const getJobData = await getJobRes.json();
+      assert.equal(getJobData.ok, true);
+      assert.equal(getJobData.job.title, 'Senior Full Stack TypeScript Engineer');
+      assert.equal(getJobData.organization.name, 'DirectTech Solutions');
+      assert.equal(getJobData.jsonLd['@type'], 'JobPosting');
+      assert.equal(getJobData.jsonLd.jobLocationType, 'TELECOMMUTE');
+      assert.equal(getJobData.jsonLd.directApply, true);
+
+      // 3. Published internal job appears in Direct Jobs search with source === 'Direct'
+      const directJobs = await DataStore.searchPublishedEmployerJobsAsDirectJobs({
+        query: 'TypeScript',
+        remote: true,
+      });
+      const foundDirect = directJobs.find((j) => j.id === publishedJob.id);
+      assert.ok(foundDirect, 'Expected published EmployerJob to appear in Direct jobs search');
+      assert.equal(foundDirect!.source, 'Direct');
+      assert.equal(foundDirect!.url, `/jobs/hire/${publishedJob.slug}`);
+
+      // 4. Create Candidate user
+      const candidate = await DataStore.createUserAccount({
+        name: 'Salma Candidate',
+        email: `salma_cand_${Date.now()}@example.com`,
+        password: 'password123',
+      });
+
+      const candToken = signToken({
+        userId: candidate.id,
+        email: candidate.email,
+        name: candidate.name,
+        role: 'user',
+      });
+
+      // 5. Apply WITHOUT explicit consent -> 400 CONSENT_REQUIRED
+      const noConsentRes: any = await hireJobApplyPOST(
+        new NextRequest(`http://localhost:3000/api/jobs/hire/${publishedJob.slug}/apply`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${candToken}`,
+          },
+          body: JSON.stringify({
+            resumeSnapshot: {
+              fullName: 'Salma Hassan',
+              email: candidate.email,
+              headline: 'Senior TypeScript Developer',
+              skills: ['TypeScript', 'Next.js', 'Node.js', 'React'],
+            },
+            consentAccepted: false,
+            answers: [{ questionId: 'q_0', question: 'How many years?', answer: '6 years' }],
+          }),
+        }),
+        { params: Promise.resolve({ slug: publishedJob.slug }) }
+      );
+      assert.equal(noConsentRes.status, 400);
+      const noConsentData = await noConsentRes.json();
+      assert.equal(noConsentData.error, 'CONSENT_REQUIRED');
+
+      // 6. Apply WITH explicit consent -> 201 Created
+      const validApplyRes: any = await hireJobApplyPOST(
+        new NextRequest(`http://localhost:3000/api/jobs/hire/${publishedJob.slug}/apply`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${candToken}`,
+          },
+          body: JSON.stringify({
+            resumeSnapshot: {
+              fullName: 'Salma Hassan',
+              email: candidate.email,
+              headline: 'Senior TypeScript Developer',
+              summary: 'Full stack developer experienced in TypeScript, Next.js, and Node.js.',
+              skills: ['TypeScript', 'Next.js', 'Node.js', 'React'],
+            },
+            coverLetter: 'I would love to join DirectTech Solutions as a Senior TS Engineer.',
+            answers: [
+              {
+                questionId: 'q_0',
+                question: 'How many years of production TypeScript experience do you have?',
+                answer: '6 years in production',
+              },
+            ],
+            consentAccepted: true,
+            sharePhone: false,
+            shareSalary: false,
+          }),
+        }),
+        { params: Promise.resolve({ slug: publishedJob.slug }) }
+      );
+      assert.equal(validApplyRes.status, 201);
+      const validApplyData = await validApplyRes.json();
+      assert.equal(validApplyData.ok, true);
+      const createdAppId = validApplyData.application.id;
+
+      // 7. Duplicate application to the same job -> 409 DUPLICATE_APPLICATION
+      const dupApplyRes: any = await hireJobApplyPOST(
+        new NextRequest(`http://localhost:3000/api/jobs/hire/${publishedJob.slug}/apply`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${candToken}`,
+          },
+          body: JSON.stringify({
+            resumeSnapshot: {
+              fullName: 'Salma Hassan',
+              email: candidate.email,
+              skills: ['TypeScript', 'Next.js'],
+            },
+            answers: [
+              {
+                questionId: 'q_0',
+                question: 'How many years of production TypeScript experience do you have?',
+                answer: '6 years in production',
+              },
+            ],
+            consentAccepted: true,
+          }),
+        }),
+        { params: Promise.resolve({ slug: publishedJob.slug }) }
+      );
+      assert.equal(dupApplyRes.status, 409);
+      const dupApplyData = await dupApplyRes.json();
+      assert.equal(dupApplyData.error, 'DUPLICATE_APPLICATION');
+
+      // 8. HR adds private notes and updates status to 'shortlisted'
+      const hrPatchRes: any = await employerAppPATCH(
+        new NextRequest(`http://localhost:3000/api/employer/applications/${createdAppId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${hrToken}`,
+          },
+          body: JSON.stringify({
+            status: 'shortlisted',
+            notes: 'CONFIDENTIAL_HR_NOTE_DO_NOT_LEAK_TO_CANDIDATE',
+          }),
+        }),
+        { params: Promise.resolve({ applicationId: createdAppId }) }
+      );
+      assert.equal(hrPatchRes.status, 200);
+
+      // 9. Candidate fetches GET /api/applications -> sees 'shortlisted' status but NEVER sees HR notes
+      const myAppsRes: any = await candidateAppsGET(
+        new NextRequest('http://localhost:3000/api/applications', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${candToken}` },
+        })
+      );
+      assert.equal(myAppsRes.status, 200);
+      const myAppsData = await myAppsRes.json();
+      assert.equal(myAppsData.ok, true);
+      const myAppItem = myAppsData.applications.find((a: any) => a.id === createdAppId);
+      assert.ok(myAppItem);
+      assert.equal(myAppItem.status, 'shortlisted');
+      assert.equal('notes' in myAppItem, false);
+      assert.equal(
+        JSON.stringify(myAppsData).includes('CONFIDENTIAL_HR_NOTE_DO_NOT_LEAK_TO_CANDIDATE'),
+        false
+      );
+
+      // 10. Another user cannot withdraw Salma's application -> 403 FORBIDDEN
+      const otherCand = await DataStore.createUserAccount({
+        name: 'Other Candidate',
+        email: `other_cand_${Date.now()}@example.com`,
+        password: 'password123',
+      });
+      const otherCandToken = signToken({
+        userId: otherCand.id,
+        email: otherCand.email,
+        name: otherCand.name,
+        role: 'user',
+      });
+
+      const idorDeleteRes: any = await candidateAppDELETE(
+        new NextRequest(`http://localhost:3000/api/applications/${createdAppId}`, {
+          method: 'DELETE',
+          headers: {
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${otherCandToken}`,
+          },
+        }),
+        { params: Promise.resolve({ applicationId: createdAppId }) }
+      );
+      assert.equal(idorDeleteRes.status, 403);
+
+      // 11. Salma withdraws her application and deletes her shared data -> 200 OK & applicantsCount decrements
+      const withdrawRes: any = await candidateAppDELETE(
+        new NextRequest(`http://localhost:3000/api/applications/${createdAppId}`, {
+          method: 'DELETE',
+          headers: {
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${candToken}`,
+          },
+        }),
+        { params: Promise.resolve({ applicationId: createdAppId }) }
+      );
+      assert.equal(withdrawRes.status, 200);
+      const deletedLookup = await DataStore.getApplicationById(createdAppId, candidate.id);
+      assert.equal(deletedLookup, null);
+      const updatedJobAfterWithdraw = await DataStore.getEmployerJobById(publishedJob.id);
+      assert.equal(updatedJobAfterWithdraw?.applicantsCount, 0);
+    });
+  });
+
+  // =========================================================================
+  // 24. Applicant AI Analysis, Fairness Redaction, Atomic Credit Deduction & Refund
+  // =========================================================================
+  describe('24. Applicant AI Analysis, Fairness Redaction, Atomic Credit Deduction & Refund', () => {
+    it('redacts Name, Gender, Age, Photo, Nationality, Marital Status, and Religion before AI prompt & scoring', async () => {
+      const {
+        redactCandidateForFairness,
+        analyzeApplicantAgainstJob,
+        setCustomApplicantAiRunnerForTests,
+      } = await import('../lib/employer/analyzeApplicant');
+
+      const snapshotWithDemographics: Record<string, unknown> = {
+        fullName: 'Ahmed Al-Mansouri',
+        email: 'ahmed.mansouri@personalmail.com',
+        phone: '+201099887766',
+        gender: 'Male',
+        age: 32,
+        dateOfBirth: '1994-05-12',
+        photo: 'https://cdn.example.com/photos/ahmed-profile.jpg',
+        avatar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA',
+        nationality: 'Egyptian',
+        maritalStatus: 'Married',
+        religion: 'Muslim',
+        headline: 'Senior Backend TypeScript & Node.js Engineer',
+        yearsOfExperience: 7,
+        skills: ['TypeScript', 'Node.js', 'PostgreSQL', 'Redis', 'Docker'],
+        summary:
+          'My name is Ahmed Al-Mansouri. Gender: Male. Age: 32 years old. DOB: 12/05/1994. Nationality: Egyptian. Marital Status: Married. Religion: Islam. الجنس: ذكر. العمر: 32 سنة. الجنسية: مصري. الحالة الاجتماعية: متزوج. الديانة: مسلم. Built distributed microservices in TypeScript and Node.js handling 50k req/s.',
+      };
+
+      const redaction = redactCandidateForFairness(
+        snapshotWithDemographics,
+        'Ahmed Al-Mansouri'
+      );
+
+      // Verify all 7 sensitive demographic categories are recorded as redacted
+      for (const cat of [
+        'name',
+        'gender',
+        'age',
+        'photo',
+        'nationality',
+        'maritalStatus',
+        'religion',
+      ] as const) {
+        assert.ok(
+          redaction.redactedCategories.includes(cat),
+          `Expected category ${cat} to be marked as redacted`
+        );
+      }
+
+      // Verify none of the demographic values exist in redactedText
+      const forbiddenTokens = [
+        'Ahmed',
+        'Mansouri',
+        'ahmed.mansouri@personalmail.com',
+        '+201099887766',
+        '1994-05-12',
+        '12/05/1994',
+        '32 years old',
+        '32 سنة',
+        'ahmed-profile.jpg',
+        'data:image/png',
+        'Gender: Male',
+        'Nationality: Egyptian',
+        'Marital Status: Married',
+        'Religion: Islam',
+        'الجنس: ذكر',
+        'الجنسية: مصري',
+        'الحالة الاجتماعية: متزوج',
+        'الديانة: مسلم',
+      ];
+      for (const token of forbiddenTokens) {
+        assert.equal(
+          redaction.redactedText.includes(token),
+          false,
+          `Redacted text must NOT contain sensitive token: "${token}"`
+        );
+      }
+
+      // Capture the prompt sent to AI runner and verify no demographic leakage
+      let capturedPrompt = '';
+      setCustomApplicantAiRunnerForTests(async (input) => {
+        capturedPrompt = input.prompt;
+        return {
+          strengths: ['Strong TypeScript & Node.js production experience (7 years)'],
+          gaps: ['Missing Kubernetes certification'],
+          interviewQuestions: [
+            'How did you design your Redis caching layer for 50k req/s?',
+          ],
+          score: 86,
+          explanation:
+            'Evaluated strictly on technical skills (TypeScript, Node.js, PostgreSQL) and 7 years of backend engineering experience.',
+          model: 'gemini-2.5-flash-test',
+          promptTokens: 320,
+          completionTokens: 140,
+        };
+      });
+
+      try {
+        const mockJob: any = {
+          id: 'job_fairness_1',
+          orgId: 'org_fairness_1',
+          title: 'Senior Backend TypeScript Engineer',
+          description:
+            'Design and scale Node.js and TypeScript microservices using PostgreSQL, Redis, and Docker.',
+          requirements: ['5+ years backend engineering', 'TypeScript and Node.js'],
+          skills: ['TypeScript', 'Node.js', 'PostgreSQL', 'Redis', 'Docker', 'Kubernetes'],
+          remote: true,
+          employmentType: 'full-time',
+          seniority: 'senior',
+          applyMode: 'internal',
+          status: 'published',
+          applicantsCount: 1,
+          slug: 'senior-backend-ts',
+          screeningQuestions: [],
+          flaggedKeywords: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const mockApp: any = {
+          id: 'app_fairness_1',
+          jobId: mockJob.id,
+          orgId: mockJob.orgId,
+          candidateId: 'cand_fairness_1',
+          resumeSnapshot: snapshotWithDemographics,
+          coverLetter:
+            'Hello, I am Ahmed Al-Mansouri (32 years old, Married, Egyptian). I have 7 years of Node.js experience.',
+          answers: [
+            {
+              question: 'Describe your scaling experience.',
+              answer: 'Scaled TypeScript services to 50k RPS.',
+            },
+          ],
+          consent: { sharedAt: new Date().toISOString(), version: 'v1.0-direct-apply' },
+          status: 'new',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const outcome = await analyzeApplicantAgainstJob({
+          application: mockApp,
+          job: mockJob,
+          candidateName: 'Ahmed Al-Mansouri',
+        });
+
+        assert.ok(capturedPrompt.length > 50);
+        for (const token of forbiddenTokens) {
+          assert.equal(
+            capturedPrompt.includes(token),
+            false,
+            `AI prompt must NOT contain sensitive demographic token: "${token}"`
+          );
+        }
+        assert.ok(outcome.analysis.score > 0 && outcome.analysis.score <= 100);
+        assert.ok(outcome.analysis.matchedSkills.includes('TypeScript'));
+        assert.ok(outcome.analysis.strengths && outcome.analysis.strengths.length > 0);
+        assert.ok(outcome.analysis.gaps && outcome.analysis.gaps.length > 0);
+        assert.ok(
+          outcome.analysis.interviewQuestions &&
+            outcome.analysis.interviewQuestions.length > 0
+        );
+        assert.ok(outcome.analysis.scoreBreakdown);
+        assert.ok(outcome.analysis.jobDescriptionHash);
+      } finally {
+        setCustomApplicantAiRunnerForTests(null);
+      }
+    });
+
+    it('deducts HR credits atomically, caches by jobDescriptionHash, refunds on AI failure, and enforces IDOR protection', async () => {
+      const { DataStore } = await import('../app/lib/datastore');
+      const { setCustomApplicantAiRunnerForTests } = await import(
+        '../lib/employer/analyzeApplicant'
+      );
+      const { POST: analyzeJobPOST } = await import(
+        '../app/api/employer/jobs/[jobId]/analyze/route'
+      );
+      const { PATCH: employerAppPATCH } = await import(
+        '../app/api/employer/applications/[applicationId]/route'
+      );
+
+      // 1. Setup Employer Org (with 5 HR credits) & a Rival Employer Org
+      const hrOwner = await DataStore.createUserAccount({
+        name: 'Analyze HR Owner',
+        email: `hr_analyze_${Date.now()}@techcorp-ai.io`,
+        password: 'password123',
+      });
+      const hrToken = signToken({
+        userId: hrOwner.id,
+        email: hrOwner.email,
+        name: hrOwner.name,
+        role: 'user',
+      });
+
+      const org = await DataStore.createOrganization(hrOwner.id, {
+        name: 'TechCorp AI Hiring',
+        website: 'https://techcorp-ai.io',
+        country: 'EG',
+        initialHrCredits: 5,
+      });
+
+      const rivalUser = await DataStore.createUserAccount({
+        name: 'Rival HR',
+        email: `rival_hr_${Date.now()}@rivalcorp.io`,
+        password: 'password123',
+      });
+      const rivalToken = signToken({
+        userId: rivalUser.id,
+        email: rivalUser.email,
+        name: rivalUser.name,
+        role: 'user',
+      });
+      await DataStore.createOrganization(rivalUser.id, {
+        name: 'Rival Corp',
+        country: 'AE',
+        initialHrCredits: 10,
+      });
+
+      // Create job & 2 applications
+      const job = await DataStore.createEmployerJob(org.id, hrOwner.id, {
+        title: 'Full Stack TypeScript Engineer',
+        description:
+          'Build modern web applications with TypeScript, React, Next.js, and Node.js.',
+        requirements: ['3+ years TypeScript', 'React & Next.js'],
+        skills: ['TypeScript', 'React', 'Next.js', 'Node.js', 'Tailwind CSS'],
+        remote: true,
+        employmentType: 'full-time',
+        seniority: 'mid',
+        status: 'published',
+      });
+
+      const app1 = await DataStore.createApplication({
+        jobId: job.id,
+        candidateId: 'cand_analyze_1',
+        resumeSnapshot: {
+          fullName: 'Candidate One',
+          headline: 'Senior React & TypeScript Developer',
+          yearsOfExperience: 5,
+          skills: ['TypeScript', 'React', 'Next.js', 'Node.js', 'Tailwind CSS'],
+          summary: '5 years building Next.js and TypeScript web applications.',
+        },
+        consent: { sharedAt: new Date().toISOString(), version: 'v1.0' },
+      });
+
+      const app2 = await DataStore.createApplication({
+        jobId: job.id,
+        candidateId: 'cand_analyze_2',
+        resumeSnapshot: {
+          fullName: 'Candidate Two',
+          headline: 'Junior Frontend Developer',
+          yearsOfExperience: 1,
+          skills: ['React', 'Tailwind CSS'],
+          summary: '1 year building UI components in React.',
+        },
+        consent: { sharedAt: new Date().toISOString(), version: 'v1.0' },
+      });
+
+      // 2. IDOR check: Rival HR cannot trigger analysis on org's job -> 403 FORBIDDEN
+      const idorRes: any = await analyzeJobPOST(
+        new NextRequest(`http://localhost:3000/api/employer/jobs/${job.id}/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${rivalToken}`,
+          },
+          body: JSON.stringify({
+            action: 'analyze_batch',
+            applicationIds: [app1.id],
+          }),
+        }),
+        { params: Promise.resolve({ jobId: job.id }) }
+      );
+      assert.equal(idorRes.status, 403);
+
+      // 3. Batch analyze both applicants -> deducts 2 credits (5 -> 3)
+      const batchRes1: any = await analyzeJobPOST(
+        new NextRequest(`http://localhost:3000/api/employer/jobs/${job.id}/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${hrToken}`,
+          },
+          body: JSON.stringify({
+            action: 'analyze_batch',
+            applicationIds: [app1.id, app2.id],
+            onlyNew: false,
+            force: false,
+          }),
+        }),
+        { params: Promise.resolve({ jobId: job.id }) }
+      );
+      assert.equal(batchRes1.status, 200);
+      const batchData1 = await batchRes1.json();
+      assert.equal(batchData1.ok, true);
+      assert.equal(batchData1.analyzedCount, 2);
+      assert.equal(batchData1.cachedCount, 0);
+      assert.equal(batchData1.creditsCharged, 2);
+      assert.equal(batchData1.balanceAfter, 3);
+
+      // 4. Re-running analysis without JD change -> cachedCount = 2, creditsCharged = 0!
+      const batchResCached: any = await analyzeJobPOST(
+        new NextRequest(`http://localhost:3000/api/employer/jobs/${job.id}/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${hrToken}`,
+          },
+          body: JSON.stringify({
+            action: 'analyze_batch',
+            applicationIds: [app1.id, app2.id],
+            onlyNew: false,
+            force: false,
+          }),
+        }),
+        { params: Promise.resolve({ jobId: job.id }) }
+      );
+      assert.equal(batchResCached.status, 200);
+      const cachedData = await batchResCached.json();
+      assert.equal(cachedData.cachedCount, 2);
+      assert.equal(cachedData.analyzedCount, 0);
+      assert.equal(cachedData.creditsCharged, 0);
+      assert.equal(cachedData.balanceAfter, 3);
+
+      // 5. Simulate AI failure on a new 3rd applicant -> verify atomic credit deduction is AUTOMATICALLY REFUNDED
+      const app3 = await DataStore.createApplication({
+        jobId: job.id,
+        candidateId: 'cand_analyze_3',
+        resumeSnapshot: {
+          fullName: 'Candidate Three',
+          skills: ['TypeScript', 'Node.js'],
+          summary: 'Backend developer.',
+        },
+        consent: { sharedAt: new Date().toISOString(), version: 'v1.0' },
+      });
+
+      setCustomApplicantAiRunnerForTests(async () => {
+        throw new Error('SIMULATED_AI_PROVIDER_OUTAGE');
+      });
+
+      try {
+        const failRes: any = await analyzeJobPOST(
+          new NextRequest(`http://localhost:3000/api/employer/jobs/${job.id}/analyze`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${hrToken}`,
+            },
+            body: JSON.stringify({
+              action: 'analyze_batch',
+              applicationIds: [app3.id],
+              onlyNew: false,
+              force: true,
+            }),
+          }),
+          { params: Promise.resolve({ jobId: job.id }) }
+        );
+        assert.equal(failRes.status, 200);
+        const failData = await failRes.json();
+        assert.equal(failData.analyzedCount, 0);
+        assert.equal(failData.refundedCredits, 1, 'Must refund 1 credit when AI fails');
+        assert.equal(failData.creditsCharged, 0, 'Net credits charged must be 0 on failure');
+        assert.equal(
+          failData.balanceAfter,
+          3,
+          'Organization HR credit balance must be restored to 3 after refund'
+        );
+
+        const ledger = await DataStore.getHrCreditLedger(org.id, 20);
+        const refundEntry = ledger.find(
+          (entry: any) =>
+            entry.reason === 'candidate_ai_analysis_refund' && entry.refId === app3.id
+        );
+        assert.ok(refundEntry, 'HrCreditLedger must record candidate_ai_analysis_refund');
+        assert.equal(refundEntry?.delta, 1);
+      } finally {
+        setCustomApplicantAiRunnerForTests(null);
+      }
+
+      // 6. Update job description -> hash changes -> re-analyzing app1 now runs fresh analysis and charges 1 credit (3 -> 2)
+      await DataStore.updateEmployerJob(job.id, org.id, hrOwner.id, {
+        description:
+          'Updated Job Description: Must also architect GraphQL federation and distributed event-driven systems.',
+        skills: ['TypeScript', 'React', 'Next.js', 'GraphQL', 'Kafka'],
+      });
+
+      const reanalyzeAfterJdChange: any = await analyzeJobPOST(
+        new NextRequest(`http://localhost:3000/api/employer/jobs/${job.id}/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${hrToken}`,
+          },
+          body: JSON.stringify({
+            action: 'analyze_batch',
+            applicationIds: [app1.id],
+            onlyNew: false,
+            force: false,
+          }),
+        }),
+        { params: Promise.resolve({ jobId: job.id }) }
+      );
+      const reanalyzeData = await reanalyzeAfterJdChange.json();
+      assert.equal(reanalyzeData.analyzedCount, 1);
+      assert.equal(reanalyzeData.cachedCount, 0);
+      assert.equal(reanalyzeData.creditsCharged, 1);
+      assert.equal(reanalyzeData.balanceAfter, 2);
+
+      // 7. Manual Ranking & Top-10 Comparison Report (costs 2 credits: 2 -> 0)
+      const rankPatchRes: any = await employerAppPATCH(
+        new NextRequest(`http://localhost:3000/api/employer/applications/${app2.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${hrToken}`,
+          },
+          body: JSON.stringify({ manualRank: 1 }),
+        }),
+        { params: Promise.resolve({ applicationId: app2.id }) }
+      );
+      assert.equal(rankPatchRes.status, 200);
+
+      const top10Res: any = await analyzeJobPOST(
+        new NextRequest(`http://localhost:3000/api/employer/jobs/${job.id}/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            origin: 'http://localhost:3000',
+            Authorization: `Bearer ${hrToken}`,
+          },
+          body: JSON.stringify({ action: 'compare_top10' }),
+        }),
+        { params: Promise.resolve({ jobId: job.id }) }
+      );
+      assert.equal(top10Res.status, 200);
+      const top10Data = await top10Res.json();
+      assert.equal(top10Data.ok, true);
+      assert.equal(top10Data.report.creditsUsed, 2);
+      assert.equal(top10Data.balanceAfter, 0);
+      assert.ok(top10Data.report);
+      assert.equal(top10Data.report.candidates[0].applicationId, app2.id);
+    });
+  });
+
+  // =========================================================================
+  // 25. Employer Billing, 50/200/1000 HR Credit Packs, Webhook-Only Activation,
+  //     Monthly Spend Cap / Low-Balance Alerts & Provider Refund Negative Balance
+  // =========================================================================
+  describe('25. Employer Billing, 50/200/1000 HR Credit Packs, Webhook-Only Activation, Spend Cap & Refund Negative Balance', () => {
+    it('creates 50/200/1000 HR pack checkouts without instant activation, activates credits strictly via idempotent Lemon Squeezy webhook with amount/currency verification, enforces monthly spend cap & low-balance alerts, and allows provider refunds to drive balance negative (blocking usage until settled)', async () => {
+      const {
+        GET: billingGET,
+        PUT: billingPUT,
+        POST: billingPOST,
+      } = await import('@/app/api/employer/billing/route');
+      const { POST: jobsPOST } = await import('@/app/api/employer/jobs/route');
+
+      const prevSecret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET;
+      const prevAllowMock = process.env.ALLOW_MOCK_PAYMENTS;
+      const prevVar50 = process.env.LEMONSQUEEZY_VARIANT_HR_50;
+      const prevVar200 = process.env.LEMONSQUEEZY_VARIANT_HR_200;
+      const prevVar1000 = process.env.LEMONSQUEEZY_VARIANT_HR_1000;
+
+      const testWebhookSecret = 'ls_hr_pack_webhook_secret_2026';
+      process.env.LEMONSQUEEZY_WEBHOOK_SECRET = testWebhookSecret;
+      process.env.ALLOW_MOCK_PAYMENTS = 'true';
+      process.env.LEMONSQUEEZY_VARIANT_HR_50 = 'var_hr_50';
+      process.env.LEMONSQUEEZY_VARIANT_HR_200 = 'var_hr_200';
+      process.env.LEMONSQUEEZY_VARIANT_HR_1000 = 'var_hr_1000';
+
+      try {
+        clearAllRateLimits();
+
+        // 1. Create Employer user + Organization (and a second user for IDOR checks)
+        const billingOwner = await DataStore.createUserAccount({
+          name: 'Billing Owner',
+          email: `billing_owner_${Date.now()}@company-hr.io`,
+          password: 'hashed_password',
+          role: 'user',
+          accountType: 'employer',
+        });
+
+        const outsiderUser = await DataStore.createUserAccount({
+          name: 'Outsider User',
+          email: `outsider_billing_${Date.now()}@other.io`,
+          password: 'hashed_password',
+          role: 'user',
+          accountType: 'employer',
+        });
+
+        const ownerToken = signToken({
+          userId: billingOwner.id,
+          email: billingOwner.email,
+          name: billingOwner.name,
+        });
+        const outsiderToken = signToken({
+          userId: outsiderUser.id,
+          email: outsiderUser.email,
+          name: outsiderUser.name,
+        });
+
+        const org = await DataStore.createOrganization(billingOwner.id, {
+          name: 'Apex Hiring Corp',
+          website: 'https://company-hr.io',
+          industry: 'Software',
+          size: '51-200',
+          country: 'UAE',
+        });
+        // Deduct initial 2 starter credits so we start from 0 for clean pack math
+        if (org.hrCredits > 0) {
+          await DataStore.deductHrCredits(
+            org.id,
+            org.hrCredits,
+            'job_post_publish',
+            'init_zero_reset',
+            billingOwner.id
+          );
+        }
+        const orgZero = await DataStore.getOrganizationById(org.id);
+        assert.equal(orgZero?.hrCredits, 0, 'Organization starts at 0 HR credits for pack test');
+
+        // 2. IDOR Protection: Outsider cannot GET, PUT, or POST for this organization
+        const idorGet = await billingGET(
+          new NextRequest(`http://localhost:3000/api/employer/billing?orgId=${org.id}`, {
+            headers: { Authorization: `Bearer ${outsiderToken}` },
+          })
+        );
+        assert.equal(idorGet.status, 403);
+
+        const idorPut = await billingPUT(
+          new NextRequest('http://localhost:3000/api/employer/billing', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${outsiderToken}`,
+            },
+            body: JSON.stringify({ orgId: org.id, monthlySpendCap: 100 }),
+          })
+        );
+        assert.equal(idorPut.status, 403);
+
+        const idorPost = await billingPOST(
+          new NextRequest('http://localhost:3000/api/employer/billing', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${outsiderToken}`,
+            },
+            body: JSON.stringify({ orgId: org.id, packId: 'hr_pack_50' }),
+          })
+        );
+        assert.equal(idorPost.status, 403);
+
+        // 3. Initiate checkout for hr_pack_50 ($29 USD = 50 credits)
+        // Even with ALLOW_MOCK_PAYMENTS=true, HR packs MUST NOT auto-activate during checkout creation!
+        const checkout50Res = await billingPOST(
+          new NextRequest('http://localhost:3000/api/employer/billing', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${ownerToken}`,
+            },
+            body: JSON.stringify({ orgId: org.id, packId: 'hr_pack_50' }),
+          })
+        );
+        assert.equal(checkout50Res.status, 200);
+        const checkout50Data = await checkout50Res.json();
+        assert.equal(checkout50Data.ok, true);
+        assert.equal(checkout50Data.packId, 'hr_pack_50');
+        assert.equal(checkout50Data.credits, 50);
+        assert.equal(checkout50Data.amountUsd, 29);
+        assert.ok(checkout50Data.orderReference);
+
+        const orgAfterCheckout = await DataStore.getOrganizationById(org.id);
+        assert.equal(
+          orgAfterCheckout?.hrCredits,
+          0,
+          'HR credits MUST NOT be activated on checkout creation — webhook activation only!'
+        );
+
+        // 4. Send Lemon Squeezy webhook with MISMATCHED amount (500 cents instead of 2900 cents) -> must reject 400
+        const mismatchPayload = JSON.stringify({
+          meta: {
+            event_name: 'order_created',
+            custom_data: {
+              order_reference: checkout50Data.orderReference,
+              user_id: billingOwner.id,
+              plan_id: 'hr_pack_50',
+              org_id: org.id,
+            },
+          },
+          data: {
+            id: `ls_hr_mismatch_${Date.now()}`,
+            attributes: {
+              status: 'paid',
+              total: 500, // Wrong! Expected 2900 ($29.00)
+              currency: 'USD',
+              user_email: billingOwner.email,
+            },
+          },
+        });
+        const mismatchSig = crypto
+          .createHmac('sha256', testWebhookSecret)
+          .update(mismatchPayload)
+          .digest('hex');
+
+        const mismatchRes = await lemonSqueezyWebhookPOST(
+          new NextRequest('http://localhost:3000/api/webhooks/lemonsqueezy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Signature': mismatchSig,
+            },
+            body: mismatchPayload,
+          })
+        );
+        assert.equal(mismatchRes.status, 400);
+        const mismatchData = await mismatchRes.json();
+        assert.equal(mismatchData.error, 'AMOUNT_OR_CURRENCY_MISMATCH');
+
+        // 5. Initiate checkout for hr_pack_200 ($99 USD = 200 credits) and activate via valid signed webhook
+        const checkout200Res = await billingPOST(
+          new NextRequest('http://localhost:3000/api/employer/billing', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${ownerToken}`,
+            },
+            body: JSON.stringify({ orgId: org.id, packId: 'hr_pack_200' }),
+          })
+        );
+        assert.equal(checkout200Res.status, 200);
+        const checkout200Data = await checkout200Res.json();
+        assert.equal(checkout200Data.credits, 200);
+        assert.equal(checkout200Data.amountUsd, 99);
+
+        const lsOrder200Id = `ls_hr_order_200_${Date.now()}`;
+        const valid200Payload = JSON.stringify({
+          meta: {
+            event_name: 'order_created',
+            custom_data: {
+              order_reference: checkout200Data.orderReference,
+              user_id: billingOwner.id,
+              plan_id: 'hr_pack_200',
+              org_id: org.id,
+            },
+          },
+          data: {
+            id: lsOrder200Id,
+            attributes: {
+              status: 'paid',
+              total: 9900, // Exact match: $99.00 = 9900 cents
+              currency: 'USD',
+              user_email: billingOwner.email,
+            },
+          },
+        });
+        const valid200Sig = crypto
+          .createHmac('sha256', testWebhookSecret)
+          .update(valid200Payload)
+          .digest('hex');
+
+        const webhookActivateRes = await lemonSqueezyWebhookPOST(
+          new NextRequest('http://localhost:3000/api/webhooks/lemonsqueezy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Signature': valid200Sig,
+            },
+            body: valid200Payload,
+          })
+        );
+        assert.equal(webhookActivateRes.status, 200);
+        const webhookActivateData = await webhookActivateRes.json();
+        assert.equal(webhookActivateData.status, 'paid');
+        assert.equal(webhookActivateData.duplicate, false);
+
+        const orgAfterWebhook = await DataStore.getOrganizationById(org.id);
+        assert.equal(
+          orgAfterWebhook?.hrCredits,
+          200,
+          'Webhook must activate exactly 200 HR credits on the organization'
+        );
+
+        // 6. Idempotency: Re-sending the exact same webhook must not double-credit
+        const dupRes = await lemonSqueezyWebhookPOST(
+          new NextRequest('http://localhost:3000/api/webhooks/lemonsqueezy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Signature': valid200Sig,
+            },
+            body: valid200Payload,
+          })
+        );
+        assert.equal(dupRes.status, 200);
+        const dupData = await dupRes.json();
+        assert.equal(dupData.duplicate, true);
+        const orgAfterDup = await DataStore.getOrganizationById(org.id);
+        assert.equal(orgAfterDup?.hrCredits, 200, 'Duplicate webhook must not add extra credits');
+
+        // 7. Spend 160 credits (leaving 40 credits), then process a provider refund (`order_refunded`) for the 200-credit pack!
+        //    Balance must drop by 200: 40 - 200 = -160 (Negative balance!)
+        const spend160 = await DataStore.deductHrCredits(
+          org.id,
+          160,
+          'candidate_ai_analysis',
+          'bulk_analysis_160',
+          billingOwner.id
+        );
+        assert.equal(spend160.success, true);
+        assert.equal(spend160.balanceAfter, 40);
+
+        const refund200Payload = JSON.stringify({
+          meta: {
+            event_name: 'order_refunded',
+            custom_data: {
+              order_reference: checkout200Data.orderReference,
+              user_id: billingOwner.id,
+              plan_id: 'hr_pack_200',
+              org_id: org.id,
+            },
+          },
+          data: {
+            id: lsOrder200Id,
+            attributes: {
+              status: 'refunded',
+              total: 9900,
+              currency: 'USD',
+              user_email: billingOwner.email,
+            },
+          },
+        });
+        const refund200Sig = crypto
+          .createHmac('sha256', testWebhookSecret)
+          .update(refund200Payload)
+          .digest('hex');
+
+        const refundWebhookRes = await lemonSqueezyWebhookPOST(
+          new NextRequest('http://localhost:3000/api/webhooks/lemonsqueezy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Signature': refund200Sig,
+            },
+            body: refund200Payload,
+          })
+        );
+        assert.equal(refundWebhookRes.status, 200);
+        const refundWebhookData = await refundWebhookRes.json();
+        assert.equal(refundWebhookData.status, 'refunded');
+
+        const orgAfterRefund = await DataStore.getOrganizationById(org.id);
+        assert.equal(
+          orgAfterRefund?.hrCredits,
+          -160,
+          'Provider refund of 200-credit pack after spending 160 credits must result in -160 negative balance'
+        );
+
+        // 8. Verify negative balance (-160) strictly blocks HR credit usage (deductHrCredits & publishing jobs)
+        const blockedDeduct = await DataStore.deductHrCredits(
+          org.id,
+          1,
+          'job_post_publish',
+          'job_blocked_test',
+          billingOwner.id
+        );
+        assert.equal(blockedDeduct.success, false);
+        assert.equal(blockedDeduct.error, 'INSUFFICIENT_HR_CREDITS');
+        assert.equal(blockedDeduct.balanceAfter, -160);
+
+        const blockedPublishRes = await jobsPOST(
+          new NextRequest('http://localhost:3000/api/employer/jobs', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${ownerToken}`,
+            },
+            body: JSON.stringify({
+              orgId: org.id,
+              title: 'Blocked Senior Backend Role',
+              description: 'Testing negative balance blocking job publish until settled.',
+              location: 'Dubai',
+              publishNow: true,
+            }),
+          })
+        );
+        assert.equal(blockedPublishRes.status, 402);
+        const blockedPublishData = await blockedPublishRes.json();
+        assert.equal(blockedPublishData.error, 'INSUFFICIENT_HR_CREDITS');
+        assert.equal(blockedPublishData.purchaseUrl, '/employer/billing');
+
+        // Verify GET /api/employer/billing reports negativeBalanceBlocked = true and ledger contains the -200 refund
+        const billingStateNegRes = await billingGET(
+          new NextRequest(`http://localhost:3000/api/employer/billing?orgId=${org.id}`, {
+            headers: { Authorization: `Bearer ${ownerToken}` },
+          })
+        );
+        assert.equal(billingStateNegRes.status, 200);
+        const billingStateNeg = await billingStateNegRes.json();
+        assert.equal(billingStateNeg.negativeBalanceBlocked, true);
+        assert.equal(billingStateNeg.organization.hrCredits, -160);
+        assert.ok(
+          billingStateNeg.ledger.some(
+            (entry: any) => entry.reason === 'refund' && entry.delta === -200 && entry.balanceAfter === -160
+          ),
+          'Ledger must record -200 refund with balanceAfter -160'
+        );
+
+        // 9. Settle the negative balance by purchasing & webhook-activating another hr_pack_200 (-160 + 200 = +40)
+        const settleOrder = await DataStore.createOrder({
+          userId: billingOwner.id,
+          userEmail: billingOwner.email,
+          planId: 'hr_pack_200',
+          billingCycle: 'once',
+          baseAmount: 99,
+          amount: 99,
+          currency: 'USD',
+          method: 'lemonsqueezy',
+          reference: `ORD_SETTLE_${Date.now()}`,
+          expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+          metadata: { orgId: org.id },
+        });
+        await DataStore.completeOrder(settleOrder.id, {
+          provider: 'lemonsqueezy',
+        });
+
+        const orgSettled = await DataStore.getOrganizationById(org.id);
+        assert.equal(orgSettled?.hrCredits, 40, 'Balance should be settled to +40 (-160 + 200)');
+
+        // 10. Monthly Spend Cap & Low-Balance Alert Settings
+        // Current monthlySpent is 162 (2 reset + 160 from step 7). Set monthlySpendCap to 167 and lowBalanceThreshold to 38.
+        const settingsRes = await billingPUT(
+          new NextRequest('http://localhost:3000/api/employer/billing', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              origin: 'http://localhost:3000',
+              Authorization: `Bearer ${ownerToken}`,
+            },
+            body: JSON.stringify({
+              orgId: org.id,
+              monthlySpendCap: 167,
+              lowBalanceThreshold: 38,
+              lowBalanceAlertEnabled: true,
+            }),
+          })
+        );
+        assert.equal(settingsRes.status, 200);
+        const settingsData = await settingsRes.json();
+        assert.equal(settingsData.organization.monthlySpendCap, 167);
+        assert.equal(settingsData.organization.lowBalanceThreshold, 38);
+
+        // Deduct 3 credits -> monthlySpent becomes 165 (<= 167 cap), balance becomes 37 (<= 38 threshold -> triggers lowBalanceAlertTriggered!)
+        const deductWithLowAlert = await DataStore.deductHrCredits(
+          org.id,
+          3,
+          'candidate_ai_analysis',
+          'app_low_alert_test',
+          billingOwner.id
+        );
+        assert.equal(deductWithLowAlert.success, true);
+        assert.equal(deductWithLowAlert.balanceAfter, 37);
+        assert.equal(
+          deductWithLowAlert.lowBalanceAlertTriggered,
+          true,
+          'Deducting down to 37 (<= threshold 38) must trigger low-balance alert'
+        );
+
+        // Attempt to deduct 5 more credits -> 165 + 5 = 170 > 167 monthlySpendCap -> blocked with MONTHLY_SPEND_CAP_EXCEEDED!
+        const capExceededRes = await DataStore.deductHrCredits(
+          org.id,
+          5,
+          'candidate_ai_analysis',
+          'app_cap_exceeded_test',
+          billingOwner.id
+        );
+        assert.equal(capExceededRes.success, false);
+        assert.equal(capExceededRes.error, 'MONTHLY_SPEND_CAP_EXCEEDED');
+        assert.equal(capExceededRes.balanceAfter, 37, 'Balance must remain 37 when monthly spend cap blocks deduction');
+      } finally {
+        if (prevSecret !== undefined) process.env.LEMONSQUEEZY_WEBHOOK_SECRET = prevSecret;
+        else delete process.env.LEMONSQUEEZY_WEBHOOK_SECRET;
+        if (prevAllowMock !== undefined) process.env.ALLOW_MOCK_PAYMENTS = prevAllowMock;
+        else delete process.env.ALLOW_MOCK_PAYMENTS;
+        if (prevVar50 !== undefined) process.env.LEMONSQUEEZY_VARIANT_HR_50 = prevVar50;
+        else delete process.env.LEMONSQUEEZY_VARIANT_HR_50;
+        if (prevVar200 !== undefined) process.env.LEMONSQUEEZY_VARIANT_HR_200 = prevVar200;
+        else delete process.env.LEMONSQUEEZY_VARIANT_HR_200;
+        if (prevVar1000 !== undefined) process.env.LEMONSQUEEZY_VARIANT_HR_1000 = prevVar1000;
+        else delete process.env.LEMONSQUEEZY_VARIANT_HR_1000;
+      }
+    });
+  });
+
 });
 
 function oversizedReqBody(str: string): string {

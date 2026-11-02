@@ -90,6 +90,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const profile = await DataStore.getUserProfile(user.id, user.id);
+
     const token = signToken({
       userId: user.id,
       email: user.email,
@@ -103,9 +105,12 @@ export async function POST(req: NextRequest) {
       user: {
         id: user.id,
         name: user.name,
+        fullName: profile?.fullName || user.name,
         email: user.email,
         role: user.role || 'user',
         emailVerified: user.emailVerified || null,
+        profileCompletion: profile?.profileCompletion ?? 0,
+        onboardingCompletedAt: profile?.onboardingCompletedAt ?? null,
       },
     });
 

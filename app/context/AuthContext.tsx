@@ -25,6 +25,9 @@ export interface UserProfile {
   lemonSubscriptionId?: string;
   subscriptionStatus?: 'active' | 'past_due' | 'canceled' | 'expired' | 'none';
   paymentFailedAt?: string | null;
+  fullName?: string;
+  profileCompletion?: number;
+  onboardingCompletedAt?: string | null;
   createdAt?: string;
 }
 

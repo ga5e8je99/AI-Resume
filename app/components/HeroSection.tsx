@@ -1,49 +1,47 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Zap, Check, CheckCircle2, FileText } from 'lucide-react';
-import clsx from 'clsx';
-import { useLanguage } from '@/app/context/LanguageContext';
-import { Button } from '@/components/ui';
-import { ScrollReveal } from './landing/ScrollReveal';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import {
+  ArrowRight,
+  Sparkles,
+  CheckCircle2,
+  ShieldCheck,
+  Globe,
+  BarChart3,
+  Layers,
+  Briefcase,
+  FileText,
+  ScanLine,
+  TrendingUp,
+} from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import Button from '@/components/ui/Button';
 
-interface HeroSectionProps {
-  onScanClick: (e: React.MouseEvent) => void;
-  onDemoClick: () => void;
-  isDemoLoading: boolean;
+export interface HeroSectionProps {
+  onScanClick?: (e: React.MouseEvent) => void;
+  onDemoClick?: (e: React.MouseEvent) => void;
+  isDemoLoading?: boolean;
+  variant?: 'bento' | 'classic';
 }
 
 const TARGET_SCORE = 94;
-const SCORE_DURATION_MS = 800;
-const radius = 17;
-const circumference = 2 * Math.PI * radius; // ~106.81
+const SCORE_DURATION_MS = 900;
 
 export default function HeroSection({
   onScanClick,
-  onDemoClick,
-  isDemoLoading,
+  variant = 'bento',
 }: HeroSectionProps) {
-  const { language, t } = useLanguage();
-  const isAr = language === 'ar';
+  const { t, dir } = useLanguage();
+  const isRtl = dir === 'rtl';
 
-  // ATS Score count-up state & single-run guard
-  const [displayScore, setDisplayScore] = useState(TARGET_SCORE);
+  const [animatedScore, setAnimatedScore] = useState(0);
+  const [activeSkillCycle, setActiveSkillCycle] = useState(0);
+  const scoreContainerRef = useRef<HTMLDivElement | null>(null);
+  const bentoContainerRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedScoreRef = useRef(false);
-  const scoreSectionRef = useRef<HTMLDivElement>(null);
-  const scoreTextRef = useRef<HTMLSpanElement>(null);
-  const scoreCircleRef = useRef<SVGCircleElement>(null);
+  const rafParallaxRef = useRef<number | null>(null);
 
-  // Score circular progress offset (94 / 100)
-  const strokeOffset = circumference - (displayScore / 100) * circumference;
-
-  const keywords = [
-    t('hero_preview_kw1'),
-    t('hero_preview_kw2'),
-    t('hero_preview_kw3'),
-    t('hero_preview_kw4'),
-    t('hero_preview_kw5'),
-  ];
-
+  // Animate ATS score once from 0 -> 94 over 900ms on first viewport entry
   useEffect(() => {
     if (hasAnimatedScoreRef.current) return;
 
@@ -54,405 +52,598 @@ export default function HeroSection({
 
     if (prefersReducedMotion) {
       hasAnimatedScoreRef.current = true;
-      return;
+      const immediateTimer = window.setTimeout(() => {
+        setAnimatedScore(TARGET_SCORE);
+      }, 0);
+      return () => window.clearTimeout(immediateTimer);
     }
 
-    const targetEl = scoreSectionRef.current;
-    if (!targetEl || typeof IntersectionObserver === 'undefined') {
-      hasAnimatedScoreRef.current = true;
-      return;
-    }
-
-    let rafId = 0;
-
+    let rafId: number | null = null;
     const runCountUp = () => {
+      if (hasAnimatedScoreRef.current) return;
+      hasAnimatedScoreRef.current = true;
       const startTime = performance.now();
 
-      const animate = (now: number) => {
+      const tick = (now: number) => {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / SCORE_DURATION_MS, 1);
-        // Smooth cubic ease-out over 800ms: 1 - (1 - progress)^3
-        const easedProgress = 1 - Math.pow(1 - progress, 3);
-        const currentScore = Math.round(easedProgress * TARGET_SCORE);
-        const currentOffset =
-          circumference - (currentScore / 100) * circumference;
-
-        if (scoreTextRef.current) {
-          scoreTextRef.current.textContent = String(currentScore);
-        }
-        if (scoreCircleRef.current) {
-          scoreCircleRef.current.style.strokeDashoffset = String(currentOffset);
-        }
-
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setAnimatedScore(Math.round(eased * TARGET_SCORE));
         if (progress < 1) {
-          rafId = requestAnimationFrame(animate);
+          rafId = requestAnimationFrame(tick);
         } else {
-          setDisplayScore(TARGET_SCORE);
+          setAnimatedScore(TARGET_SCORE);
         }
       };
 
-      rafId = requestAnimationFrame(animate);
+      rafId = requestAnimationFrame(tick);
     };
+
+    const node = scoreContainerRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      runCountUp();
+      return () => {
+        if (rafId !== null) cancelAnimationFrame(rafId);
+      };
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting && !hasAnimatedScoreRef.current) {
-            hasAnimatedScoreRef.current = true;
-            observer.disconnect();
-            runCountUp();
-            break;
-          }
+        if (entries[0]?.isIntersecting) {
+          runCountUp();
+          observer.disconnect();
         }
       },
       { threshold: 0.2 }
     );
 
-    observer.observe(targetEl);
+    observer.observe(node);
 
     return () => {
       observer.disconnect();
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-      }
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, []);
 
+  // Gentle cycle of active scan stage & skill chips (disabled on reduced motion)
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (mq.matches) return;
+
+    const intervalId = window.setInterval(() => {
+      setActiveSkillCycle((prev) => (prev + 1) % 3);
+    }, 2800);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  // Subtle mouse parallax on desktop only (disabled on prefers-reduced-motion)
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    if (
+      !window.matchMedia('(min-width: 1024px)').matches ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+
+    const container = bentoContainerRef.current;
+    if (!container) return;
+
+    const { x, y, width, height } = e.currentTarget.getBoundingClientRect();
+    const normX = (e.clientX - x) / width - 0.5;
+    const normY = (e.clientY - y) / height - 0.5;
+
+    if (rafParallaxRef.current !== null) {
+      cancelAnimationFrame(rafParallaxRef.current);
+    }
+
+    rafParallaxRef.current = requestAnimationFrame(() => {
+      container.style.setProperty('--bento-px', `${(normX * 10).toFixed(2)}px`);
+      container.style.setProperty('--bento-py', `${(normY * 8).toFixed(2)}px`);
+    });
+  }, []);
+
+  const handlePointerLeave = useCallback(() => {
+    const container = bentoContainerRef.current;
+    if (!container) return;
+    container.style.setProperty('--bento-px', '0px');
+    container.style.setProperty('--bento-py', '0px');
+  }, []);
+
+  const handlePrimaryScan = (e: React.MouseEvent) => {
+    if (onScanClick) {
+      onScanClick(e);
+      return;
+    }
+    const target = document.getElementById('ats-scanner');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleHowItWorksScroll = () => {
+    const target =
+      document.getElementById('how-it-works') ||
+      document.getElementById('ats-scanner');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Ring geometry (r = 28 => circumference ≈ 175.9)
+  const ringRadius = 28;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringStrokeOffset =
+    ringCircumference - (animatedScore / 100) * ringCircumference;
+
+  // 3 indicator bars
+  const scoreMetrics = [
+    { label: t('hero_bento_metric_keywords'), value: 96 },
+    { label: t('hero_bento_metric_format'), value: 100 },
+    { label: t('hero_bento_metric_impact'), value: 88 },
+  ];
+
+  // 6 general, company-neutral skill chips that smoothly alternate Matched/Missing
+  const skillChips = [
+    { label: t('hero_skill_communication'), matched: true },
+    { label: t('hero_skill_analysis'), matched: true },
+    { label: t('hero_skill_teamwork'), matched: activeSkillCycle !== 1 },
+    { label: t('hero_skill_reporting'), matched: activeSkillCycle === 1 },
+    { label: t('hero_skill_planning'), matched: activeSkillCycle !== 2 },
+    { label: t('hero_skill_leadership'), matched: activeSkillCycle === 2 },
+  ];
+
+  // 3 abstract job match rows
+  const jobMatchRows = [
+    { id: 1, titleWidth: 'w-24 sm:w-28', subWidth: 'w-16', score: 94 },
+    { id: 2, titleWidth: 'w-20 sm:w-24', subWidth: 'w-14', score: 89 },
+    { id: 3, titleWidth: 'w-24 sm:w-28', subWidth: 'w-16', score: 84 },
+  ];
+
   return (
-    <section className="relative overflow-hidden overflow-x-clip pt-10 sm:pt-16 lg:pt-20 pb-16 sm:pb-24 lg:pb-28">
-      {/* 1. Subtle Editorial Grid Background (CSS only, ultra-low opacity) */}
+    <section
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      className="relative flex items-center bg-[var(--paper)] pt-6 pb-12 sm:pt-10 sm:pb-16 lg:py-16 border-b border-[var(--line)] overflow-x-clip overflow-y-clip"
+    >
+      {/* Background: fine dot/line grid with radial mask + single ultra-light jade & amber ambient blob */}
       <div
-        className="absolute inset-0 pointer-events-none -z-20 opacity-[0.035] dark:opacity-[0.045]"
-        style={{
-          backgroundImage:
-            'linear-gradient(90deg, var(--ink) 1px, transparent 1px), linear-gradient(180deg, var(--ink) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-          maskImage:
-            'radial-gradient(ellipse 70% 60% at 50% 40%, #000 60%, transparent 100%)',
-          WebkitMaskImage:
-            'radial-gradient(ellipse 70% 60% at 50% 40%, #000 60%, transparent 100%)',
-        }}
         aria-hidden="true"
-      />
+        className="pointer-events-none select-none absolute inset-0 overflow-hidden"
+      >
+        <div
+          className="absolute inset-0 opacity-[0.35] dark:opacity-[0.22]"
+          style={{
+            backgroundImage:
+              'linear-gradient(90deg, var(--line) 1px, transparent 1px), linear-gradient(180deg, var(--line) 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+            maskImage:
+              'radial-gradient(ellipse 75% 65% at 50% 45%, #000 30%, transparent 100%)',
+            WebkitMaskImage:
+              'radial-gradient(ellipse 75% 65% at 50% 45%, #000 30%, transparent 100%)',
+          }}
+        />
+        <div
+          className="absolute top-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2 w-[22rem] sm:w-[36rem] h-[18rem] sm:h-[26rem] rounded-full blur-3xl opacity-20 dark:opacity-15"
+          style={{
+            background:
+              'radial-gradient(circle at 35% 40%, var(--brand) 0%, var(--highlight) 55%, transparent 78%)',
+          }}
+        />
+      </div>
 
-      {/* 2. Soft Ambient Jade/Pine Aura behind the preview card */}
-      <div
-        className="absolute top-1/2 end-0 sm:end-[2%] lg:end-[6%] -translate-y-1/2 w-[280px] sm:w-[480px] lg:w-[580px] h-[280px] sm:h-[480px] lg:h-[580px] rounded-full bg-brand-soft/70 dark:bg-brand/10 blur-[80px] sm:blur-[110px] pointer-events-none -z-10 transition-colors"
-        aria-hidden="true"
-      />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full min-w-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center min-w-0">
+          {/* START COLUMN: Headline -> Subtitle -> CTAs -> Trust Row */}
+          <div className="lg:col-span-6 text-start min-w-0">
+            {/* Honest Eyebrow Pill */}
+            <div className="hero-lcp-enter inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--brand-soft)] border border-[var(--brand)]/20 text-[var(--brand)] text-xs font-semibold tracking-wide mb-4 max-w-full">
+              <Sparkles className="w-3.5 h-3.5 shrink-0 text-[var(--brand)]" aria-hidden="true" />
+              <span className="truncate">{t('hero_eyebrow')}</span>
+            </div>
 
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 sm:gap-12 lg:gap-14 items-center">
-          {/* ========================================================================= */}
-          {/* Start Column: Sequential Entrance (Headline -> Subtitle -> CTAs)          */}
-          {/* ========================================================================= */}
-          <div className="lg:col-span-6 xl:col-span-6 text-start space-y-6 min-w-0 max-w-full">
-            {/* Step 1: Eyebrow + Headline (delay: 0ms) */}
-            <ScrollReveal direction="up" delay={0} className="space-y-6">
-              {/* Eyebrow Pill */}
-              <div className="inline-flex items-center gap-2 sm:gap-2.5 px-3 sm:px-3.5 py-1.5 rounded-full border border-line-strong bg-surface backdrop-blur-sm text-ink-2 text-[11px] sm:text-[13px] font-mono shadow-subtle max-w-full">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping motion-reduce:animate-none absolute inline-flex h-full w-full rounded-full bg-brand opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand" />
+            {/* 2-Line Headline in Newsreader (serif in LTR, sans in RTL) */}
+            <h1
+              className={`${
+                isRtl
+                  ? 'font-sans leading-[1.22] tracking-normal'
+                  : 'font-serif leading-[1.1] tracking-tight'
+              } hero-lcp-enter hero-lcp-delay-50 text-3xl sm:text-4xl lg:text-5xl font-semibold text-[var(--ink)] mb-4 max-w-xl`}
+            >
+              <span>{t('hero_headline_part1')} </span>
+              <span className="relative inline-block whitespace-nowrap">
+                <span className="bg-gradient-to-r from-[var(--brand)] via-[var(--brand)] to-[var(--highlight)] bg-clip-text text-transparent font-bold">
+                  {t('hero_headline_highlight')}
                 </span>
-                <span className="truncate">{t('hero_eyebrow')}</span>
-              </div>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 200 12"
+                  fill="none"
+                  preserveAspectRatio="none"
+                  className="pointer-events-none absolute -bottom-1 inset-x-0 w-full h-2.5 text-[var(--highlight)] opacity-80"
+                >
+                  <path
+                    d="M3 8.5C52 2.5 142 2.5 197 7.5"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>{' '}
+              <span>{t('hero_headline_part2')}</span>
+            </h1>
 
-              {/* Headline with amber hand-drawn underline SVG */}
-              <h1
-                className={clsx(
-                  'text-ink tracking-tight font-semibold break-words',
-                  isAr
-                    ? 'font-sans text-[clamp(1.95rem,4.5vw,3.65rem)] leading-[1.25]'
-                    : 'font-serif text-[clamp(2.15rem,5vw,4.15rem)] leading-[1.1]'
-                )}
-              >
-                {t('hero_headline_part1')}{' '}
-                <span className="relative inline-block sm:whitespace-nowrap text-brand max-w-full">
-                  <span>{t('hero_headline_highlight')}</span>
-                  <svg
-                    className="absolute -bottom-1.5 sm:-bottom-2 start-0 w-full h-3 sm:h-3.5 text-highlight pointer-events-none overflow-visible"
-                    viewBox="0 0 240 14"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    preserveAspectRatio="none"
+            {/* Subtitle (full wrap, no clipping) */}
+            <p className="hero-lcp-enter hero-lcp-delay-100 text-sm sm:text-base lg:text-lg text-[var(--ink-2)] leading-relaxed mb-6 max-w-xl">
+              {t('hero_subheadline')}
+            </p>
+
+            {/* Primary & Secondary CTAs */}
+            <div className="hero-lcp-enter hero-lcp-delay-150 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 min-w-0">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handlePrimaryScan}
+                endIcon={
+                  <ArrowRight
+                    className="w-4 h-4 rtl:rotate-180 transition-transform"
                     aria-hidden="true"
-                  >
-                    <path
-                      d="M2.5 10C48 3.5 145 2 237.5 5.5C170 9.5 75 11.5 12 11.5"
-                      stroke="currentColor"
-                      strokeWidth="3.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>{' '}
-                {t('hero_headline_part2')}
-              </h1>
-            </ScrollReveal>
+                  />
+                }
+                className="w-full sm:w-auto font-bold shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)]"
+              >
+                {t('hero_scan_cta')}
+              </Button>
 
-            {/* Step 2: Subheadline (delay: 100ms) */}
-            <ScrollReveal direction="up" delay={100}>
-              <p className="text-base sm:text-lg lg:text-[1.125rem] text-ink-2 leading-relaxed max-w-[56ch]">
-                {t('hero_subheadline')}
-              </p>
-            </ScrollReveal>
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={handleHowItWorksScroll}
+                className="w-full sm:w-auto font-semibold text-[var(--ink)] bg-[var(--surface)] hover:bg-[var(--surface-2)]"
+              >
+                {t('hero_how_it_works_cta')}
+              </Button>
+            </div>
 
-            {/* Step 3: Action CTAs & Trust Ticks (delay: 200ms) */}
-            <ScrollReveal direction="up" delay={200} className="space-y-4">
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={onScanClick}
-                  endIcon={
-                    <ArrowRight className="w-4 h-4 rtl:rotate-180 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
-                  }
-                  className="w-full sm:w-auto shadow-card hover:shadow-glow transition-all"
-                >
-                  {t('hero_scan_cta')}
-                </Button>
-
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  isLoading={isDemoLoading}
-                  onClick={onDemoClick}
-                  startIcon={<Zap className="w-4 h-4 text-highlight fill-highlight/25" />}
-                  className="w-full sm:w-auto border-line-strong transition-all"
-                >
-                  {t('hero_demo_cta')}
-                </Button>
-              </div>
-
-              {/* Trust Ticks */}
-              <p className="text-xs text-ink-2 flex flex-wrap items-center gap-2 pt-1 font-mono">
-                <span className="text-ink-2 font-medium">
-                  {t('hero_trust_free')}
-                </span>
-                <span>•</span>
+            {/* Honest 3-Item Trust Row with Lucide Icons */}
+            <ul className="hero-lcp-enter hero-lcp-delay-200 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-[var(--ink-2)]">
+              <li className="inline-flex items-center gap-1.5">
+                <CheckCircle2
+                  className="w-3.5 h-3.5 text-[var(--success)] shrink-0"
+                  aria-hidden="true"
+                />
+                <span>{t('hero_trust_free')}</span>
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <ShieldCheck
+                  className="w-3.5 h-3.5 text-[var(--brand)] shrink-0"
+                  aria-hidden="true"
+                />
                 <span>{t('hero_trust_no_card')}</span>
-                <span>•</span>
-                <span>{t('hero_trust_instant')}</span>
-              </p>
-            </ScrollReveal>
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <Globe
+                  className="w-3.5 h-3.5 text-[var(--highlight)] shrink-0"
+                  aria-hidden="true"
+                />
+                <span>{t('hero_trust_languages')}</span>
+              </li>
+            </ul>
           </div>
 
-          {/* ========================================================================= */}
-          {/* End Column: Step 4 Mockup (delay: 300ms) + One-Time 800ms ATS Count-Up    */}
-          {/* ========================================================================= */}
-          <ScrollReveal
-            direction="up"
-            delay={300}
-            className="lg:col-span-6 xl:col-span-6 flex justify-center lg:justify-end min-w-0 max-w-full"
+          {/* END COLUMN: Interactive Live A4 Resume X-Ray Scanner + Floating Brand Score HUD */}
+          <div
+            ref={scoreContainerRef}
+            className="lg:col-span-6 w-full min-w-0 max-w-full hero-lcp-enter hero-lcp-delay-200"
           >
-            <div
-              ref={scoreSectionRef}
-              className="relative w-full max-w-[480px] pt-2 sm:pt-6 pe-0 sm:pe-5 min-w-0"
-            >
-              {/* Secondary peeking card behind for physical document depth (Hidden on <640px) */}
-              <div
-                className="hidden sm:block absolute inset-0 translate-x-3 translate-y-3 sm:translate-x-4 sm:translate-y-4 rounded-xl border border-line-strong bg-surface-2 shadow-card pointer-events-none -rotate-1"
-                aria-hidden="true"
-              />
+            {/* Single Accessible Text Alternative for Screen Readers */}
+            <p className="sr-only">{t('hero_bento_sr_summary')}</p>
 
-              {/* Unified Responsive ATS Score Badge:
-                  - Mobile (<640px): safe in-bounds (relative inset-x-0 mb-3.5 w-full) with zero overflow
-                  - Desktop/Tablet (sm+): floating top-end (sm:absolute sm:inset-x-auto sm:w-auto sm:mb-0 sm:-top-5 sm:-end-4) */}
+            {variant === 'bento' ? (
               <div
-                data-testid="hero-ats-badge"
-                className={clsx(
-                  'relative inset-x-0 mb-3.5 w-full flex items-center justify-between gap-2.5 p-3 rounded-xl',
-                  'sm:absolute sm:inset-x-auto sm:w-auto sm:mb-0 sm:-top-5 sm:-end-4 z-20 sm:justify-start sm:gap-3 sm:px-3.5 sm:py-2.5',
-                  'bg-surface dark:bg-elevated/95 backdrop-blur-md border border-line-strong text-ink shadow-elevated'
-                )}
-                aria-label={t('hero_preview_ats_score_aria').replace(
-                  '{score}',
-                  String(TARGET_SCORE)
-                )}
+                ref={bentoContainerRef}
+                aria-hidden="true"
+                style={{
+                  transform:
+                    'translate3d(var(--bento-px, 0px), var(--bento-py, 0px), 0)',
+                  transition: 'transform 200ms cubic-bezier(0.22, 1, 0.36, 1)',
+                }}
+                className="relative w-full max-w-[540px] mx-auto select-none pt-3 pb-4 sm:py-5 sm:px-4"
               >
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                  {/* SVG Progress Ring */}
-                  <div className="relative w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center shrink-0">
-                    <svg className="w-10 h-10 sm:w-11 sm:h-11 -rotate-90" viewBox="0 0 42 42">
-                      <circle
-                        cx="21"
-                        cy="21"
-                        r={radius}
-                        className="text-line-strong"
-                        stroke="currentColor"
-                        strokeWidth="3.5"
-                        fill="transparent"
-                      />
-                      <circle
-                        ref={scoreCircleRef}
-                        cx="21"
-                        cy="21"
-                        r={radius}
-                        className="text-success"
-                        stroke="currentColor"
-                        strokeWidth="3.5"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={strokeOffset}
-                        strokeLinecap="round"
-                        fill="transparent"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-                      <span
-                        ref={scoreTextRef}
-                        dir="ltr"
-                        style={{ unicodeBidi: 'isolate' }}
-                        className="font-mono text-xs font-bold text-ink tabular-nums [unicode-bidi:isolate]"
-                      >
-                        {displayScore}
+                {/* MAIN CENTERPIECE: Live A4 Editorial Resume Sheet with Animated Laser Scan Beam */}
+                <div className="relative rounded-2xl bg-[var(--surface)] border border-[var(--line-strong)] shadow-[var(--shadow-elevated)] overflow-hidden p-4 sm:p-6">
+                  {/* Animated Laser Scan Beam sweeping across the resume */}
+                  <div className="hero-scan-beam pointer-events-none absolute inset-x-0 z-20 flex flex-col items-center">
+                    <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-[var(--brand)] to-transparent shadow-[0_0_12px_var(--brand)]" />
+                    <div className="w-full h-10 bg-gradient-to-b from-[var(--brand)]/10 to-transparent" />
+                  </div>
+
+                  {/* Top Document Toolbar */}
+                  <div className="flex items-center justify-between gap-2 pb-3.5 mb-4 border-b border-[var(--line)]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--danger)]/60" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--warning)]/70" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--success)]/80" />
+                      </div>
+                      <span className="ms-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--surface-2)] border border-[var(--line)] text-[11px] font-mono font-semibold text-[var(--ink-2)] truncate">
+                        <FileText className="w-3 h-3 text-[var(--brand)] shrink-0" />
+                        {t('hero_badge_preview')}
                       </span>
-                      <span className="hidden sm:inline text-[8px] font-mono uppercase text-ink-2">
-                        {t('hero_preview_ats_short')}
+                    </div>
+
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--success-soft)] text-[var(--success)] text-[11px] font-semibold shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+                      {t('hero_bento_score_badge')}
+                    </span>
+                  </div>
+
+                  {/* Simulated Editorial Resume Header + Before/After Score Pill */}
+                  <div className="flex items-start justify-between gap-3 pb-4 mb-4 border-b border-dashed border-[var(--line)]">
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3.5 w-36 sm:w-44 rounded-md bg-[var(--ink)]/85" />
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[var(--brand-soft)] text-[var(--brand)] border border-[var(--brand)]/20">
+                          ISO A4 ✓
+                        </span>
+                      </div>
+                      <div className="h-2.5 w-28 sm:w-32 rounded-md bg-[var(--brand)]/60" />
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="px-2 py-0.5 rounded bg-[var(--surface-2)] text-[10px] font-mono text-[var(--ink-2)]">
+                          E.164 ✓
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-[var(--surface-2)] text-[10px] font-mono text-[var(--ink-2)]">
+                          LinkedIn ✓
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-[var(--surface-2)] text-[10px] font-mono text-[var(--ink-2)]">
+                          RTL / LTR ✓
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Score Upgrade Pill: 54 -> 94 */}
+                    <div
+                      dir="ltr"
+                      style={{ unicodeBidi: 'isolate' }}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--line-strong)] shrink-0"
+                    >
+                      <span className="text-xs font-mono line-through text-[var(--danger)] opacity-75">
+                        54
+                      </span>
+                      <ArrowRight className="w-3 h-3 text-[var(--ink-3)]" />
+                      <span className="text-sm font-mono font-bold text-[var(--brand)]">
+                        {animatedScore}
                       </span>
                     </div>
                   </div>
 
-                  {/* Score Details */}
-                  <div className="min-w-0">
-                    <span className="text-xs font-bold text-success flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
-                      <span className="truncate">{t('hero_preview_match_score')}</span>
-                    </span>
-                    <span className="text-[10px] text-ink-2 font-mono block truncate">
-                      {t('hero_preview_parser_ready')}
-                    </span>
-                  </div>
-                </div>
-
-                <span className="sm:hidden text-[10px] font-mono px-2 py-0.5 rounded bg-brand-soft text-brand font-semibold border border-brand/20 shrink-0">
-                  {t('hero_preview_ats_passed')}
-                </span>
-              </div>
-
-              {/* Primary Realistic Resume Card */}
-              <div
-                className={clsx(
-                  'relative rounded-xl border border-line-strong bg-surface text-ink p-4 sm:p-7 shadow-elevated text-start select-none min-w-0 max-w-full overflow-hidden',
-                  'rotate-0 sm:rotate-[1.5deg]'
-                )}
-              >
-                {/* Document Top Strip: Sample label & ISO format badge */}
-                <div className="flex items-center justify-between gap-2 pb-3 mb-3.5 border-b border-line-strong/80">
-                  <div className="flex items-center gap-1.5 text-ink-2 min-w-0">
-                    <FileText className="w-3.5 h-3.5 text-brand shrink-0" />
-                    <span className="text-[10px] font-mono uppercase tracking-wider font-semibold truncate">
-                      {t('hero_preview_sample')}
-                    </span>
-                  </div>
-                  <span
-                    dir="ltr"
-                    style={{ unicodeBidi: 'isolate' }}
-                    className="text-[10px] font-mono px-2 py-0.5 rounded border border-line-strong bg-surface-2 text-ink-2 font-medium shrink-0 [unicode-bidi:isolate]"
-                  >
-                    {t('hero_preview_iso')}
-                  </span>
-                </div>
-
-                {/* Document Header (Clear layout with zero collision with badges) */}
-                <div className="border-b border-line-strong/70 pb-3.5 mb-3.5">
-                  <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-ink">
-                    {t('hero_preview_name')}
-                  </h2>
-                  <p className="text-xs font-semibold text-brand mt-0.5 font-sans">
-                    {t('hero_preview_title')}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-ink-2 mt-2 font-mono">
-                    <span
-                      dir="ltr"
-                      style={{ unicodeBidi: 'isolate' }}
-                      className="[unicode-bidi:isolate]"
-                    >
-                      {t('hero_preview_email')}
-                    </span>
-                    <span aria-hidden="true">•</span>
-                    <span
-                      dir="ltr"
-                      style={{ unicodeBidi: 'isolate' }}
-                      className="[unicode-bidi:isolate]"
-                    >
-                      {t('hero_preview_phone')}
-                    </span>
-                    <span aria-hidden="true">•</span>
-                    <span>{t('hero_preview_location')}</span>
-                  </div>
-                </div>
-
-                {/* Executive Profile Snippet */}
-                <div className="mb-3.5">
-                  <h3 className="text-[10px] font-mono uppercase tracking-wider text-ink-2 mb-1 font-semibold">
-                    {t('hero_preview_summary_title')}
-                  </h3>
-                  <p className="text-xs text-ink-2 leading-relaxed">
-                    {t('hero_preview_summary_desc')}
-                  </p>
-                </div>
-
-                {/* Key Experience Highlight */}
-                <div className="mb-3.5">
-                  <h3 className="text-[10px] font-mono uppercase tracking-wider text-ink-2 mb-1 font-semibold">
-                    {t('hero_preview_exp_title')}
-                  </h3>
-                  <div className="text-xs font-semibold text-ink">
-                    {t('hero_preview_exp_role')}
-                  </div>
-                  <p className="text-[11px] text-ink-2 mt-0.5 leading-relaxed">
-                    {t('hero_preview_exp_desc')}
-                  </p>
-                </div>
-
-                {/* Matched Keywords Section */}
-                <div className="mb-3.5 pt-3 border-t border-line-strong/80">
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <h3 className="text-[10px] font-mono uppercase tracking-wider text-ink-2 font-semibold truncate">
-                      {t('hero_preview_kw_title')}
-                    </h3>
-                    <span
-                      dir="ltr"
-                      style={{ unicodeBidi: 'isolate' }}
-                      className="text-[10px] font-mono font-bold text-brand bg-brand-soft px-1.5 py-0.5 rounded border border-brand/20 shrink-0 [unicode-bidi:isolate]"
-                    >
-                      {t('hero_preview_kw_matched')}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {keywords.map((kw) => (
+                  {/* Section 1 inside Sheet: 3 Live Diagnostic Meters (Keywords / Format / Impact) */}
+                  <div className="mb-4 p-3 rounded-xl bg-[var(--surface-2)]/60 border border-[var(--line)] space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="inline-flex items-center gap-1.5">
+                        <ScanLine className="w-3.5 h-3.5 text-[var(--brand)]" />
+                        <span className="text-xs font-bold text-[var(--ink)]">
+                          {t('hero_bento_score_title')}
+                        </span>
+                      </div>
                       <span
-                        key={kw}
                         dir="ltr"
-                        style={{ unicodeBidi: 'isolate' }}
-                        className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-brand-soft text-brand border border-brand/20 flex items-center gap-1 [unicode-bidi:isolate]"
+                        className="text-[11px] font-mono font-bold text-[var(--brand)]"
                       >
-                        <Check className="w-3 h-3 text-brand shrink-0" />
-                        <span>{kw}</span>
+                        {animatedScore}/100
                       </span>
-                    ))}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {scoreMetrics.map((metric, idx) => {
+                        const isHighlighted = activeSkillCycle === idx;
+                        return (
+                          <div
+                            key={metric.label}
+                            className={`p-2 rounded-lg border transition-all duration-300 ${
+                              isHighlighted
+                                ? 'bg-[var(--surface)] border-[var(--brand)] shadow-subtle'
+                                : 'bg-[var(--surface)]/70 border-[var(--line)]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-1 mb-1.5">
+                              <span className="text-[10px] font-semibold text-[var(--ink-2)] truncate">
+                                {metric.label}
+                              </span>
+                              <span
+                                dir="ltr"
+                                className="font-mono text-[10px] font-bold text-[var(--ink)] shrink-0"
+                              >
+                                {metric.value}%
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-[var(--brand)] to-[var(--highlight)] transition-all duration-500"
+                                style={{ width: `${metric.value}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Section 2 inside Sheet: Skill Alignment Matrix */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="inline-flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-[var(--brand)] shrink-0" />
+                        <span className="text-xs font-bold text-[var(--ink)]">
+                          {t('hero_bento_skills_title')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-semibold">
+                        <span className="inline-flex items-center gap-1 text-[var(--success)]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
+                          {t('hero_bento_skills_matched')}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[var(--warning)]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]" />
+                          {t('hero_bento_skills_missing')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {skillChips.map((chip) => (
+                        <span
+                          key={chip.label}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all duration-500 ${
+                            chip.matched
+                              ? 'bg-[var(--success-soft)] text-[var(--success)] border-[var(--success)]/25'
+                              : 'bg-[var(--warning-soft)] text-[var(--warning)] border-[var(--warning)]/30 scale-[0.98]'
+                          }`}
+                        >
+                          <span
+                            dir="ltr"
+                            style={{ unicodeBidi: 'isolate' }}
+                            className="text-[10px] font-bold shrink-0"
+                          >
+                            {chip.matched ? '✓' : '+'}
+                          </span>
+                          <span className="truncate">{chip.label}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Section 3 inside Sheet: Live Role Matches Strip */}
+                  <div className="pt-3 border-t border-[var(--line)]">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="inline-flex items-center gap-1.5">
+                        <Briefcase className="w-3.5 h-3.5 text-[var(--highlight)] shrink-0" />
+                        <span className="text-xs font-bold text-[var(--ink)]">
+                          {t('hero_bento_jobs_title')}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-medium text-[var(--ink-3)]">
+                        {t('hero_bento_jobs_subtitle')}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {jobMatchRows.map((row, rIdx) => (
+                        <div
+                          key={row.id}
+                          className={`flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border transition-all duration-300 ${
+                            activeSkillCycle === rIdx
+                              ? 'bg-[var(--brand-soft)]/50 border-[var(--brand)]/40'
+                              : 'bg-[var(--surface-2)]/70 border-[var(--line)]/70'
+                          }`}
+                        >
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <div className="h-2 w-16 rounded-full bg-[var(--ink)]/25" />
+                            <div className="h-1.5 w-10 rounded-full bg-[var(--ink)]/12" />
+                          </div>
+                          <span
+                            dir="ltr"
+                            style={{ unicodeBidi: 'isolate' }}
+                            className="px-2 py-0.5 rounded-full bg-[var(--brand)] text-[var(--on-brand)] font-mono text-[10px] font-bold shrink-0"
+                          >
+                            {t('hero_bento_jobs_match_badge').replace(
+                              '{score}',
+                              String(row.score)
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {/* Bottom Verification Pin & Format Status */}
-                <div className="pt-2.5 border-t border-line-strong/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-2">
-                  <span className="flex items-center gap-1 text-success font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
-                    <span>{t('hero_preview_verified')}</span>
-                  </span>
-                  <span
+                {/* FLOATING HUD BADGE (Top-End Corner): Olive Brand Score Ring Badge */}
+                <div className="hidden sm:flex bento-float-1 absolute -top-2 -end-2 z-30 items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-[var(--brand)] text-[var(--on-brand)] shadow-[var(--shadow-elevated)] border border-[var(--on-brand)]/15">
+                  <div
                     dir="ltr"
                     style={{ unicodeBidi: 'isolate' }}
-                    className="font-mono text-ink-2 flex items-center gap-1 [unicode-bidi:isolate]"
+                    className="relative w-12 h-12 flex items-center justify-center shrink-0"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
-                    <span>{t('hero_preview_errors')}</span>
-                  </span>
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 68 68">
+                      <circle
+                        cx="34"
+                        cy="34"
+                        r={ringRadius}
+                        fill="transparent"
+                        stroke="currentColor"
+                        strokeOpacity="0.2"
+                        strokeWidth="5.5"
+                      />
+                      <circle
+                        cx="34"
+                        cy="34"
+                        r={ringRadius}
+                        fill="transparent"
+                        stroke="currentColor"
+                        strokeWidth="5.5"
+                        strokeDasharray={ringCircumference}
+                        strokeDashoffset={ringStrokeOffset}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center font-mono text-xs font-bold">
+                      {animatedScore}%
+                    </span>
+                  </div>
+                  <div className="pe-1">
+                    <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider opacity-85">
+                      <TrendingUp className="w-3 h-3" />
+                      <span>ATS Score</span>
+                    </div>
+                    <div className="text-xs font-bold leading-tight mt-0.5">
+                      {t('hero_badge_ats')}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </ScrollReveal>
+            ) : (
+              /* Classic Variant (A/B prop support): Generic abstract skeleton sheet with zero personal/company data */
+              <div
+                aria-hidden="true"
+                className="w-full min-w-0 max-w-lg mx-auto rounded-2xl bg-[var(--surface)] border border-[var(--line)] p-5 shadow-[var(--shadow-card)] select-none"
+              >
+                <div className="flex items-center justify-between gap-3 pb-3 mb-4 border-b border-[var(--line)]">
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-[var(--ink)] truncate">
+                      {t('hero_preview_name')}
+                    </div>
+                    <div className="text-xs text-[var(--ink-2)] truncate">
+                      {t('hero_preview_title')}
+                    </div>
+                  </div>
+                  <div
+                    dir="ltr"
+                    style={{ unicodeBidi: 'isolate' }}
+                    className="px-2.5 py-1 rounded-lg bg-[var(--brand-soft)] text-[var(--brand)] font-mono text-xs font-bold shrink-0"
+                  >
+                    {animatedScore}/100
+                  </div>
+                </div>
+                <div className="space-y-2.5 mb-4">
+                  <div className="h-2.5 w-3/4 rounded-full bg-[var(--surface-2)]" />
+                  <div className="h-2 w-full rounded-full bg-[var(--surface-2)]" />
+                  <div className="h-2 w-5/6 rounded-full bg-[var(--surface-2)]" />
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {skillChips.slice(0, 4).map((chip) => (
+                    <span
+                      key={chip.label}
+                      className="px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--ink-2)] text-[11px] font-medium"
+                    >
+                      {chip.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>

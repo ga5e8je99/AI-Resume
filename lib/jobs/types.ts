@@ -1,3 +1,17 @@
+export type JobEmploymentTypeFilter =
+  | 'any'
+  | 'all'
+  | 'full-time'
+  | 'part-time'
+  | 'contract'
+  | 'internship';
+
+export type JobDatePostedFilter = 'any' | 'all' | '24h' | '7d' | '30d';
+
+export type JobSortByOption = 'relevance' | 'newest' | 'match' | 'score' | 'date';
+
+export type JobAlertFrequency = 'none' | 'daily' | 'weekly';
+
 export interface JobSearchParams {
   query: string;
   location?: string;
@@ -6,6 +20,15 @@ export interface JobSearchParams {
   country?: string; // e.g. 'eg', 'sa', 'ae', 'us', 'gb', etc.
   skills?: string[];
   seniority?: 'junior' | 'mid' | 'senior' | 'lead' | 'any';
+  employmentType?: JobEmploymentTypeFilter;
+  datePosted?: JobDatePostedFilter;
+  minSalary?: number;
+  maxSalary?: number;
+  source?: string;
+  sortBy?: JobSortByOption;
+  cursor?: string | null;
+  limit?: number;
+  includeMatch?: boolean;
 }
 
 export interface Job {
@@ -22,11 +45,54 @@ export interface Job {
   salary?: string;
   jobType?: string; // 'full-time', 'part-time', 'contract', etc.
   tags?: string[];
-  // Match scoring added by matcher engine
+  // Match scoring added by matcher engine (only when CV/Skill matching is active)
   matchScore?: number; // 0 - 100
   matchReasons?: string[];
   missingSkills?: string[];
   matchedSkills?: string[];
+}
+
+export interface SavedJobItem {
+  id: string;
+  userId: string;
+  jobId: string;
+  job: Job;
+  notes?: string;
+  savedAt: string;
+}
+
+export interface SavedJobSearch {
+  id: string;
+  userId: string;
+  userEmail: string;
+  name: string;
+  query: string;
+  location?: string;
+  country?: string;
+  remote?: boolean;
+  employmentType?: JobEmploymentTypeFilter;
+  datePosted?: JobDatePostedFilter;
+  seniority?: 'junior' | 'mid' | 'senior' | 'lead' | 'any';
+  minSalary?: number | null;
+  maxSalary?: number | null;
+  source?: string;
+  alertEnabled: boolean;
+  alertFrequency: JobAlertFrequency;
+  unsubscribeToken: string;
+  lastSentAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JobClickRecord {
+  id: string;
+  userId?: string | null;
+  jobId: string;
+  title: string;
+  company: string;
+  source: string;
+  url: string;
+  clickedAt: string;
 }
 
 export interface JobProviderAttribution {
@@ -78,4 +144,16 @@ export interface CandidateProfileExtract {
   location: string;
   country: string;
   remotePreference: boolean;
+  // Extended fields for onboarding & profile auto-fill
+  fullName?: string;
+  targetRole?: string;
+  yearsOfExperience?: number;
+  city?: string;
+  countryName?: string;
+  phone?: string;
+  links?: {
+    linkedin?: string;
+    github?: string;
+    portfolio?: string;
+  };
 }

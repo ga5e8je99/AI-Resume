@@ -210,11 +210,14 @@ export async function POST(req: NextRequest) {
         user: {
           id: newUser.id,
           name: newUser.name,
+          fullName: newUser.name,
           email: newUser.email,
           role: newUser.role,
           emailVerified: null,
           termsAcceptedAt: newUser.termsAcceptedAt || termsAcceptedAt.toISOString(),
           termsVersion: newUser.termsVersion || termsVersion,
+          profileCompletion: 10,
+          onboardingCompletedAt: null,
         },
       },
       { status: 201 }

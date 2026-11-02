@@ -87,18 +87,22 @@ export default function LanguageSelector({
         type="button"
         suppressHydrationWarning
         onClick={() => setIsOpen((prev) => !prev)}
-        className="min-h-[44px] min-w-[44px] px-2.5 rounded-md border border-line-strong bg-surface hover:bg-surface-2 text-ink text-xs font-mono font-medium transition-all duration-150 active:scale-[0.98] shadow-subtle flex items-center justify-center gap-1 sm:gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 cursor-pointer"
+        className={`h-9 px-3 rounded-full border transition-all duration-200 active:scale-[0.97] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 cursor-pointer ${
+          isOpen
+            ? 'bg-brand-soft border-brand/30 text-brand shadow-subtle'
+            : 'bg-ink/[0.04] hover:bg-ink/[0.08] border-transparent hover:border-line-strong/40 text-ink-2 hover:text-ink'
+        }`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={`${t('nav_change_language_aria')}: ${languageInfo.code.toUpperCase()}`}
       >
         <Globe className="w-3.5 h-3.5 text-brand shrink-0" aria-hidden="true" />
         <span className="font-mono uppercase tracking-wider text-[11px] font-semibold text-ink">
-          {languageInfo.code}
+          {variant === 'full' ? languageInfo.nativeName : languageInfo.code}
         </span>
         <ChevronDown
-          className={`w-3 h-3 text-ink-2 transition-transform duration-150 ${
-            isOpen ? 'rotate-180' : ''
+          className={`w-3 h-3 text-ink-2 transition-transform duration-200 ${
+            isOpen ? 'rotate-180 text-brand' : ''
           }`}
           aria-hidden="true"
         />
@@ -109,12 +113,12 @@ export default function LanguageSelector({
           role="menu"
           aria-orientation="vertical"
           aria-label={t('nav_language_options_aria')}
-          className="absolute end-0 mt-1.5 w-44 rounded-xl bg-surface border border-line-strong shadow-elevated py-1.5 z-dropdown text-start animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute end-0 mt-2 w-44 rounded-2xl bg-surface border border-line-strong shadow-elevated py-1.5 z-dropdown text-start animate-in fade-in slide-in-from-top-2 duration-150"
         >
           <div className="px-3 py-1 text-[10px] uppercase font-mono font-semibold tracking-wider text-ink-2 border-b border-line-strong mb-1">
             {t('nav_lang_switch')}
           </div>
-          <div className="py-0.5" role="none">
+          <div className="py-0.5 px-1 space-y-0.5" role="none">
             {supportedLanguages.map((item, index) => {
               const isSelected = item.code === language;
               return (
@@ -123,22 +127,22 @@ export default function LanguageSelector({
                   ref={(el) => {
                     itemRefs.current[index] = el;
                   }}
-                  role="menuitem"
                   type="button"
                   onClick={() => handleSelect(item.code)}
-                  className={`w-full text-start px-3 py-1.5 text-xs flex items-center justify-between transition-colors cursor-pointer focus-visible:outline-none focus-visible:bg-surface-2 ${
+                  className={`w-full px-2.5 py-2 text-xs rounded-xl flex items-center justify-between transition-colors cursor-pointer focus-visible:outline-none focus-visible:bg-surface-2 ${
                     isSelected
                       ? 'bg-brand-soft text-brand font-semibold'
-                      : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
+                      : 'text-ink-2 hover:bg-surface-2 hover:text-ink font-medium'
                   }`}
+                  role="menuitem"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-4 rounded-[3px] bg-surface-2 border border-line-strong text-[9px] font-mono font-semibold flex items-center justify-center text-ink shrink-0 uppercase">
+                    <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded-md bg-surface-2 border border-line-strong text-ink-2">
                       {item.code}
                     </span>
-                    <span className="text-xs">{item.nativeName}</span>
+                    <span>{item.nativeName}</span>
                   </div>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-brand shrink-0" aria-hidden="true" />}
+                  {isSelected && <Check className="w-3.5 h-3.5 text-brand shrink-0" />}
                 </button>
               );
             })}

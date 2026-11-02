@@ -36,7 +36,16 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      router.push(returnUrl);
+      if (
+        !user.isDemo &&
+        user.role !== 'admin' &&
+        !user.onboardingCompletedAt &&
+        returnUrl === '/dashboard'
+      ) {
+        router.push('/onboarding');
+      } else {
+        router.push(returnUrl);
+      }
     }
   }, [user, returnUrl, router]);
 

@@ -9,6 +9,7 @@ import LanguageSelector from '../components/LanguageSelector';
 import ThemeToggle from '../components/ThemeToggle';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { Reveal, Stagger } from '@/components/motion/Reveal';
 import { Button } from '../components/ui/Button';
 import { Mail, MessageSquare, Clock, ShieldCheck, CheckCircle2, AlertCircle, Send } from 'lucide-react';
 
@@ -329,7 +330,7 @@ function ContactPageInner() {
 
   return (
     <div
-      className="min-h-screen bg-paper text-ink flex flex-col justify-between selection:bg-accent-soft selection:text-ink"
+      className="min-h-screen bg-paper text-ink flex flex-col justify-between selection:bg-accent-soft selection:text-ink overflow-x-clip"
       dir={isRtl ? 'rtl' : 'ltr'}
     >
       {/* Top Navbar */}
@@ -351,7 +352,7 @@ function ContactPageInner() {
 
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16 w-full text-start">
-        <div className="max-w-2xl mb-10 space-y-2">
+        <div className="hero-lcp-enter max-w-2xl mb-10 space-y-2">
           <span className="text-xs font-mono uppercase tracking-wider text-accent font-semibold inline-flex items-center gap-1.5">
             <MessageSquare className="w-3.5 h-3.5" />
             <span>{content.badge}</span>
@@ -364,7 +365,7 @@ function ContactPageInner() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Contact Form (7 cols) */}
-          <div className="lg:col-span-7 p-6 sm:p-8 rounded-[12px] bg-surface border border-line-strong shadow-subtle">
+          <Reveal from="start" className="lg:col-span-7"><div className="p-6 sm:p-8 rounded-[12px] bg-surface border border-line-strong shadow-subtle">
             {ticketId ? (
               <div className="py-8 text-center space-y-4">
                 <div className="w-12 h-12 rounded-full bg-success/15 text-success flex items-center justify-center mx-auto">
@@ -496,10 +497,10 @@ function ContactPageInner() {
                 </Button>
               </form>
             )}
-          </div>
+          </div></Reveal>
 
           {/* Direct Support Info Cards (5 cols) */}
-          <div className="lg:col-span-5 space-y-4">
+          <Stagger className="lg:col-span-5 space-y-4" from="end">
             <div className="p-5 rounded-[12px] bg-surface border border-line-strong space-y-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-ink">
                 <Mail className="w-4 h-4 text-accent shrink-0" />
@@ -554,7 +555,7 @@ function ContactPageInner() {
                 </Link>
               </div>
             </div>
-          </div>
+          </Stagger>
         </div>
       </main>
 

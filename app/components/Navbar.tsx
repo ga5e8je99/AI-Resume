@@ -391,9 +391,9 @@ export default function Navbar() {
               type="button"
               onClick={closeMobileMenu}
               aria-label={t('shell_close_menu')}
-              className="btn min-h-[44px] min-w-[44px] p-2 rounded-md border border-line-strong text-ink-2 hover:text-ink hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer flex items-center justify-center"
+              className="w-9 h-9 rounded-full border border-transparent hover:border-line-strong/40 bg-ink/[0.04] hover:bg-ink/[0.08] text-ink-2 hover:text-ink transition-all duration-200 active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent cursor-pointer flex items-center justify-center"
             >
-              <X className="w-5 h-5" aria-hidden="true" />
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
 
@@ -543,7 +543,7 @@ export default function Navbar() {
               <Link
                 href="/builder"
                 onClick={closeMobileMenu}
-                className="btn w-full inline-flex items-center justify-center py-2.5 px-4 text-sm font-semibold rounded-md bg-accent text-on-accent hover:bg-accent-hover shadow-subtle text-center transition-colors"
+                className="btn w-full inline-flex items-center justify-center py-2.5 px-4 text-sm font-semibold rounded-full bg-accent text-on-accent hover:bg-accent-hover shadow-subtle text-center transition-colors"
               >
                 {t('nav_start_free')}
               </Link>
@@ -553,7 +553,7 @@ export default function Navbar() {
               <Link
                 href="/login"
                 onClick={closeMobileMenu}
-                className="btn w-full inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium rounded-md border border-line-strong bg-surface hover:bg-surface-2 text-ink text-center transition-colors"
+                className="btn w-full inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium rounded-full border border-line-strong bg-surface hover:bg-surface-2 text-ink text-center transition-colors"
               >
                 {t('nav_login_btn')}
               </Link>
@@ -561,7 +561,7 @@ export default function Navbar() {
               <Link
                 href="/builder"
                 onClick={closeMobileMenu}
-                className="btn w-full inline-flex items-center justify-center py-2.5 px-4 text-sm font-semibold rounded-md bg-accent text-on-accent hover:bg-accent-hover shadow-subtle text-center transition-colors"
+                className="btn w-full inline-flex items-center justify-center py-2.5 px-4 text-sm font-semibold rounded-full bg-accent text-on-accent hover:bg-accent-hover shadow-subtle text-center transition-colors"
               >
                 {t('nav_start_free')}
               </Link>
@@ -784,7 +784,7 @@ export default function Navbar() {
                 <Link
                   href="/pricing"
                   data-testid="navbar-credits-badge"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-mono font-semibold bg-highlight/15 text-ink border border-highlight/30 hover:bg-highlight/25 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-semibold bg-highlight/15 text-ink border border-highlight/30 hover:bg-highlight/25 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-highlight shrink-0" aria-hidden="true" />
                   <span>
@@ -803,7 +803,7 @@ export default function Navbar() {
                 <Link
                   href="/login"
                   data-testid="navbar-login-btn"
-                  className="inline-flex items-center justify-center px-3.5 py-2 text-sm font-medium text-ink-2 hover:text-ink hover:bg-surface-2 rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                  className="inline-flex items-center justify-center h-9 px-3.5 text-sm font-medium text-ink-2 hover:text-ink hover:bg-ink/[0.06] rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
                 >
                   {t('nav_login_btn')}
                 </Link>
@@ -812,7 +812,7 @@ export default function Navbar() {
                 <Link
                   href="/builder"
                   data-testid="navbar-start-free-cta"
-                  className="btn inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-md bg-accent text-on-accent hover:bg-accent-hover shadow-subtle transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper cursor-pointer"
+                  className="btn inline-flex items-center justify-center h-9 px-4 text-sm font-semibold rounded-full bg-accent text-on-accent hover:bg-accent-hover shadow-subtle transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper cursor-pointer"
                 >
                   {t('nav_start_free')}
                 </Link>
@@ -823,7 +823,7 @@ export default function Navbar() {
           {/* ================================================================= */}
           {/* 4. MOBILE HAMBURGER & QUICK CONTROLS (< 1024px)                   */}
           {/* ================================================================= */}
-          <div className="flex items-center gap-1 sm:gap-1.5 lg:hidden shrink-0">
+          <div className="flex items-center gap-1.5 lg:hidden shrink-0">
             <LanguageSelector variant="compact" />
             <ThemeToggle size="sm" variant="icon" />
 
@@ -836,12 +836,12 @@ export default function Navbar() {
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-navigation-drawer"
               aria-haspopup="dialog"
-              className="btn min-h-[44px] min-w-[44px] p-2 rounded-md border border-line-strong bg-surface text-ink hover:bg-surface-2 transition-all duration-150 active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 flex items-center justify-center"
+              className="w-9 h-9 rounded-full border border-transparent hover:border-line-strong/40 bg-ink/[0.04] hover:bg-ink/[0.08] text-ink transition-all duration-200 active:scale-[0.95] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 flex items-center justify-center"
             >
               {isMobileMenuOpen ? (
-                <X className="w-5 h-5" aria-hidden="true" />
+                <X className="w-4 h-4" aria-hidden="true" />
               ) : (
-                <Menu className="w-5 h-5" aria-hidden="true" />
+                <Menu className="w-4 h-4" aria-hidden="true" />
               )}
             </button>
           </div>

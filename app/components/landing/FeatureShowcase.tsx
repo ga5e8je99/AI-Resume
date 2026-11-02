@@ -12,7 +12,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useLanguage } from '@/app/context/LanguageContext';
-import { ScrollReveal, Stagger } from './ScrollReveal';
+import { Reveal, Stagger } from '@/components/motion/Reveal';
 
 export default function FeatureShowcase() {
   const { t } = useLanguage();
@@ -90,10 +90,12 @@ export default function FeatureShowcase() {
     },
   ];
 
+  const isOddTotal = features.length % 2 !== 0;
+
   return (
     <section id="features" className="overflow-x-clip py-16 sm:py-24 bg-surface-2 border-y border-line-strong">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 space-y-12">
-        <ScrollReveal direction="up" className="text-center max-w-2xl mx-auto space-y-3">
+        <Reveal from="up" className="text-center max-w-2xl mx-auto space-y-3">
           <span className="inline-block text-xs font-mono uppercase tracking-wider px-3 py-1 rounded-full bg-brand-soft text-brand font-semibold">
             {t('features_tag')}
           </span>
@@ -103,15 +105,22 @@ export default function FeatureShowcase() {
           <p className="text-sm sm:text-base text-ink-2 leading-relaxed">
             {t('features_desc')}
           </p>
-        </ScrollReveal>
+        </Reveal>
 
-        <Stagger className="grid grid-cols-1 md:grid-cols-2 gap-6" direction="up">
-          {features.map((item) => {
+        <Stagger
+          className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch"
+          itemClassName={(idx, total) =>
+            `h-full flex ${total % 2 !== 0 && idx === total - 1 ? 'md:col-span-2' : ''}`
+          }
+          from="up"
+        >
+          {features.map((item, idx) => {
             const Icon = item.icon;
+            const isLastOdd = isOddTotal && idx === features.length - 1;
             return (
               <div
                 key={item.id}
-                className="card-interactive rounded-2xl border border-line-strong bg-surface p-6 sm:p-8 shadow-subtle flex flex-col justify-between gap-6 text-start"
+                className="card-interactive h-full w-full rounded-2xl border border-line-strong bg-surface p-6 sm:p-8 shadow-subtle flex flex-col justify-between gap-6 text-start"
               >
                 <div className="space-y-4">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand text-xs font-mono font-semibold">
@@ -122,7 +131,13 @@ export default function FeatureShowcase() {
                     {item.title}
                   </h3>
                   <p className="text-sm text-ink-2 leading-relaxed">{item.desc}</p>
-                  <ul className="space-y-2 pt-1">
+                  <ul
+                    className={
+                      isLastOdd
+                        ? 'grid grid-cols-1 md:grid-cols-3 gap-3 pt-1'
+                        : 'space-y-2 pt-1'
+                    }
+                  >
                     {item.bullets.map((bullet, bIdx) => (
                       <li
                         key={bIdx}

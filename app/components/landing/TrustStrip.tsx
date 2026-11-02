@@ -3,7 +3,7 @@
 import React from 'react';
 import { ShieldCheck, Globe, FileCheck2, Lock } from 'lucide-react';
 import { useLanguage } from '@/app/context/LanguageContext';
-import { Stagger } from './ScrollReveal';
+import { Stagger } from '@/components/motion/Reveal';
 
 export default function TrustStrip() {
   const { t } = useLanguage();
@@ -38,22 +38,25 @@ export default function TrustStrip() {
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         <Stagger
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
-          direction="up"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 items-stretch auto-rows-fr"
+          itemClassName="h-full flex"
+          from="up"
         >
           {facts.map((fact, idx) => {
             const Icon = fact.icon;
             return (
               <div
                 key={idx}
-                className="card-interactive flex items-start gap-3.5 p-4 rounded-xl border border-line-strong bg-surface shadow-subtle text-start"
+                className="card-interactive h-full w-full flex items-start gap-3.5 p-5 rounded-xl border border-line-strong bg-surface shadow-subtle text-start"
               >
                 <div className="w-10 h-10 rounded-lg bg-brand-soft text-brand flex items-center justify-center shrink-0">
                   <Icon className="w-5 h-5" />
                 </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-ink">{fact.title}</h3>
-                  <p className="text-xs text-ink-2 mt-0.5 leading-relaxed">
+                <div className="min-w-0 flex-1 flex flex-col justify-start">
+                  <h3 className="text-sm font-semibold text-ink leading-snug">
+                    {fact.title}
+                  </h3>
+                  <p className="text-xs text-ink-2 mt-1.5 leading-relaxed">
                     {fact.desc}
                   </p>
                 </div>

@@ -9,6 +9,7 @@ import JobSearchBar from './_components/JobSearchBar';
 import ProviderStatusBanner from './_components/ProviderStatusBanner';
 import JobFilters from './_components/JobFilters';
 import JobResultsList from './_components/JobResultsList';
+import JobDetailsDrawer from './_components/JobDetailsDrawer';
 import { useJobSearch } from './_components/useJobSearch';
 
 export default function JobMatchPage() {
@@ -21,6 +22,8 @@ export default function JobMatchPage() {
     uploadedFileName,
     handleFileUpload,
     handleSelectResume,
+    includeMatch,
+    handleToggleIncludeMatch,
     query,
     setQuery,
     location,
@@ -31,6 +34,12 @@ export default function JobMatchPage() {
     setRemoteOnly,
     seniority,
     setSeniority,
+    employmentType,
+    setEmploymentType,
+    datePosted,
+    setDatePosted,
+    minSalary,
+    setMinSalary,
     targetTitles,
     skills,
     newSkillInput,
@@ -38,7 +47,11 @@ export default function JobMatchPage() {
     handleAddSkill,
     handleRemoveSkill,
     isSearching,
+    isLoadingMore,
     displayJobs,
+    totalFound,
+    hasMore,
+    handleLoadMore,
     smartLinks,
     attributions,
     allProvidersFailed,
@@ -59,6 +72,22 @@ export default function JobMatchPage() {
     resetFilters,
     expandedJobId,
     setExpandedJobId,
+    selectedDrawerJob,
+    setSelectedDrawerJob,
+    activeTab,
+    setActiveTab,
+    savedJobs,
+    savedJobIds,
+    handleToggleSaveJob,
+    savedSearches,
+    alertFrequency,
+    setAlertFrequency,
+    isSavingSearch,
+    searchSavedToast,
+    handleSaveCurrentSearch,
+    handleDeleteSavedSearch,
+    handleApplySavedSearch,
+    handleRecordJobClick,
     isProUser,
     freeQuotaUsed,
     isQuotaExhausted,
@@ -82,7 +111,7 @@ export default function JobMatchPage() {
           isQuotaExhausted={isQuotaExhausted}
         />
 
-        {/* Search Parameters Card + ResumePicker + 10 Smart Links Panel */}
+        {/* Search Parameters Card + Optional CV Match + 10 Smart Links Panel */}
         <JobSearchBar
           savedResumes={savedResumes}
           selectedResumeId={selectedResumeId}
@@ -91,6 +120,8 @@ export default function JobMatchPage() {
           fileInputRef={fileInputRef}
           onSelectResume={handleSelectResume}
           onFileUpload={handleFileUpload}
+          includeMatch={includeMatch}
+          onToggleIncludeMatch={handleToggleIncludeMatch}
           query={query}
           onQueryChange={setQuery}
           location={location}
@@ -101,12 +132,26 @@ export default function JobMatchPage() {
           onRemoteOnlyChange={setRemoteOnly}
           seniority={seniority}
           onSeniorityChange={setSeniority}
+          employmentType={employmentType}
+          onEmploymentTypeChange={setEmploymentType}
+          datePosted={datePosted}
+          onDatePostedChange={setDatePosted}
+          minSalary={minSalary}
+          onMinSalaryChange={setMinSalary}
+          filterSource={filterSource}
+          onFilterSourceChange={setFilterSource}
+          availableSources={availableSources}
           targetTitles={targetTitles}
           skills={skills}
           newSkillInput={newSkillInput}
           onNewSkillInputChange={setNewSkillInput}
           onAddSkill={handleAddSkill}
           onRemoveSkill={handleRemoveSkill}
+          alertFrequency={alertFrequency}
+          onAlertFrequencyChange={setAlertFrequency}
+          isSavingSearch={isSavingSearch}
+          searchSavedToast={searchSavedToast}
+          onSaveSearch={handleSaveCurrentSearch}
           isSearching={isSearching}
           onSearch={executeJobSearch}
           smartLinks={smartLinks}
@@ -119,11 +164,16 @@ export default function JobMatchPage() {
           isSearching={isSearching}
         />
 
-        {/* Matched Jobs Results & Filters */}
+        {/* Matched Jobs Results, Saved Jobs, Saved Searches & Filters */}
         <div className="space-y-4">
           <JobFilters
             totalDisplayed={displayJobs.length}
             isCachedResult={isCachedResult}
+            includeMatch={includeMatch}
+            activeTab={activeTab}
+            onChangeActiveTab={setActiveTab}
+            savedJobsCount={savedJobs.length}
+            savedSearchesCount={savedSearches.length}
             filterRemote={filterRemote}
             onToggleFilterRemote={() => setFilterRemote((prev) => !prev)}
             filterMinScore={filterMinScore}
@@ -137,7 +187,11 @@ export default function JobMatchPage() {
 
           <JobResultsList
             isSearching={isSearching}
+            isLoadingMore={isLoadingMore}
             displayJobs={displayJobs}
+            totalFound={totalFound}
+            hasMore={hasMore}
+            onLoadMore={handleLoadMore}
             expandedJobId={expandedJobId}
             onToggleExpandJob={(jobId) =>
               setExpandedJobId((prev) => (prev === jobId ? null : jobId))
@@ -148,9 +202,27 @@ export default function JobMatchPage() {
             onRetrySearch={executeJobSearch}
             onResetFilters={resetFilters}
             attributions={attributions}
+            activeTab={activeTab}
+            savedJobs={savedJobs}
+            savedJobIds={savedJobIds}
+            onToggleSaveJob={handleToggleSaveJob}
+            savedSearches={savedSearches}
+            onApplySavedSearch={handleApplySavedSearch}
+            onDeleteSavedSearch={handleDeleteSavedSearch}
+            onOpenDrawer={setSelectedDrawerJob}
+            onApplyClick={handleRecordJobClick}
           />
         </div>
       </main>
+
+      {/* Side Drawer for Full Job Details */}
+      <JobDetailsDrawer
+        job={selectedDrawerJob}
+        onClose={() => setSelectedDrawerJob(null)}
+        isSaved={Boolean(selectedDrawerJob && savedJobIds.has(selectedDrawerJob.id))}
+        onToggleSave={handleToggleSaveJob}
+        onApplyClick={handleRecordJobClick}
+      />
 
       {/* Upgrade Paywall Modal */}
       <UpgradeModal
