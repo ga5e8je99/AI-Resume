@@ -21,7 +21,7 @@ export default function FaqSection() {
   ];
 
   return (
-    <section className="relative overflow-x-clip py-18 sm:py-24 lg:py-28 bg-gradient-to-b from-paper via-surface-2/40 to-paper border-t border-line-strong">
+    <section className="relative overflow-x-clip py-18 sm:py-24 lg:py-28 bg-gradient-to-b from-paper via-surface-2/40 to-paper">
       {/* Decorative ambient background */}
       <div
         aria-hidden="true"

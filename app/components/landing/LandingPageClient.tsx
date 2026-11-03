@@ -149,11 +149,11 @@ export default function LandingPageClient() {
           onDemoClick={handleDemoClick}
           isDemoLoading={isDemoLoading}
         />
-        <SectionWave id="hero-to-trust" />
+        <SectionWave id="hero-to-trust" variant="paper-to-surface2" />
 
         {/* 2. Logos / Trust Strip (Honest Facts Only) */}
         <TrustStrip />
-        <SectionWave id="trust-to-how" flipX />
+        <SectionWave id="trust-to-how" variant="surface2-to-paper" flipX />
 
         {/* 3. How It Works (3 Steps + Anchor Dropzone) */}
         <HowItWorks
@@ -162,23 +162,23 @@ export default function LandingPageClient() {
           uploadedFileName={uploadedFileName}
           onFileSelect={handleFileDrop}
         />
-        <SectionWave id="how-to-features" />
+        <SectionWave id="how-to-features" variant="paper-to-surface2" />
 
         {/* 4. Feature Showcase (5 Alternating Zigzag Rows) */}
         <FeatureShowcase />
-        <SectionWave id="features-to-compare" flipX />
+        <SectionWave id="features-to-compare" variant="surface2-to-paper" flipX />
 
         {/* 5. Before / After Resume Comparison (54 -> 91) */}
         <ComparisonSection />
-        <SectionWave id="compare-to-pricing" />
+        <SectionWave id="compare-to-pricing" variant="paper-to-surface2" />
 
         {/* 6. Pricing Teaser (3 Compact Cards from PLANS Config) */}
         <PricingTeaser />
-        <SectionWave id="pricing-to-faq" flipX />
+        <SectionWave id="pricing-to-faq" variant="surface2-to-paper" flipX />
 
         {/* 7. FAQ Accordion (8 Questions covering Privacy, Formats, Languages, Free tier, Credits, Cancellation, Refunds, Deletion) */}
         <FaqSection />
-        <SectionWave id="faq-to-cta" />
+        <SectionWave id="faq-to-cta" variant="paper-to-brand" />
 
         {/* 8. Final CTA Band in Brand Color */}
         <CtaBand onScanClick={handleScanClick} />

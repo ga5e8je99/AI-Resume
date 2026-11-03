@@ -34,7 +34,7 @@ export default function TrustStrip() {
   return (
     <section
       aria-label={t('trust_strip_aria')}
-      className="overflow-x-clip border-y border-line-strong bg-surface-2 py-8 sm:py-10"
+      className="overflow-x-clip bg-surface-2 py-8 sm:py-10"
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         <Stagger

@@ -14,7 +14,7 @@ export function PricingTeaser() {
   return (
     <section
       id="pricing"
-      className="overflow-x-clip py-16 sm:py-24 lg:py-28 border-t border-line-strong bg-surface-2 text-start"
+      className="overflow-x-clip py-16 sm:py-24 lg:py-28 bg-surface-2 text-start"
     >
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         <Reveal from="up">

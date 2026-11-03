@@ -206,7 +206,7 @@ export default function HeroSection({
     <section
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      className="relative flex items-center bg-[var(--paper)] pt-6 pb-12 sm:pt-10 sm:pb-16 lg:py-16 lg:max-h-[100svh] border-b border-[var(--line)] overflow-x-clip overflow-y-clip"
+      className="relative flex items-center bg-[var(--paper)] pt-6 pb-12 sm:pt-10 sm:pb-16 lg:py-16 lg:max-h-[100svh] overflow-x-clip overflow-y-clip"
     >
       {/* Background: fine dot/line grid with radial mask + single ultra-light jade & amber ambient blob */}
       <div

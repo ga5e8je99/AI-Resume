@@ -66,7 +66,7 @@ export default function CtaBand({ onScanClick }: CtaBandProps) {
   const { t } = useLanguage();
 
   return (
-    <section className="relative overflow-x-clip bg-brand text-on-brand py-16 sm:py-24 border-t border-on-brand/10">
+    <section className="relative overflow-x-clip bg-brand text-on-brand py-16 sm:py-24">
       {/* Subtle Decorative Background Icons & Glows */}
       <div
         aria-hidden="true"

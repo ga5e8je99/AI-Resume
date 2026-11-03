@@ -93,7 +93,7 @@ export default function FeatureShowcase() {
   const isOddTotal = features.length % 2 !== 0;
 
   return (
-    <section id="features" className="overflow-x-clip py-16 sm:py-24 bg-surface-2 border-y border-line-strong">
+    <section id="features" className="overflow-x-clip py-16 sm:py-24 bg-surface-2">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 space-y-12">
         <Reveal from="up" className="text-center max-w-2xl mx-auto space-y-3">
           <span className="inline-block text-xs font-mono uppercase tracking-wider px-3 py-1 rounded-full bg-brand-soft text-brand font-semibold">
