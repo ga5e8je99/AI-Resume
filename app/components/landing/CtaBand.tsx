@@ -31,49 +31,49 @@ export interface CtaBandProps {
 }
 
 const BG_ICONS = [
-  // Left outer column
-  { Icon: FileText, pos: 'top-6 left-[3%]', size: 'w-14 h-14', iconSize: 'w-7 h-7', rot: '-rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.07]' },
-  { Icon: Search, pos: 'top-[32%] left-[2%]', size: 'w-11 h-11', iconSize: 'w-5 h-5', rot: 'rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
-  { Icon: ShieldCheck, pos: 'top-[58%] left-[4%]', size: 'w-13 h-13', iconSize: 'w-6 h-6', rot: '-rotate-6', opacity: 'text-on-brand/20 bg-on-brand/[0.06]' },
-  { Icon: Briefcase, pos: 'bottom-6 left-[3%]', size: 'w-14 h-14', iconSize: 'w-7 h-7', rot: 'rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.07]' },
+  // Start outer column
+  { Icon: FileText, pos: 'top-6 start-[3%]', size: 'w-14 h-14', iconSize: 'w-7 h-7', rot: '-rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.07]' },
+  { Icon: Search, pos: 'top-[32%] start-[2%]', size: 'w-11 h-11', iconSize: 'w-5 h-5', rot: 'rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
+  { Icon: ShieldCheck, pos: 'top-[58%] start-[4%]', size: 'w-13 h-13', iconSize: 'w-6 h-6', rot: '-rotate-6', opacity: 'text-on-brand/20 bg-on-brand/[0.06]' },
+  { Icon: Briefcase, pos: 'bottom-6 start-[3%]', size: 'w-14 h-14', iconSize: 'w-7 h-7', rot: 'rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.07]' },
 
-  // Left mid column
-  { Icon: Award, pos: 'top-10 left-[12%]', size: 'w-12 h-12', iconSize: 'w-6 h-6', rot: 'rotate-12', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
-  { Icon: Mail, pos: 'top-[45%] left-[10%]', size: 'w-14 h-14', iconSize: 'w-6 h-6', rot: '-rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.06]' },
-  { Icon: GraduationCap, pos: 'bottom-10 left-[13%]', size: 'w-12 h-12', iconSize: 'w-6 h-6', rot: 'rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
+  // Start mid column
+  { Icon: Award, pos: 'top-10 start-[12%]', size: 'w-12 h-12', iconSize: 'w-6 h-6', rot: 'rotate-12', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
+  { Icon: Mail, pos: 'top-[45%] start-[10%]', size: 'w-14 h-14', iconSize: 'w-6 h-6', rot: '-rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.06]' },
+  { Icon: GraduationCap, pos: 'bottom-10 start-[13%]', size: 'w-12 h-12', iconSize: 'w-6 h-6', rot: 'rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
 
-  // Left inner column
-  { Icon: Target, pos: 'top-8 left-[22%]', size: 'w-10 h-10', iconSize: 'w-5 h-5', rot: '-rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.04]' },
-  { Icon: Layers, pos: 'bottom-8 left-[23%]', size: 'w-11 h-11', iconSize: 'w-5 h-5', rot: 'rotate-12', opacity: 'text-on-brand/15 bg-on-brand/[0.04]' },
+  // Start inner column
+  { Icon: Target, pos: 'top-8 start-[22%]', size: 'w-10 h-10', iconSize: 'w-5 h-5', rot: '-rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.04]' },
+  { Icon: Layers, pos: 'bottom-8 start-[23%]', size: 'w-11 h-11', iconSize: 'w-5 h-5', rot: 'rotate-12', opacity: 'text-on-brand/15 bg-on-brand/[0.04]' },
 
-  // Right inner column
-  { Icon: Zap, pos: 'top-8 right-[22%]', size: 'w-10 h-10', iconSize: 'w-5 h-5', rot: 'rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.04]' },
-  { Icon: TrendingUp, pos: 'bottom-8 right-[23%]', size: 'w-11 h-11', iconSize: 'w-5 h-5', rot: '-rotate-12', opacity: 'text-on-brand/15 bg-on-brand/[0.04]' },
+  // End inner column
+  { Icon: Zap, pos: 'top-8 end-[22%]', size: 'w-10 h-10', iconSize: 'w-5 h-5', rot: 'rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.04]' },
+  { Icon: TrendingUp, pos: 'bottom-8 end-[23%]', size: 'w-11 h-11', iconSize: 'w-5 h-5', rot: '-rotate-12', opacity: 'text-on-brand/15 bg-on-brand/[0.04]' },
 
-  // Right mid column
-  { Icon: UserCheck, pos: 'top-10 right-[12%]', size: 'w-12 h-12', iconSize: 'w-6 h-6', rot: '-rotate-12', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
-  { Icon: Cpu, pos: 'top-[45%] right-[10%]', size: 'w-14 h-14', iconSize: 'w-6 h-6', rot: 'rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.06]' },
-  { Icon: FileCheck2, pos: 'bottom-10 right-[13%]', size: 'w-12 h-12', iconSize: 'w-6 h-6', rot: '-rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
+  // End mid column
+  { Icon: UserCheck, pos: 'top-10 end-[12%]', size: 'w-12 h-12', iconSize: 'w-6 h-6', rot: '-rotate-12', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
+  { Icon: Cpu, pos: 'top-[45%] end-[10%]', size: 'w-14 h-14', iconSize: 'w-6 h-6', rot: 'rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.06]' },
+  { Icon: FileCheck2, pos: 'bottom-10 end-[13%]', size: 'w-12 h-12', iconSize: 'w-6 h-6', rot: '-rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
 
-  // Right outer column
-  { Icon: CheckCircle2, pos: 'top-6 right-[3%]', size: 'w-14 h-14', iconSize: 'w-7 h-7', rot: 'rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.07]' },
-  { Icon: Sparkles, pos: 'top-[32%] right-[2%]', size: 'w-11 h-11', iconSize: 'w-5 h-5', rot: '-rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
-  { Icon: FileText, pos: 'top-[58%] right-[4%]', size: 'w-13 h-13', iconSize: 'w-6 h-6', rot: 'rotate-6', opacity: 'text-on-brand/20 bg-on-brand/[0.06]' },
-  { Icon: Globe, pos: 'bottom-6 right-[3%]', size: 'w-14 h-14', iconSize: 'w-7 h-7', rot: '-rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.07]' },
+  // End outer column
+  { Icon: CheckCircle2, pos: 'top-6 end-[3%]', size: 'w-14 h-14', iconSize: 'w-7 h-7', rot: 'rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.07]' },
+  { Icon: Sparkles, pos: 'top-[32%] end-[2%]', size: 'w-11 h-11', iconSize: 'w-5 h-5', rot: '-rotate-6', opacity: 'text-on-brand/15 bg-on-brand/[0.05]' },
+  { Icon: FileText, pos: 'top-[58%] end-[4%]', size: 'w-13 h-13', iconSize: 'w-6 h-6', rot: 'rotate-6', opacity: 'text-on-brand/20 bg-on-brand/[0.06]' },
+  { Icon: Globe, pos: 'bottom-6 end-[3%]', size: 'w-14 h-14', iconSize: 'w-7 h-7', rot: '-rotate-12', opacity: 'text-on-brand/20 bg-on-brand/[0.07]' },
 ];
 
 export default function CtaBand({ onScanClick }: CtaBandProps) {
   const { t } = useLanguage();
 
   return (
-    <section className="relative overflow-hidden bg-brand text-on-brand py-16 sm:py-24 border-t border-on-brand/10">
+    <section className="relative overflow-x-clip bg-brand text-on-brand py-16 sm:py-24 border-t border-on-brand/10">
       {/* Subtle Decorative Background Icons & Glows */}
       <div
         aria-hidden="true"
         className="pointer-events-none select-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-on-brand/5 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-on-brand/5 blur-3xl" />
+        <div className="absolute -top-24 -start-24 w-80 h-80 rounded-full bg-on-brand/5 blur-3xl" />
+        <div className="absolute -bottom-24 -end-24 w-80 h-80 rounded-full bg-on-brand/5 blur-3xl" />
 
         {BG_ICONS.map(({ Icon, pos, size, iconSize, rot, opacity }, idx) => (
           <div

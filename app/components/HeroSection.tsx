@@ -25,7 +25,7 @@ export interface HeroSectionProps {
 }
 
 const TARGET_SCORE = 94;
-const SCORE_DURATION_MS = 900;
+const SCORE_DURATION_MS = 800;
 
 export default function HeroSection({
   onScanClick,
@@ -206,7 +206,7 @@ export default function HeroSection({
     <section
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      className="relative flex items-center bg-[var(--paper)] pt-6 pb-12 sm:pt-10 sm:pb-16 lg:py-16 border-b border-[var(--line)] overflow-x-clip overflow-y-clip"
+      className="relative flex items-center bg-[var(--paper)] pt-6 pb-12 sm:pt-10 sm:pb-16 lg:py-16 lg:max-h-[100svh] border-b border-[var(--line)] overflow-x-clip overflow-y-clip"
     >
       {/* Background: fine dot/line grid with radial mask + single ultra-light jade & amber ambient blob */}
       <div
@@ -529,7 +529,7 @@ export default function HeroSection({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {jobMatchRows.map((row, rIdx) => (
                         <div
                           key={row.id}
