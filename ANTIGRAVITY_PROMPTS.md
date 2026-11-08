@@ -52,7 +52,7 @@ Requirements:
      b) one saved ATS scan report with a score, matched/missing keywords, and suggestions so the Dashboard looks populated,
      c) one ready cover letter draft (use the existing models/collections for these).
    - Create a session/JWT exactly the same way the normal login does, and return success.
-2. In `app/login/page.tsx` add a clearly visible button: "⚡ Try Demo Instantly" (and Arabic label "⚡ جرّب النظام فوراً" following the existing i18n approach). On click: call the endpoint, show a loading state, redirect to the dashboard. Handle errors with a friendly message.
+2. In `app/login/page.tsx` add a clearly visible button: "  Try Demo Instantly" (and Arabic label "  جرّب النظام فوراً" following the existing i18n approach). On click: call the endpoint, show a loading state, redirect to the dashboard. Handle errors with a friendly message.
 3. Demo accounts must not be able to change email/password or delete the account, and must not consume paid credits in the future (add a simple `isDemo` check helper in `lib/` for later use).
 4. Add basic rate limiting (in-memory is fine) to the demo endpoint.
 

@@ -12,10 +12,13 @@ import {
   Briefcase,
   FileText,
   ScanLine,
-  TrendingUp,
   Upload,
   Cpu,
   FileCheck2,
+  Mail,
+  Phone,
+  MapPin,
+  GraduationCap,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import Button from '@/components/ui/Button';
@@ -174,12 +177,6 @@ export default function HeroSection({
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
-
-  // Ring geometry (r = 28 => circumference ≈ 175.9)
-  const ringRadius = 28;
-  const ringCircumference = 2 * Math.PI * ringRadius;
-  const ringStrokeOffset =
-    ringCircumference - (animatedScore / 100) * ringCircumference;
 
   // 3 indicator bars
   const scoreMetrics = [
@@ -355,15 +352,15 @@ export default function HeroSection({
                 }}
                 className="relative w-full max-w-[540px] mx-auto select-none pt-3 pb-4 sm:py-5 sm:px-4"
               >
-                {/* MAIN CENTERPIECE: Connected Vertical Workflow Pipeline (3 Stages) */}
+                {/* MAIN CENTERPIECE: Live A4 Editorial ATS Resume Sheet */}
                 <div className="relative rounded-2xl bg-[var(--surface)] border border-[var(--line-strong)] shadow-[var(--shadow-elevated)] overflow-hidden p-4 sm:p-5">
-                  {/* Subtle animated laser scan beam sweeping across the pipeline */}
+                  {/* Subtle animated laser scan beam sweeping across the resume sheet */}
                   <div className="hero-scan-beam pointer-events-none absolute inset-x-0 z-20 flex flex-col items-center">
                     <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-[var(--brand)] to-transparent shadow-[0_0_12px_var(--brand)]" />
                     <div className="w-full h-8 bg-gradient-to-b from-[var(--brand)]/10 to-transparent" />
                   </div>
 
-                  {/* Top Pipeline Toolbar */}
+                  {/* Top Document Header Toolbar */}
                   <div className="flex items-center justify-between gap-2 pb-3 mb-3.5 border-b border-[var(--line)]">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -372,8 +369,8 @@ export default function HeroSection({
                         <span className="w-2.5 h-2.5 rounded-full bg-[var(--success)]/80" />
                       </div>
                       <span className="ms-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--surface-2)] border border-[var(--line)] text-[11px] font-mono font-semibold text-[var(--ink-2)] truncate">
-                        <Sparkles className="w-3 h-3 text-[var(--brand)] shrink-0" />
-                        {isRtl ? 'مسار المعالجة الفوري (3 مراحل)' : 'Instant 3-Stage Pipeline'}
+                        <FileText className="w-3 h-3 text-[var(--brand)] shrink-0" />
+                        {isRtl ? 'سيرة_ذاتية_معتمدة_ATS.pdf' : 'ATS_Optimized_Resume.pdf'}
                       </span>
                     </div>
 
@@ -383,107 +380,83 @@ export default function HeroSection({
                     </span>
                   </div>
 
-                  {/* THE VERTICAL PIPELINE CONTAINER */}
-                  <div className="relative ps-6 sm:ps-7 space-y-3">
-                    {/* Continuous Vertical Timeline Track */}
-                    <div
-                      aria-hidden="true"
-                      className="absolute start-2.5 sm:start-3 top-3 bottom-3 w-[2px] bg-gradient-to-b from-[var(--brand)] via-[var(--brand)]/60 to-[var(--brand)]/20"
-                    />
-
-                    {/* STAGE 01: Upload & Initial Parsing */}
-                    <div className="relative rounded-xl border border-[var(--line)] bg-[var(--surface-2)]/50 p-2.5 sm:p-3 transition-all">
-                      {/* Timeline Node 01 */}
-                      <div
-                        dir="ltr"
-                        style={{ unicodeBidi: 'isolate' }}
-                        className="absolute -start-6 sm:-start-7 top-2.5 w-5 h-5 rounded-full bg-[var(--brand)] text-[var(--on-brand)] flex items-center justify-center font-mono text-[9px] font-bold shadow-subtle [unicode-bidi:isolate]"
-                      >
-                        01
-                      </div>
-
-                      {/* Stage 1 Header */}
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <Upload className="w-3.5 h-3.5 text-[var(--brand)] shrink-0" />
-                          <span className="text-xs font-bold text-[var(--ink)] truncate">
-                            {t('how_step_1_title')}
-                          </span>
-                        </div>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--brand-soft)] text-[var(--brand)] text-[10px] font-mono font-semibold shrink-0">
-                          <ShieldCheck className="w-3 h-3 shrink-0" />
-                          {isRtl ? 'خصوصية 100%' : '100% In-Browser'}
-                        </span>
-                      </div>
-
-                      {/* Stage 1 Content: Document Meta & Verification Tokens */}
-                      <div className="flex flex-wrap items-center justify-between gap-1.5 p-2 rounded-lg bg-[var(--surface)] border border-[var(--line)]">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="w-4 h-4 text-[var(--brand)] shrink-0" />
-                          <div className="min-w-0">
-                            <div className="h-2 w-24 sm:w-32 rounded bg-[var(--ink)]/80" />
-                            <div className="h-1.5 w-14 sm:w-16 rounded bg-[var(--ink-2)]/30 mt-1" />
+                  {/* RESUME PAPER BODY */}
+                  <div className="space-y-3">
+                    {/* 1. Resume Candidate Header */}
+                    <div className="pb-3 border-b border-dashed border-[var(--line)]">
+                      <div className="flex items-start justify-between gap-3 mb-1.5">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base sm:text-lg font-bold font-serif text-[var(--ink)] tracking-tight">
+                              {t('hero_preview_name')}
+                            </h3>
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[var(--brand-soft)] text-[var(--brand)] border border-[var(--brand)]/20">
+                              <ShieldCheck className="w-3 h-3 shrink-0" />
+                              {t('hero_preview_iso')}
+                            </span>
                           </div>
+                          <p className="text-xs font-semibold text-[var(--brand)] mt-0.5">
+                            {t('hero_preview_title')}
+                          </p>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-1">
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-[var(--surface-2)] text-[var(--ink-2)] border border-[var(--line)]">
-                            ISO A4 ✓
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-[var(--surface-2)] text-[var(--ink-2)] border border-[var(--line)]">
-                            E.164 ✓
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-[var(--surface-2)] text-[var(--ink-2)] border border-[var(--line)]">
-                            RTL/LTR ✓
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* STAGE 02: Instant ATS Audit & Score Counter */}
-                    <div className="relative rounded-xl border border-[var(--brand)]/35 bg-[var(--brand-soft)]/20 p-2.5 sm:p-3 transition-all shadow-subtle">
-                      {/* Timeline Node 02 (Pulsing Active Indicator) */}
-                      <div
-                        dir="ltr"
-                        style={{ unicodeBidi: 'isolate' }}
-                        className="absolute -start-6 sm:-start-7 top-2.5 w-5 h-5 rounded-full bg-[var(--brand)] text-[var(--on-brand)] flex items-center justify-center font-mono text-[9px] font-bold shadow-subtle ring-2 ring-[var(--brand-soft)] [unicode-bidi:isolate]"
-                      >
-                        02
-                      </div>
-
-                      {/* Stage 2 Header + Score Transform Pill */}
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <ScanLine className="w-3.5 h-3.5 text-[var(--brand)] shrink-0" />
-                          <span className="text-xs font-bold text-[var(--ink)] truncate">
-                            {t('hero_bento_score_title')}
-                          </span>
-                        </div>
-
-                        {/* Score Upgrade Pill: 54 -> 94 */}
+                        {/* Upgrade Score Pill: 54 -> 94 */}
                         <div
                           dir="ltr"
                           style={{ unicodeBidi: 'isolate' }}
-                          className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[var(--surface)] border border-[var(--brand)]/30 shrink-0 [unicode-bidi:isolate]"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--brand)]/30 shrink-0 shadow-subtle [unicode-bidi:isolate]"
                         >
                           <span className="text-[10px] font-mono line-through text-[var(--danger)] opacity-75">
                             54
                           </span>
-                          <ArrowRight className="w-2.5 h-2.5 text-[var(--ink-3)]" />
-                          <span className="text-[11px] font-mono font-bold text-[var(--brand)]">
+                          <ArrowRight className="w-2.5 h-2.5 text-[var(--ink-3)] rtl:rotate-180" />
+                          <span className="text-xs font-mono font-bold text-[var(--brand)]">
                             {animatedScore}/100
                           </span>
                         </div>
                       </div>
 
-                      {/* Stage 2 Content: 3 Live Diagnostic Meters */}
+                      {/* Contact & Meta Badges Strip */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-[var(--ink-2)] font-medium pt-1">
+                        <span className="inline-flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-[var(--brand)] shrink-0" />
+                          <span>{t('hero_preview_email')}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-[var(--brand)] shrink-0" />
+                          <span>{t('hero_preview_phone')}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-[var(--brand)] shrink-0" />
+                          <span>{t('hero_preview_location')}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[var(--success)] font-semibold font-mono text-[10px]">
+                          ✓ E.164
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 2. ATS Live Diagnostic Strip */}
+                    <div className="p-2 sm:p-2.5 rounded-xl border border-[var(--brand)]/30 bg-[var(--brand-soft)]/20 shadow-subtle">
+                      <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <ScanLine className="w-3.5 h-3.5 text-[var(--brand)] shrink-0" />
+                          <span className="text-[11px] font-bold text-[var(--ink)]">
+                            {t('hero_bento_score_title')}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-[var(--brand)]">
+                          {animatedScore}%
+                        </span>
+                      </div>
+
                       <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                         {scoreMetrics.map((metric, idx) => {
                           const isHighlighted = activeSkillCycle === idx;
                           return (
                             <div
                               key={metric.label}
-                              className={`p-1.5 sm:p-2 rounded-lg border transition-all duration-300 ${
+                              className={`p-1.5 rounded-lg border transition-all duration-300 ${
                                 isHighlighted
                                   ? 'bg-[var(--surface)] border-[var(--brand)] shadow-subtle'
                                   : 'bg-[var(--surface)]/80 border-[var(--line)]'
@@ -512,156 +485,139 @@ export default function HeroSection({
                       </div>
                     </div>
 
-                    {/* STAGE 03: Skills Alignment, Role Matches & Verified Export */}
-                    <div className="relative rounded-xl border border-[var(--line)] bg-[var(--surface-2)]/50 p-2.5 sm:p-3 transition-all">
-                      {/* Timeline Node 03 */}
-                      <div
-                        dir="ltr"
-                        style={{ unicodeBidi: 'isolate' }}
-                        className="absolute -start-6 sm:-start-7 top-2.5 w-5 h-5 rounded-full bg-[var(--surface)] text-[var(--brand)] border-2 border-[var(--brand)] flex items-center justify-center font-mono text-[9px] font-bold shadow-subtle [unicode-bidi:isolate]"
-                      >
-                        03
+                    {/* 3. Section: Professional Summary */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink)] uppercase tracking-wider">
+                        <FileText className="w-3 h-3 text-[var(--brand)] shrink-0" />
+                        <span>{t('hero_preview_summary_title')}</span>
+                        <div className="flex-1 h-[1px] bg-[var(--line)] ms-1" />
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-[var(--ink-2)] text-justify">
+                        {t('hero_preview_summary_desc')}
+                      </p>
+                    </div>
+
+                    {/* 4. Section: Work Experience */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink)] uppercase tracking-wider">
+                        <Briefcase className="w-3 h-3 text-[var(--brand)] shrink-0" />
+                        <span>{t('hero_preview_exp_title')}</span>
+                        <div className="flex-1 h-[1px] bg-[var(--line)] ms-1" />
                       </div>
 
-                      {/* Stage 3 Header */}
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[var(--success)] shrink-0" />
-                          <span className="text-xs font-bold text-[var(--ink)] truncate">
-                            {t('how_step_3_title')}
+                      <div className="p-2 rounded-lg bg-[var(--surface-2)]/40 border border-[var(--line)] text-[11px] space-y-1">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-bold text-[var(--ink)]">
+                            {t('hero_preview_exp_role')}
+                          </span>
+                          <span className="font-mono text-[9.5px] text-[var(--ink-3)]">
+                            {isRtl ? '2021 — الآن' : '2021 — Present'}
                           </span>
                         </div>
-                        <span className="text-[9px] font-mono text-[var(--success)] font-semibold shrink-0">
-                          {isRtl ? 'جاهز للتصدير ✓' : 'Export Ready ✓'}
+                        <p className="text-[10.5px] text-[var(--ink-2)]">
+                          {t('hero_preview_exp_desc')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 5. Section: ATS Skills Matrix */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink)] uppercase tracking-wider">
+                          <Layers className="w-3 h-3 text-[var(--brand)] shrink-0" />
+                          <span>{t('hero_bento_skills_title')}</span>
+                          <div className="flex-1 h-[1px] bg-[var(--line)] ms-1" />
+                        </div>
+                        <div className="flex items-center gap-2 text-[9px] font-semibold shrink-0">
+                          <span className="inline-flex items-center gap-0.5 text-[var(--success)]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
+                            {t('hero_bento_skills_matched')}
+                          </span>
+                          <span className="inline-flex items-center gap-0.5 text-[var(--warning)]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]" />
+                            {t('hero_bento_skills_missing')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1">
+                        {skillChips.map((chip) => (
+                          <span
+                            key={chip.label}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold border transition-all duration-300 ${
+                              chip.matched
+                                ? 'bg-[var(--success-soft)] text-[var(--success)] border-[var(--success)]/25'
+                                : 'bg-[var(--warning-soft)] text-[var(--warning)] border-[var(--warning)]/30'
+                            }`}
+                          >
+                            <span
+                              dir="ltr"
+                              style={{ unicodeBidi: 'isolate' }}
+                              className="text-[8px] font-bold shrink-0"
+                            >
+                              {chip.matched ? '✓' : '+'}
+                            </span>
+                            <span className="truncate">{chip.label}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 6. Section: Role Matches Grid (with grid-cols-1 sm:grid-cols-2 lg:grid-cols-3) */}
+                    <div className="pt-2 border-t border-[var(--line)]">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-[10px] font-bold text-[var(--ink-2)] flex items-center gap-1">
+                          <Briefcase className="w-3 h-3 text-[var(--highlight)] shrink-0" />
+                          {t('hero_bento_jobs_title')}
+                        </span>
+                        <span className="text-[9px] font-medium text-[var(--ink-3)]">
+                          {t('hero_bento_jobs_subtitle')}
                         </span>
                       </div>
 
-                      {/* Skills Tags Strip */}
-                      <div className="mb-2">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-[10px] font-bold text-[var(--ink-2)] flex items-center gap-1">
-                            <Layers className="w-3 h-3 text-[var(--brand)]" />
-                            {t('hero_bento_skills_title')}
-                          </span>
-                          <div className="flex items-center gap-1.5 text-[9px] font-semibold">
-                            <span className="inline-flex items-center gap-0.5 text-[var(--success)]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
-                              {t('hero_bento_skills_matched')}
-                            </span>
-                            <span className="inline-flex items-center gap-0.5 text-[var(--warning)]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]" />
-                              {t('hero_bento_skills_missing')}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                        {jobMatchRows.map((row, rIdx) => (
+                          <div
+                            key={row.id}
+                            className={`flex items-center justify-between gap-1.5 px-2 py-1 rounded-lg border transition-all duration-300 ${
+                              activeSkillCycle === rIdx
+                                ? 'bg-[var(--brand-soft)]/50 border-[var(--brand)]/40'
+                                : 'bg-[var(--surface)] border-[var(--line)]'
+                            }`}
+                          >
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="h-1.5 w-10 sm:w-12 rounded-full bg-[var(--ink)]/25" />
+                              <div className="h-1 w-7 sm:w-8 rounded-full bg-[var(--ink)]/15" />
+                            </div>
+                            <span
+                              dir="ltr"
+                              style={{ unicodeBidi: 'isolate' }}
+                              className="px-1.5 py-0.5 rounded-full bg-[var(--brand)] text-[var(--on-brand)] font-mono text-[9px] font-bold shrink-0"
+                            >
+                              {t('hero_bento_jobs_match_badge').replace(
+                                '{score}',
+                                String(row.score)
+                              )}
                             </span>
                           </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-1">
-                          {skillChips.map((chip) => (
-                            <span
-                              key={chip.label}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold border transition-all duration-300 ${
-                                chip.matched
-                                  ? 'bg-[var(--success-soft)] text-[var(--success)] border-[var(--success)]/25'
-                                  : 'bg-[var(--warning-soft)] text-[var(--warning)] border-[var(--warning)]/30'
-                              }`}
-                            >
-                              <span
-                                dir="ltr"
-                                style={{ unicodeBidi: 'isolate' }}
-                                className="text-[8px] font-bold shrink-0"
-                              >
-                                {chip.matched ? '✓' : '+'}
-                              </span>
-                              <span className="truncate">{chip.label}</span>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Role Matches Grid (with grid-cols-1 sm:grid-cols-2 lg:grid-cols-3) */}
-                      <div className="pt-2 border-t border-[var(--line)]">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-[10px] font-bold text-[var(--ink-2)] flex items-center gap-1">
-                            <Briefcase className="w-3 h-3 text-[var(--highlight)]" />
-                            {t('hero_bento_jobs_title')}
-                          </span>
-                          <span className="text-[9px] font-medium text-[var(--ink-3)]">
-                            {t('hero_bento_jobs_subtitle')}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                          {jobMatchRows.map((row, rIdx) => (
-                            <div
-                              key={row.id}
-                              className={`flex items-center justify-between gap-1.5 px-2 py-1 rounded-lg border transition-all duration-300 ${
-                                activeSkillCycle === rIdx
-                                  ? 'bg-[var(--brand-soft)]/50 border-[var(--brand)]/40'
-                                  : 'bg-[var(--surface)] border-[var(--line)]'
-                              }`}
-                            >
-                              <div className="space-y-1 min-w-0 flex-1">
-                                <div className="h-1.5 w-10 sm:w-12 rounded-full bg-[var(--ink)]/25" />
-                                <div className="h-1 w-7 sm:w-8 rounded-full bg-[var(--ink)]/15" />
-                              </div>
-                              <span
-                                dir="ltr"
-                                style={{ unicodeBidi: 'isolate' }}
-                                className="px-1.5 py-0.5 rounded-full bg-[var(--brand)] text-[var(--on-brand)] font-mono text-[9px] font-bold shrink-0"
-                              >
-                                {t('hero_bento_jobs_match_badge').replace(
-                                  '{score}',
-                                  String(row.score)
-                                )}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* FLOATING HUD BADGE (Top-End Corner): Olive Brand Score Ring Badge */}
-                <div className="hidden sm:flex bento-float-1 absolute -top-4 -end-3 z-30 items-center gap-2.5 px-3 py-2 rounded-2xl bg-[var(--brand)] text-[var(--on-brand)] shadow-[var(--shadow-elevated)] border border-[var(--on-brand)]/15">
-                  <div
-                    dir="ltr"
-                    style={{ unicodeBidi: 'isolate' }}
-                    className="relative w-11 h-11 flex items-center justify-center shrink-0 [unicode-bidi:isolate]"
-                  >
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 68 68">
-                      <circle
-                        cx="34"
-                        cy="34"
-                        r={ringRadius}
-                        fill="transparent"
-                        stroke="currentColor"
-                        strokeOpacity="0.2"
-                        strokeWidth="5.5"
-                      />
-                      <circle
-                        cx="34"
-                        cy="34"
-                        r={ringRadius}
-                        fill="transparent"
-                        stroke="currentColor"
-                        strokeWidth="5.5"
-                        strokeDasharray={ringCircumference}
-                        strokeDashoffset={ringStrokeOffset}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center font-mono text-[11px] font-bold">
-                      {animatedScore}%
-                    </span>
-                  </div>
-                  <div className="pe-1">
-                    <div className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider opacity-85">
-                      <TrendingUp className="w-3 h-3" />
-                      <span>ATS Score</span>
-                    </div>
-                    <div className="text-[11px] font-bold leading-tight mt-0.5">
-                      {t('hero_badge_ats')}
+                    {/* 7. Section: Education & Verified Footnote */}
+                    <div className="pt-2 border-t border-[var(--line)] flex items-center justify-between gap-2 text-[10px] text-[var(--ink-2)]">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <GraduationCap className="w-3.5 h-3.5 text-[var(--highlight)] shrink-0" />
+                        <span className="truncate">
+                          {isRtl
+                            ? 'تعليم معتمد • مرتبة الشرف'
+                            : 'Accredited Degree • Honors'}
+                        </span>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-[9px] font-mono text-[var(--success)] font-semibold shrink-0">
+                        <CheckCircle2 className="w-3 h-3 shrink-0" />
+                        {isRtl ? 'جاهز للتصدير ✓' : 'Export Ready ✓'}
+                      </span>
                     </div>
                   </div>
                 </div>

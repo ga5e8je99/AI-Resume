@@ -27,11 +27,7 @@ export default function ErrorBoundary({ error, reset }: ErrorProps) {
       dir={isRtl ? 'rtl' : 'ltr'}
       className="min-h-[100dvh] bg-paper text-ink flex flex-col justify-center items-center px-4 py-12 relative selection:bg-accent-soft selection:text-ink"
     >
-      {/* Top Utility Bar with Language and Theme Switcher */}
-      <div className="absolute top-6 end-6 z-20 flex items-center gap-2">
-        <ThemeToggle />
-        <LanguageSelector variant="compact" />
-      </div>
+
 
       <main id="main-content" className="w-full max-w-lg relative z-10 text-center">
         {/* Brand Header */}

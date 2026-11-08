@@ -80,7 +80,7 @@ Once the deployment completes, perform the following verification checks:
 - [ ] **Homepage Load:** Visit `https://your-app.vercel.app/` and verify that stylesheets, hero elements, and templates render crisply.
 - [ ] **Instant Demo Login:**
   - Navigate to `/login`.
-  - Click **"⚡ Try Demo Instantly"**.
+  - Click **"  Try Demo Instantly"**.
   - Verify automatic redirect to `/dashboard`.
   - Confirm the pre-seeded Full-Stack Developer resume, ATS scan report (score 88), and cover letter draft appear.
 - [ ] **New User Registration:**

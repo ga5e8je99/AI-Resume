@@ -316,7 +316,7 @@ const es: TranslationDictionary = {
   common_copied: '¡Copiado!',
 
   // Auth & Demo
-  auth_demo_button: '⚡ Probar Demo al Instante',
+  auth_demo_button: '  Probar Demo al Instante',
   auth_demo_loading: 'Preparando cuenta de prueba...',
   auth_demo_desc: 'Prueba todas las funciones de inmediato con un CV precargado, puntuación ATS y carta de muestra.',
   auth_login_title: 'Te Damos la Bienvenida de Nuevo',
@@ -475,7 +475,7 @@ const es: TranslationDictionary = {
 
   // Additional Hero Keys
   hero_scan_cta: 'Analizar mi currículum gratis',
-  hero_demo_cta: '⚡ Probar Demo Inmediatamente',
+  hero_demo_cta: '  Probar Demo Inmediatamente',
   hero_trust_free: 'Gratis para empezar',
   hero_trust_no_card: 'Sin tarjeta de crédito',
   hero_trust_instant: 'Resultados inmediatos',
@@ -497,7 +497,7 @@ const es: TranslationDictionary = {
   // Additional Auth Keys
   auth_login_submitting: 'Iniciando sesión...',
   auth_login_or_demo: 'O explore de inmediato sin registrarse:',
-  auth_login_demo_btn: '⚡ Probar Demo Inmediatamente',
+  auth_login_demo_btn: '  Probar Demo Inmediatamente',
   auth_login_demo_hint: 'Sesión precargada con datos de demostración',
   auth_login_trust_banner_title: 'Currículums diseñados para superar los filtros ATS',
   auth_login_trust_feature1: 'Formatos de una sola columna validados para Workday y Taleo',

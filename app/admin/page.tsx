@@ -454,7 +454,7 @@ export default function AdminDashboardPage() {
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean | null>(null);
@@ -545,8 +545,8 @@ export default function AdminDashboardPage() {
       newStatus === 'completed'
         ? 'تهانينا! تم تحديث حالة الميزة إلى مكتملة بنجاح 🎉'
         : newStatus === 'in-progress'
-        ? 'تم نقل الميزة إلى قيد التطوير والعمل 🚀'
-        : 'تم نقل الميزة إلى قائمة الأفكار المجدولة 💡'
+          ? 'تم نقل الميزة إلى قيد التطوير والعمل 🚀'
+          : 'تم نقل الميزة إلى قائمة الأفكار المجدولة 💡'
     );
   };
 
@@ -642,14 +642,13 @@ export default function AdminDashboardPage() {
         idea.status === 'completed'
           ? '✅ مكتمل'
           : idea.status === 'in-progress'
-          ? '⏳ قيد التنفيذ'
-          : '💡 فكرة مجدولة';
+            ? '⏳ قيد التنفيذ'
+            : '💡 فكرة مجدولة';
       md += `### ${idx + 1}. ${idea.title}\n`;
       md += `- **التصنيف:** ${idea.categoryLabel}\n`;
       md += `- **الحالة:** ${statusText}\n`;
-      md += `- **الأولوية:** ${
-        idea.priority === 'urgent' ? 'قصوى 🔥' : idea.priority === 'high' ? 'عالية ⭐' : 'متوسطة'
-      }\n`;
+      md += `- **الأولوية:** ${idea.priority === 'urgent' ? 'قصوى 🔥' : idea.priority === 'high' ? 'عالية ⭐' : 'متوسطة'
+        }\n`;
       md += `- **الأثر:** ${idea.impact} | **الجهد التقديري:** ${idea.effort}\n`;
       md += `- **الوصف:** ${idea.description}\n`;
       md += `- **المواصفات الفنية:**\n`;
@@ -1083,11 +1082,10 @@ export default function AdminDashboardPage() {
       {/* Top Notification Toast */}
       {notification && (
         <div
-          className={`fixed top-4 end-4 z-50 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-medium flex items-center gap-2.5 animate-in slide-in-from-top duration-300 ${
-            notification.type === 'error'
+          className={`fixed top-4 end-4 z-50 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-medium flex items-center gap-2.5 animate-in slide-in-from-top duration-300 ${notification.type === 'error'
               ? 'bg-red-950/95 border-red-800 text-red-200'
               : 'bg-emerald-950/95 border-emerald-800 text-emerald-200'
-          }`}
+            }`}
         >
           {notification.type === 'error' ? (
             <AlertCircle className="w-4 h-4 text-red-400" />
@@ -1254,11 +1252,10 @@ export default function AdminDashboardPage() {
         <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-slate-900/90 border border-slate-800 rounded-2xl overflow-x-auto">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'overview'
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${activeTab === 'overview'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/25'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+              }`}
           >
             <TrendingUp className="w-4 h-4" />
             <span>نظرة عامة والتحليلات</span>
@@ -1266,11 +1263,10 @@ export default function AdminDashboardPage() {
 
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'users'
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${activeTab === 'users'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/25'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+              }`}
           >
             <Users className="w-4 h-4" />
             <span>المستخدمين ({usersList.length})</span>
@@ -1278,11 +1274,10 @@ export default function AdminDashboardPage() {
 
           <button
             onClick={() => setActiveTab('resumes')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'resumes'
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${activeTab === 'resumes'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/25'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+              }`}
           >
             <FileText className="w-4 h-4" />
             <span>السير الذاتية ({resumesList.length})</span>
@@ -1290,11 +1285,10 @@ export default function AdminDashboardPage() {
 
           <button
             onClick={() => setActiveTab('analyses')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'analyses'
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${activeTab === 'analyses'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/25'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+              }`}
           >
             <ScanSearch className="w-4 h-4" />
             <span>سجل فحص ATS ({analysesList.length})</span>
@@ -1302,11 +1296,10 @@ export default function AdminDashboardPage() {
 
           <button
             onClick={() => setActiveTab('plan')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'plan'
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer ${activeTab === 'plan'
                 ? 'bg-accent text-on-accent text-slate-950 font-bold shadow-md shadow-orange-500/25'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
+              }`}
           >
             <Rocket className="w-4 h-4 text-amber-400 group-hover:text-amber-300" />
             <span>خطة التطوير ({roadmapIdeas.length})</span>
@@ -1438,9 +1431,8 @@ export default function AdminDashboardPage() {
                         <div className="font-semibold text-xs text-white truncate">{u.name}</div>
                         <div className="text-[11px] text-slate-400 truncate">{u.email}</div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                        u.role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${u.role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'
+                        }`}>
                         {u.role === 'admin' ? 'مشرف' : 'مستخدم'}
                       </span>
                     </div>
@@ -1564,11 +1556,10 @@ export default function AdminDashboardPage() {
                         {u.email}
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          u.role === 'admin'
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${u.role === 'admin'
                             ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                             : 'bg-slate-800 text-slate-400 border border-slate-700'
-                        }`}>
+                          }`}>
                           {u.role === 'admin' ? 'مشرف (Admin)' : 'مستخدم'}
                         </span>
                       </td>
@@ -1705,7 +1696,7 @@ export default function AdminDashboardPage() {
                             🎓 {r.educationCount}
                           </span>
                           <span className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700" title="عدد المهارات">
-                            ⚡ {r.skillsCount}
+                            {r.skillsCount}
                           </span>
                         </div>
                       </td>
@@ -2057,41 +2048,37 @@ export default function AdminDashboardPage() {
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
                     <button
                       onClick={() => setPlanStatusFilter('all')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                        planStatusFilter === 'all'
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${planStatusFilter === 'all'
                           ? 'bg-amber-500 text-slate-950 font-bold'
                           : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       الكل ({totalRoadmapItems})
                     </button>
                     <button
                       onClick={() => setPlanStatusFilter('in-progress')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                        planStatusFilter === 'in-progress'
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${planStatusFilter === 'in-progress'
                           ? 'bg-cyan-500 text-slate-950 font-bold'
                           : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       ⏳ قيد التنفيذ ({inProgressRoadmapItems})
                     </button>
                     <button
                       onClick={() => setPlanStatusFilter('idea')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                        planStatusFilter === 'idea'
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${planStatusFilter === 'idea'
                           ? 'bg-purple-500 text-white font-bold'
                           : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       💡 أفكار مجدولة ({plannedRoadmapItems})
                     </button>
                     <button
                       onClick={() => setPlanStatusFilter('completed')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                        planStatusFilter === 'completed'
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${planStatusFilter === 'completed'
                           ? 'bg-emerald-500 text-slate-950 font-bold'
                           : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
+                        }`}
                     >
                       ✅ مكتملة ({completedRoadmapItems})
                     </button>
@@ -2103,65 +2090,59 @@ export default function AdminDashboardPage() {
                   <span className="text-xs text-slate-400 whitespace-nowrap ms-2">التصنيف:</span>
                   <button
                     onClick={() => setPlanCategoryFilter('all')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                      planCategoryFilter === 'all'
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${planCategoryFilter === 'all'
                         ? 'bg-slate-700 text-white font-bold'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     🌟 كافة المجالات
                   </button>
                   <button
                     onClick={() => setPlanCategoryFilter('ai')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                      planCategoryFilter === 'ai'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${planCategoryFilter === 'ai'
                         ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     <Bot className="w-3.5 h-3.5" />
                     <span>الذكاء الاصطناعي (AI)</span>
                   </button>
                   <button
                     onClick={() => setPlanCategoryFilter('design')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                      planCategoryFilter === 'design'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${planCategoryFilter === 'design'
                         ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40 font-bold'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     <Palette className="w-3.5 h-3.5" />
                     <span>التصميم والقوالب (UI/UX)</span>
                   </button>
                   <button
                     onClick={() => setPlanCategoryFilter('jobs')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                      planCategoryFilter === 'jobs'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${planCategoryFilter === 'jobs'
                         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     <Briefcase className="w-3.5 h-3.5" />
                     <span>محرك الوظائف وسوق العمل</span>
                   </button>
                   <button
                     onClick={() => setPlanCategoryFilter('export')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                      planCategoryFilter === 'export'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${planCategoryFilter === 'export'
                         ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 font-bold'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     <Code className="w-3.5 h-3.5" />
                     <span>التصدير والتكامل التقني</span>
                   </button>
                   <button
                     onClick={() => setPlanCategoryFilter('business')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                      planCategoryFilter === 'business'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${planCategoryFilter === 'business'
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     <DollarSign className="w-3.5 h-3.5" />
                     <span>الاشتراكات والمدفوعات</span>
@@ -2263,33 +2244,30 @@ export default function AdminDashboardPage() {
                           <span className="text-[11px] text-slate-400 hidden sm:inline">الحالة:</span>
                           <button
                             onClick={() => handleUpdateIdeaStatus(idea.id, 'idea')}
-                            className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
-                              idea.status === 'idea'
+                            className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${idea.status === 'idea'
                                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                                 : 'bg-slate-800 text-slate-400 hover:text-white'
-                            }`}
+                              }`}
                             title="تعيين كفكرة مجدولة"
                           >
                             💡 فكرة
                           </button>
                           <button
                             onClick={() => handleUpdateIdeaStatus(idea.id, 'in-progress')}
-                            className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
-                              idea.status === 'in-progress'
+                            className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${idea.status === 'in-progress'
                                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                                 : 'bg-slate-800 text-slate-400 hover:text-white'
-                            }`}
+                              }`}
                             title="تعيين كقيد التطوير"
                           >
                             🚀 قيد التنفيذ
                           </button>
                           <button
                             onClick={() => handleUpdateIdeaStatus(idea.id, 'completed')}
-                            className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
-                              idea.status === 'completed'
+                            className={`px-2 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${idea.status === 'completed'
                                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                                 : 'bg-slate-800 text-slate-400 hover:text-white'
-                            }`}
+                              }`}
                             title="تعيين كمكتمل"
                           >
                             ✅ مكتمل
@@ -2377,7 +2355,7 @@ export default function AdminDashboardPage() {
                       <option value="ai">🤖 ذكاء اصطناعي (AI Features)</option>
                       <option value="design">🎨 تصميم وقوالب (UI/UX Design)</option>
                       <option value="jobs">💼 محرك الوظائف (Job Integration)</option>
-                      <option value="export">⚡ تصدير وتكامل (Tech & Export)</option>
+                      <option value="export">  تصدير وتكامل (Tech & Export)</option>
                       <option value="business">💳 اشتراكات ومدفوعات (Business)</option>
                     </select>
                   </div>

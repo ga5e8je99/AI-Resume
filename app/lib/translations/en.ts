@@ -316,7 +316,7 @@ const en: TranslationDictionary = {
   common_copied: 'Copied!',
 
   // Auth & Demo
-  auth_demo_button: '⚡ Instant Demo Access',
+  auth_demo_button: '  Instant Demo Access',
   auth_demo_loading: 'Preparing demo account...',
   auth_demo_desc: 'Test all features immediately with pre-loaded sample resumes, ATS scores, and cover letters.',
   auth_login_title: 'Welcome Back',
@@ -475,7 +475,7 @@ const en: TranslationDictionary = {
 
   // Additional Hero Keys
   hero_scan_cta: 'Scan my resume free',
-  hero_demo_cta: '⚡ Try Demo Instantly',
+  hero_demo_cta: '  Try Demo Instantly',
   hero_trust_free: 'Free to start',
   hero_trust_no_card: 'No credit card',
   hero_trust_instant: 'Instant results',
@@ -497,7 +497,7 @@ const en: TranslationDictionary = {
   // Additional Auth Keys
   auth_login_submitting: 'Signing in...',
   auth_login_or_demo: 'Or explore instantly without signing in:',
-  auth_login_demo_btn: '⚡ Try Demo Instantly',
+  auth_login_demo_btn: '  Try Demo Instantly',
   auth_login_demo_hint: 'Instant pre-populated session with sample data',
   auth_login_trust_banner_title: 'ATS-Optimized Resumes Made Simple',
   auth_login_trust_feature1: 'Single-column formats parsed by Workday & Taleo',

@@ -121,11 +121,11 @@ async function startServerIfNeeded() {
   // Ensure production build exists for rapid startup
   const nextDir = path.join(ROOT_DIR, '.next');
   if (!fs.existsSync(nextDir)) {
-    console.log('\x1b[33m⚡ .next build not detected. Compiling Next.js bundle before tests...\x1b[0m');
+    console.log('\x1b[33m  .next build not detected. Compiling Next.js bundle before tests...\x1b[0m');
     execSync('npm run build', { cwd: ROOT_DIR, stdio: 'inherit' });
   }
 
-  console.log(`\x1b[33m⚡ Starting Next.js test server on ${BASE_URL}...\x1b[0m`);
+  console.log(`\x1b[33m  Starting Next.js test server on ${BASE_URL}...\x1b[0m`);
   const serverProc = spawn('npx', ['next', 'start', '-p', String(PORT)], {
     cwd: ROOT_DIR,
     stdio: 'ignore',

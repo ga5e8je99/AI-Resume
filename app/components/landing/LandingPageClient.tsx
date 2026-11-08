@@ -178,7 +178,7 @@ export default function LandingPageClient() {
 
         {/* 7. FAQ Accordion (8 Questions covering Privacy, Formats, Languages, Free tier, Credits, Cancellation, Refunds, Deletion) */}
         <FaqSection />
-        <SectionWave id="faq-to-cta" variant="paper-to-brand" />
+        {/* <SectionWave id="faq-to-cta" variant="brand-to-brand" /> */}
 
         {/* 8. Final CTA Band in Brand Color */}
         <CtaBand onScanClick={handleScanClick} />

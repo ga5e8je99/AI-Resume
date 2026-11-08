@@ -70,7 +70,8 @@ export type TemplateId =
   | 'stockholm'    // Resume.io ATS: Compact, high density layout
   | 'london'       // Resume.io ATS: Refined executive style
   | 'classic'      // Standard Ivy League
-  | 'modern';      // Best for Engineers
+  | 'modern'       // Best for Engineers
+  | 'minimal';     // Minimalist Clean
 
 import { DocumentLanguage } from '../lib/documentI18n';
 export type { DocumentLanguage };

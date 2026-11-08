@@ -699,6 +699,77 @@ html[dir="rtl"] .mobile-drawer-exit,
   --line-strong: #8E887C;
 }
 
+/* Document Typography Scaling: Font Size ('sm' | 'base' | 'lg') */
+#resume-preview[data-font-size="sm"],
+#resume-preview-export-clone[data-font-size="sm"] {
+  font-size: 11px;
+}
+#resume-preview[data-font-size="sm"] .text-\[12px\],
+#resume-preview[data-font-size="sm"] .text-\[12\.5px\],
+#resume-preview[data-font-size="sm"] .text-\[13px\],
+#resume-preview-export-clone[data-font-size="sm"] .text-\[12px\],
+#resume-preview-export-clone[data-font-size="sm"] .text-\[12\.5px\],
+#resume-preview-export-clone[data-font-size="sm"] .text-\[13px\] {
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+#resume-preview[data-font-size="sm"] .text-\[11px\],
+#resume-preview-export-clone[data-font-size="sm"] .text-\[11px\] {
+  font-size: 10px !important;
+  line-height: 1.35 !important;
+}
+#resume-preview[data-font-size="sm"] .text-sm,
+#resume-preview-export-clone[data-font-size="sm"] .text-sm {
+  font-size: 12px !important;
+}
+#resume-preview[data-font-size="sm"] .text-xs,
+#resume-preview-export-clone[data-font-size="sm"] .text-xs {
+  font-size: 10px !important;
+}
+#resume-preview[data-font-size="sm"] .text-2xl,
+#resume-preview-export-clone[data-font-size="sm"] .text-2xl {
+  font-size: 1.25rem !important;
+}
+#resume-preview[data-font-size="sm"] .text-xl,
+#resume-preview-export-clone[data-font-size="sm"] .text-xl {
+  font-size: 1.1rem !important;
+}
+
+#resume-preview[data-font-size="lg"],
+#resume-preview-export-clone[data-font-size="lg"] {
+  font-size: 13.5px;
+}
+#resume-preview[data-font-size="lg"] .text-\[12px\],
+#resume-preview[data-font-size="lg"] .text-\[12\.5px\],
+#resume-preview[data-font-size="lg"] .text-\[13px\],
+#resume-preview-export-clone[data-font-size="lg"] .text-\[12px\],
+#resume-preview-export-clone[data-font-size="lg"] .text-\[12\.5px\],
+#resume-preview-export-clone[data-font-size="lg"] .text-\[13px\] {
+  font-size: 13.5px !important;
+  line-height: 1.65 !important;
+}
+#resume-preview[data-font-size="lg"] .text-\[11px\],
+#resume-preview-export-clone[data-font-size="lg"] .text-\[11px\] {
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+#resume-preview[data-font-size="lg"] .text-sm,
+#resume-preview-export-clone[data-font-size="lg"] .text-sm {
+  font-size: 15px !important;
+}
+#resume-preview[data-font-size="lg"] .text-xs,
+#resume-preview-export-clone[data-font-size="lg"] .text-xs {
+  font-size: 12px !important;
+}
+#resume-preview[data-font-size="lg"] .text-2xl,
+#resume-preview-export-clone[data-font-size="lg"] .text-2xl {
+  font-size: 1.65rem !important;
+}
+#resume-preview[data-font-size="lg"] .text-xl,
+#resume-preview-export-clone[data-font-size="lg"] .text-xl {
+  font-size: 1.4rem !important;
+}
+
 /* Native Details Accordion styling */
 details.paper-accordion {
   border: 1px solid var(--line);

@@ -1,25 +1,6 @@
 {
   "users": [
     {
-      "id": "usr_admin_001",
-      "name": "Admin Manager",
-      "email": "admin@jobmatch.ai",
-      "password": "$2a$10$wT8m9aHn9q6XqZvZl0lPbe4E7mO8QGqVw1jG6w6rD7eF9tY1yM8aW",
-      "role": "admin",
-      "createdAt": "2026-10-09T12:27:52.488Z",
-      "updatedAt": "2026-10-31T21:03:39.732Z",
-      "plan": "free",
-      "aiCredits": 3,
-      "billingCycle": "none",
-      "planExpiresAt": null,
-      "paymentProvider": "none",
-      "providerCustomerId": "",
-      "providerSubscriptionId": "",
-      "emailVerified": "2026-10-09T12:27:52.488Z",
-      "emailVerifyTokenHash": null,
-      "emailVerifyExpires": null
-    },
-    {
       "id": "usr_002",
       "name": "Sarah Jenkins",
       "email": "sarah.jenkins@example.com",
@@ -2213,10 +2194,10 @@
       "updatedAt": "2026-10-31T22:44:09.149Z"
     },
     {
-      "id": "usr_mvz5wgp0stki",
-      "name": "Gamal Ahmed",
-      "email": "gama.ahmed.dev@gmail.com",
-      "password": "$2b$10$dZ/iaP3lJ9sdffc.2YBCl.PE1NtqQxPxb0/giwPte5H5GSrqIYwSq",
+      "id": "usr_mw3hky15pqkv",
+      "name": "gamal",
+      "email": "ga138989@gmail.com",
+      "password": "$2b$10$V1MfWh2GYuQ3/k8dTIOymutk88ucv/vnVo95Po70qpz.sQk9OCm/G",
       "role": "user",
       "accountType": "candidate",
       "accountTypes": [
@@ -2235,109 +2216,71 @@
       "stripeSubscriptionId": "",
       "lemonCustomerId": "",
       "lemonSubscriptionId": "",
-      "emailVerified": null,
-      "emailVerifyTokenHash": "2bbcb53763e087c05059073a3c1c30c0c594ad5740d04ea4ba49123b0f4773f7",
-      "emailVerifyExpires": "2026-11-03T11:20:34.074Z",
-      "termsAcceptedAt": "2026-11-02T11:14:50.189Z",
+      "emailVerified": "2026-11-08T09:12:59.933Z",
+      "emailVerifyTokenHash": null,
+      "emailVerifyExpires": null,
+      "termsAcceptedAt": "2026-11-05T11:52:52.968Z",
       "termsVersion": "2026-10-31",
-      "createdAt": "2026-11-02T11:14:51.396Z",
-      "updatedAt": "2026-11-02T11:20:34.079Z"
+      "createdAt": "2026-11-05T11:52:54.089Z",
+      "updatedAt": "2026-11-08T10:00:18.119Z",
+      "fullName": "gamal",
+      "headline": "مطور شامل (Full Stack)",
+      "targetRole": "مطور شامل (Full Stack)",
+      "seniority": "mid",
+      "yearsOfExperience": 2,
+      "industries": [],
+      "skills": [
+        "TypeScript",
+        "React.js",
+        "Next.js",
+        "Node.js",
+        "SQL & Relational Databases",
+        "MongoDB & NoSQL",
+        "Git & Version Control",
+        "JavaScript (جافاسكريبت)",
+        "TypeScript (تايب سكريبت)",
+        "Python (بايثون)",
+        "React.js (ريأكت)",
+        "Next.js (نكست)",
+        "Node.js (نود جي إس)",
+        "قواعد بيانات SQL",
+        "MongoDB وقواعد بيانات NoSQL",
+        "الحوسبة السحابية (AWS / Cloud)",
+        "حاويات Docker و Kubernetes"
+      ],
+      "country": "مصر",
+      "city": "القاهرة",
+      "willingToRelocate": true,
+      "remotePreference": "any",
+      "employmentTypes": [
+        "full-time"
+      ],
+      "expectedSalary": {
+        "min": 1500,
+        "max": 5000,
+        "currency": "USD",
+        "visible": true
+      },
+      "languages": [
+        "Arabic",
+        "English",
+        "French"
+      ],
+      "phone": "",
+      "phoneVisible": false,
+      "links": {
+        "linkedin": "",
+        "github": "",
+        "portfolio": ""
+      },
+      "avatar": "",
+      "profileCompletion": 90,
+      "onboardingCompletedAt": "2026-11-08T10:00:18.119Z"
     }
   ],
   "resumes": [
     {
-      "id": "res_mvthe489hkb0",
-      "userId": "usr_mvthe409nj0d",
-      "title": "Senior Full Stack Engineer - Resume (AI)",
-      "templateId": "compact",
-      "theme": {
-        "accentColor": "#0F5C4D",
-        "fontFamily": "var(--font-sans), sans-serif",
-        "fontSize": "base",
-        "documentLanguage": "en"
-      },
-      "data": {
-        "personalInfo": {
-          "fullName": "Alex Morgan",
-          "jobTitle": "Senior Full Stack Engineer",
-          "email": "alex.morgan@example.com",
-          "phone": "+1 (555) 019-2834",
-          "location": "[City, Country]",
-          "website": "",
-          "linkedin": "",
-          "github": "",
-          "summary": "Results-driven Senior Full Stack Engineer with 5-8+ years of experience building scalable solutions and delivering measurable business impact. Adept at cross-functional collaboration, technical problem-solving, and workflow optimization to accelerate product delivery.",
-          "photoUrl": "",
-          "showPhoto": false
-        },
-        "experience": [
-          {
-            "id": "exp-1",
-            "company": "[Recent Employer Name]",
-            "position": "Senior Full Stack Engineer",
-            "location": "[City, Country]",
-            "startDate": "2021-03",
-            "endDate": "Present",
-            "current": true,
-            "description": [
-              "Lead Developer at FinTech Startup (2021-Present)",
-              "Software Engineer at Digital Agency (2018-2021)"
-            ]
-          }
-        ],
-        "education": [
-          {
-            "id": "edu-1",
-            "institution": "B.S. in Computer Science",
-            "degree": "Bachelor of Science",
-            "fieldOfStudy": "Computer Science or Related Field",
-            "startDate": "2018",
-            "endDate": "2022"
-          }
-        ],
-        "projects": [
-          {
-            "id": "proj-1",
-            "title": "Senior Full Stack Engineer Core Automation Platform",
-            "techStack": "TypeScript, Next.js, Node.js, PostgreSQL, Docker",
-            "link": "https://github.com/example/platform",
-            "description": [
-              "Designed and deployed an end-to-end scalable architecture servicing heavy data traffic.",
-              "Enhanced reliability and query latency through optimized indexing and caching layers."
-            ]
-          }
-        ],
-        "skills": [
-          "React",
-          "Next.js",
-          "TypeScript",
-          "Node.js",
-          "PostgreSQL",
-          "Docker",
-          "AWS",
-          "Kubernetes",
-          "Ci/cd",
-          "Microservices"
-        ],
-        "certifications": [],
-        "languages": [
-          {
-            "id": "lang-1",
-            "name": "English",
-            "proficiency": "Native"
-          },
-          {
-            "id": "lang-2",
-            "name": "Professional Working",
-            "proficiency": "Fluent"
-          }
-        ]
-      },
-      "createdAt": "2026-10-29T11:49:53.769Z",
-      "updatedAt": "2026-10-29T11:49:53.769Z"
-    },
-    {
-      "id": "res_mvthdh43ag4h",
+      "id": "res_mw7u3qw6gpld",
       "userId": "usr_mvpabfxqsnc5",
       "title": "Alex Rivera - Junior Full-Stack Developer CV",
       "templateId": "modern",
@@ -2438,8 +2381,99 @@
           }
         ]
       },
-      "createdAt": "2026-10-29T11:49:23.811Z",
-      "updatedAt": "2026-10-29T11:49:23.811Z"
+      "createdAt": "2026-11-08T12:54:31.399Z",
+      "updatedAt": "2026-11-08T12:54:31.399Z"
+    },
+    {
+      "id": "res_mvthe489hkb0",
+      "userId": "usr_mvthe409nj0d",
+      "title": "Senior Full Stack Engineer - Resume (AI)",
+      "templateId": "compact",
+      "theme": {
+        "accentColor": "#0F5C4D",
+        "fontFamily": "var(--font-sans), sans-serif",
+        "fontSize": "base",
+        "documentLanguage": "en"
+      },
+      "data": {
+        "personalInfo": {
+          "fullName": "Alex Morgan",
+          "jobTitle": "Senior Full Stack Engineer",
+          "email": "alex.morgan@example.com",
+          "phone": "+1 (555) 019-2834",
+          "location": "[City, Country]",
+          "website": "",
+          "linkedin": "",
+          "github": "",
+          "summary": "Results-driven Senior Full Stack Engineer with 5-8+ years of experience building scalable solutions and delivering measurable business impact. Adept at cross-functional collaboration, technical problem-solving, and workflow optimization to accelerate product delivery.",
+          "photoUrl": "",
+          "showPhoto": false
+        },
+        "experience": [
+          {
+            "id": "exp-1",
+            "company": "[Recent Employer Name]",
+            "position": "Senior Full Stack Engineer",
+            "location": "[City, Country]",
+            "startDate": "2021-03",
+            "endDate": "Present",
+            "current": true,
+            "description": [
+              "Lead Developer at FinTech Startup (2021-Present)",
+              "Software Engineer at Digital Agency (2018-2021)"
+            ]
+          }
+        ],
+        "education": [
+          {
+            "id": "edu-1",
+            "institution": "B.S. in Computer Science",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science or Related Field",
+            "startDate": "2018",
+            "endDate": "2022"
+          }
+        ],
+        "projects": [
+          {
+            "id": "proj-1",
+            "title": "Senior Full Stack Engineer Core Automation Platform",
+            "techStack": "TypeScript, Next.js, Node.js, PostgreSQL, Docker",
+            "link": "https://github.com/example/platform",
+            "description": [
+              "Designed and deployed an end-to-end scalable architecture servicing heavy data traffic.",
+              "Enhanced reliability and query latency through optimized indexing and caching layers."
+            ]
+          }
+        ],
+        "skills": [
+          "React",
+          "Next.js",
+          "TypeScript",
+          "Node.js",
+          "PostgreSQL",
+          "Docker",
+          "AWS",
+          "Kubernetes",
+          "Ci/cd",
+          "Microservices"
+        ],
+        "certifications": [],
+        "languages": [
+          {
+            "id": "lang-1",
+            "name": "English",
+            "proficiency": "Native"
+          },
+          {
+            "id": "lang-2",
+            "name": "Professional Working",
+            "proficiency": "Fluent"
+          }
+        ]
+      },
+      "createdAt": "2026-10-29T11:49:53.769Z",
+      "updatedAt": "2026-10-29T11:49:53.769Z"
     },
     {
       "id": "res_mvsdxg1cyp7r",
@@ -2717,7 +2751,7 @@
   ],
   "analyses": [
     {
-      "id": "ana_mvthdh5c84xq",
+      "id": "ana_mw7u3qwzv99n",
       "userId": "usr_mvpabfxqsnc5",
       "resumeFileName": "Alex_Rivera_FullStack_CV.pdf",
       "targetRole": "Full-Stack Software Engineer",
@@ -2764,13 +2798,13 @@
           "contentQuality": 82
         }
       },
-      "createdAt": "2026-10-29T11:49:23.856Z",
-      "updatedAt": "2026-10-29T11:49:23.856Z"
+      "createdAt": "2026-11-08T12:54:31.427Z",
+      "updatedAt": "2026-11-08T12:54:31.427Z"
     }
   ],
   "coverLetters": [
     {
-      "id": "cl_mvthdh6d6ogf",
+      "id": "cl_mw7u3r19r5so",
       "userId": "usr_mvpabfxqsnc5",
       "title": "Cover Letter - Acme Cloud Technologies",
       "companyName": "Acme Cloud Technologies",
@@ -2816,9 +2850,9 @@
         "fullText": "Dear Engineering Hiring Team,\n\nI am writing to express my enthusiastic interest in the Junior Full-Stack Developer position at Acme Cloud Technologies. With proven experience building scalable web applications in React, TypeScript, and Node.js, I am excited about the opportunity to contribute to your engineering team.\n\nDuring my recent experience at NexTech Solutions, I contributed to key client-facing dashboards utilizing Next.js and Tailwind CSS, resulting in a 28% reduction in page latency. Additionally, I architected RESTful microservices with Node.js and MongoDB that successfully handle over 50,000 daily telemetry events with exceptional reliability.\n\nYour focus on developer velocity and resilient cloud architecture aligns closely with my dedication to writing clean, tested, and maintainable code. I thrive in collaborative Agile teams and take pride in delivering intuitive user interfaces backed by scalable server logic.\n\nThank you for your time and consideration. I welcome the opportunity to discuss how my technical skill set and drive for engineering excellence can benefit Acme Cloud Technologies.\n\nSincerely,\nAlex Rivera\nalex.rivera.dev@gmail.com | +1 (555) 349-8201"
       },
       "templateId": "modern",
-      "linkedResumeId": "res_mvthdh43ag4h",
-      "createdAt": "2026-10-29T11:49:23.893Z",
-      "updatedAt": "2026-10-29T11:49:23.893Z"
+      "linkedResumeId": "res_mw7u3qw6gpld",
+      "createdAt": "2026-11-08T12:54:31.581Z",
+      "updatedAt": "2026-11-08T12:54:31.581Z"
     },
     {
       "id": "cl_mvmkzm7b6q9s",
@@ -4486,61 +4520,1609 @@
   ],
   "jobCache": [
     {
-      "cacheKey": "job_search:backend engineer test cache:riyadh:all:sa",
+      "cacheKey": "job_search:مطور شامل (full stack):القاهرة, مصر:all:eg",
       "data": {
         "jobs": [
           {
-            "id": "test_job_1",
-            "title": "Senior Frontend Developer",
-            "company": "FinTech Hub",
-            "location": "Cairo, Egypt",
+            "id": "remotive_2091168",
+            "title": "US Remote Patient Care Advocate (Customer Service)",
+            "company": "VXI Global Solutions",
+            "location": "USA",
             "remote": true,
-            "description": "Looking for a Senior Frontend Developer skilled in React, TypeScript, Tailwind, and AWS.",
-            "url": "https://example.com/job/1",
+            "description": "Job Title: Patient Care Advocate Job Location: Remote About Us: We are a dedicated team focused on improving access to affordable prescription medications for patients. By partnering with insurance companies, healthcare providers, and pharmacies, we work to reduce the financial burden of medications, ensuring that patients can access the treatments they need without excessive costs. Role Overview:",
+            "url": "https://remotive.com/remote-jobs/customer-service/us-remote-patient-care-advocate-customer-service-2091168",
             "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-11-06",
+            "salary": "$25k - $35k",
             "tags": [
-              "React",
-              "TypeScript",
-              "AWS"
-            ]
-          }
-        ],
-        "totalFound": 1,
-        "attributions": [],
-        "sourcesQueried": []
-      },
-      "expiresAt": "2026-10-31T08:02:24.110Z",
-      "createdAt": "2026-10-31T02:02:24.111Z"
-    },
-    {
-      "cacheKey": "job_search:senior full stack developer cachetest:cairo, egypt:remote:eg",
-      "data": {
-        "jobs": [
+              "healthcare",
+              "insurance"
+            ],
+            "jobType": "full_time"
+          },
           {
-            "id": "raw_cache_job_1",
-            "title": "Senior Full Stack Developer",
-            "company": "NileCloud Tech",
-            "location": "Cairo, Egypt",
+            "id": "remotive_1185979",
+            "title": "Freelance Writer",
+            "company": "IAPWE",
+            "location": "Worldwide",
             "remote": true,
-            "description": "Seeking a Senior Full Stack Developer with strong expertise in React, TypeScript, Node.js, and PostgreSQL.",
-            "url": "https://example.com/jobs/nilecloud-1",
+            "description": "Our organization is seeking content writers to create articles and blog posts on a variety of topics. The rate of pay is $20 per 100 words (this comes out to approximately $100 per article or $50 per hour). Some topics you may be asked to write about include the following (you can always turn down a topic if you do not feel comfortable writing about it, however if you have experience or expertise ",
+            "url": "https://remotive.com/remote-jobs/writing/freelance-writer-1185979",
             "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-11-04",
+            "salary": "$50-$75 /hour",
             "tags": [
-              "React",
-              "TypeScript",
-              "Node.js",
-              "PostgreSQL"
-            ]
+              "REST"
+            ],
+            "jobType": "freelance"
+          },
+          {
+            "id": "remotive_2091166",
+            "title": "Content Reviewer - United States",
+            "company": "TELUS Digital",
+            "location": "USA",
+            "remote": true,
+            "description": "We are looking for an independent, flexible, remote opportunity where you can help improve AI-powered search technology from the comfort of your home? If you're curious, internet-savvy, and enjoy evaluating online content, this freelance project could be a great fit. A Day in the Life of a Content Reviewer - US In this role, you will analyze and provide feedback on text, webpages, images, and othe",
+            "url": "https://remotive.com/remote-jobs/all-others/content-reviewer-united-states-2091166",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-11-04",
+            "salary": "$14/hour",
+            "tags": [
+              "android",
+              "ios",
+              "social media",
+              "AI/ML"
+            ],
+            "jobType": "part_time"
+          },
+          {
+            "id": "remotive_1749306",
+            "title": "Freelance Copywriter",
+            "company": "Coalition Technologies ",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "CT Marketing Agency is seeking skilled Freelance Copywriters to write high-quality, SEO-driven content for eCommerce and lead generation websites. This is a freelance, project-based writing role. The ideal candidate has excellent English writing skills, strong research ability, and experience writing content that follows detailed, client-specific guidelines. Projects commonly include category page",
+            "url": "https://remotive.com/remote-jobs/writing/freelance-copywriter-1749306",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-11-02",
+            "salary": "$20k -$35k",
+            "tags": [
+              "accounting",
+              "excel",
+              "research",
+              "data analysis",
+              "bookkeeping",
+              "google sheets",
+              "quickbooks",
+              "data entry",
+              "insurance",
+              "G Suite"
+            ],
+            "jobType": "freelance"
+          },
+          {
+            "id": "remotive_2091165",
+            "title": "Full-Stack Developer",
+            "company": "Fluence International, Inc.",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "We’re looking for a pragmatic, security-minded Full-Stack Developer to help build and scale Fluence’s B2B products used by clinicians, researchers, and organizations in psychedelic-assisted therapy and mental health. You’ll work closely with and report to our Senior AI &amp; Design Lead to turn product requirements into robust, secure, and well-documented applications, as well as maintain existing",
+            "url": "https://remotive.com/remote-jobs/software-development/full-stack-developer-2091165",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-29",
+            "salary": "$3.5k–$5k/month",
+            "tags": [
+              "admin",
+              "api",
+              "AWS",
+              "backend",
+              "cloud",
+              "docker",
+              "frontend",
+              "fullstack",
+              "javascript",
+              "react",
+              "security",
+              "UI/UX",
+              "AI/ML",
+              "automation",
+              "documentation",
+              "healthcare",
+              "Typescript ",
+              "web applications",
+              "SOLID",
+              "JSON",
+              "serverless",
+              "next.js",
+              "github",
+              "REST",
+              "mental health",
+              "BaaS",
+              "datadog"
+            ],
+            "jobType": "contract"
+          },
+          {
+            "id": "remotive_2091135",
+            "title": "Senior Back-end Developer",
+            "company": "Lemon.io",
+            "location": "Europe, USA, Canada, Australia, Singapore, Mexico, Saudi Arabia",
+            "remote": true,
+            "description": "Lemon.io helps companies in the US and Europe hire experienced engineers, from funded startups to teams like Klarna, Retool, and Pinterest. We’ve been doing this since 2015, and more than 1,500 companies have hired engineers through us. Currently, we have a few open positions from our client, an AI-native cloud company. AI teams use its platform to run inference on open-source models, fine-tune th",
+            "url": "https://remotive.com/remote-jobs/software-development/senior-back-end-developer-2091135",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-27",
+            "tags": [
+              ".Net",
+              "android",
+              "C",
+              "C#",
+              "C++",
+              "cloud",
+              "data science",
+              "golang",
+              "ios",
+              "java",
+              "javascript",
+              "kubernetes",
+              "node.js",
+              "php",
+              "python",
+              "react",
+              "ruby/rails",
+              "scala",
+              "shopify",
+              "swift",
+              "UI/UX",
+              "wordpress",
+              "blockchain",
+              "AI/ML",
+              "automation",
+              "project management",
+              "react native",
+              "rust",
+              "unity",
+              "electron",
+              "spring",
+              "laravel",
+              "Ethereum",
+              "graphic design",
+              "Typescript ",
+              "distributed systems",
+              "angular ",
+              "firebase",
+              "data engineering",
+              "Site Reliability",
+              "Symfony",
+              "Linux/Unix",
+              "next.js",
+              "infrastructure",
+              "flutter",
+              "GPU"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_2091134",
+            "title": "Head of Engineering",
+            "company": "Lemon.io",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "About Lemon.io Lemon.io is a profitable, growing talent marketplace that connects vetted senior engineers with companies that need them. We’ve been in business for 10 years, have 60 people across Ukraine, Europe, Canada, and the US, and process over $16M in annual GMV. We compress the traditional 2–5 week hiring timeline down to 24–48 hours through a curated, pre-vetted supply of developers. Hirin",
+            "url": "https://remotive.com/remote-jobs/software-development/head-of-engineering-2091134",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-26",
+            "tags": [
+              "AI/ML",
+              "startup",
+              "marketplace",
+              "fundraising"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_2091161",
+            "title": "AI Trainer - Video Annotation",
+            "company": "iMerit Technology",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "AI Trainer - Video Annotation Remote | Independent Contractor Prove your skills. Get certified. Robotics AI is advancing rapidly, and high-quality video data helps intelligent systems better understand the world around them. We are inviting detail-oriented professionals to complete our certification process for potential robotics AI projects. ▌ What you will do As part of the certification process",
+            "url": "https://remotive.com/remote-jobs/artificial-intelligence/ai-trainer-video-annotation-2091161",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-22",
+            "salary": "70K-80K",
+            "tags": [
+              "video",
+              "AI/ML",
+              "robotics"
+            ],
+            "jobType": "freelance"
+          },
+          {
+            "id": "remotive_2091158",
+            "title": "Software Engineer, AI Coding Tasks",
+            "company": "Askable",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "We're looking for experienced software engineers to build AI coding tasks from a codebase they know well. US$1,000 per task, and you can do as many tasks as you want. You turn a real change from a repository you know into a task that today's best AI coding models struggle with: hard for the models, but fair for a skilled engineer. Your tasks are used to measure and train AI coding models. Remote, ",
+            "url": "https://remotive.com/remote-jobs/software-development/software-engineer-ai-coding-tasks-2091158",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-17",
+            "salary": "$1000 per task",
+            "tags": [
+              "C++",
+              "docker",
+              "git",
+              "go",
+              "java",
+              "python",
+              "security",
+              "AI/ML",
+              "rust",
+              "Typescript ",
+              "distributed systems",
+              "SOLID",
+              "Linux/Unix",
+              "testing",
+              "infrastructure"
+            ],
+            "jobType": "contract"
+          },
+          {
+            "id": "remotive_2069746",
+            "title": "Tech Lead Full-Stack Rails Engineer",
+            "company": "Mitre Media",
+            "location": "USA, Canada, USA timezones",
+            "remote": true,
+            "description": "About Mitre Media Mitre Media is redefining FinTech with AI-driven tools that empower millions of investors. Our portfolio, including Dividend.com and MutualFunds.com, leverages LLMs to deliver novel data insights and visually rich user experiences. For over a decade, we’ve served individual investors, financial advisors, and top asset managers like BlackRock and Vanguard through our premium data,",
+            "url": "https://remotive.com/remote-jobs/software-development/tech-lead-full-stack-rails-engineer-2069746",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-14",
+            "salary": "$170k - $200k",
+            "tags": [
+              "api",
+              "CSS",
+              "docker",
+              "elasticsearch",
+              "fullstack",
+              "html",
+              "javascript",
+              "kubernetes",
+              "postgresql",
+              "react",
+              "ror",
+              "ruby/rails",
+              "AI/ML",
+              "CAD",
+              "advertising",
+              "Redis",
+              "ES6",
+              "web applications",
+              "MySQL",
+              "NLP",
+              "fintech",
+              "Micro services",
+              "github",
+              "system architecture"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_1680495",
+            "title": "Remote Office Assistant",
+            "company": "Coalition Technologies ",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "Coalition Technologies is seeking a reliable, detail-oriented, and highly organized Remote Office Assistant to support administrative, bookkeeping, billing, reporting, data entry, and internal operations tasks. This role is ideal for someone with strong communication skills, discretion, attention to detail, and a willingness to learn and grow within a fast-paced remote work environment. As an Offi",
+            "url": "https://remotive.com/remote-jobs/marketing/remote-office-assistant-1680495",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-11",
+            "salary": "$35,3k- $52k",
+            "tags": [
+              "CSS",
+              "excel",
+              "frontend",
+              "git",
+              "html",
+              "illustrator",
+              "magento",
+              "photoshop",
+              "php",
+              "shopify",
+              "wordpress",
+              "MySQL",
+              "startup",
+              "responsive",
+              "themes",
+              "bootstrap",
+              "insurance",
+              "jQuery",
+              "Ajax"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_2086540",
+            "title": "Inside Sales Contractor",
+            "company": "Credit Wellness, LLC",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "About Us We are a financial services start up focusing on helping to improve consumer credit profiles. We are currently seeking KPI driven sales representatives looking to earn up to 45K in their first year while working remotely. We offer comprehensive training and continuous sales coaching to help you meet your financial goals. During our training period we offer a guaranteed training stipend wh",
+            "url": "https://remotive.com/remote-jobs/sales/inside-sales-contractor-2086540",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-08",
+            "salary": "OTE $25k - $35k",
+            "tags": [
+              "CRM",
+              "google sheets",
+              "financial services",
+              "Inside Sales"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "arbeitnow_staff-software-engineer-opentelemetry-python-instrumentation-germany-remote-427337",
+            "title": "Staff Software Engineer - OpenTelemetry Python instrumentation | Germany | Remote",
+            "company": "grafanalabs",
+            "location": "Europe / Global",
+            "remote": false,
+            "description": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Grafana Labs is the company behind Grafana Cloud, the fully managed observability platform trusted by more than 10,000 organizations to ensure reliability, resolve incidents faster, and optimize telemetry at scale. Built on open source and open standards and designed for interoperability across any stack, Grafana Cloud brings AI to observability ",
+            "url": "https://www.arbeitnow.com/jobs/companies/grafanalabs/staff-software-engineer-opentelemetry-python-instrumentation-germany-remote-427337",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "R&D: Ops"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_senior-full-stack-engineer-database-observability-grafana-cloud-germany-remote-305330",
+            "title": "Senior Full Stack Engineer | Database Observability, Grafana Cloud | Germany | Remote",
+            "company": "grafanalabs",
+            "location": "Europe / Global",
+            "remote": false,
+            "description": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Grafana Labs is the company behind Grafana Cloud, the fully managed observability platform trusted by more than 10,000 organizations to ensure reliability, resolve incidents faster, and optimize telemetry at scale. Built on open source and open standards and designed for interoperability across any stack, Grafana Cloud brings AI to observability ",
+            "url": "https://www.arbeitnow.com/jobs/companies/grafanalabs/senior-full-stack-engineer-database-observability-grafana-cloud-germany-remote-305330",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "R&D: Observability"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_senior-research-consultant-dach-b2b-focus-hamburg-hamburg-412684",
+            "title": "(Senior) Research Consultant DACH (B2B Focus) (m/f/d)",
+            "company": "appinio",
+            "location": "Hamburg, Hamburg",
+            "remote": false,
+            "description": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;&lt;strong&gt;Allow us to introduce ourselves&lt;/strong&gt;&lt;/p&gt; &lt;p&gt;Hello there! We’re Appinio, a global market research company that combines an AI-powered insights platform with expert consultancy. On a mission to make the world a little more fact-based, we help companies understand how consumers think and make smarter decisions.&lt",
+            "url": "https://www.arbeitnow.com/jobs/companies/appinio/senior-research-consultant-dach-b2b-focus-hamburg-hamburg-412684",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Research Excellence"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_senior-applied-value-engineer-munich-405479",
+            "title": "Senior Applied Value Engineer",
+            "company": "celonis",
+            "location": "Munich",
+            "remote": false,
+            "description": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Celonis is the trusted platform to industrialize Enterprise AI. At our core is the Celonis Context Model — which combines process data, business knowledge, and intelligence into a living digital twin of the enterprise that AI can actually understand, turning AI&#39;s operational blind spots into operational clarity. World&#39;s leading companies ",
+            "url": "https://www.arbeitnow.com/jobs/companies/celonis/senior-applied-value-engineer-munich-405479",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Value Engineering"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_data-platform-engineer-mid-level-berlin-396788",
+            "title": "Data Platform Engineer (Mid-Level)",
+            "company": "sumup",
+            "location": "Berlin",
+            "remote": false,
+            "description": "&lt;p&gt;&lt;span style=&quot;text-decoration: underline;&quot;&gt;Onsite Role - Office First&lt;/span&gt;&lt;/p&gt; &lt;h2&gt;&lt;strong&gt;Team description&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;As part of the Platform tribe, we&#39;re building a self-service, AI-ready &lt;strong&gt;Data Platform&lt;/strong&gt; that powers SumUp&#39;s next big bets: data, AI, and real-time analytics. Our team design",
+            "url": "https://www.arbeitnow.com/jobs/companies/sumup/data-platform-engineer-mid-level-berlin-396788",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Data Engineer/Scientist"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_strategy-future-leaders-graduate-program-dusseldorf-north-rhine-westphalia-300238",
+            "title": "Strategy - Future Leaders Graduate Program",
+            "company": "Teampicnic",
+            "location": "Düsseldorf, North Rhine-Westphalia",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Du kommst frisch aus dem Studium und bist bereit, direkt ins Herz unseres Businesses einzusteigen? Komplexe Challenges schrecken dich nicht ab - sondern motivieren dich erst recht? Dann gehörst du ins Consumer Team von Picnic. Unser 1-jähriges Trainee Programm ist kein Warm-up, sondern dein echtes Launchpad. Du startest dire",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/strategy-future-leaders-graduate-program-dusseldorf-north-rhine-westphalia-300238",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Graduate Programs"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_senior-operations-manager-falkensee-brandenburg-323478",
+            "title": "Senior Operations Manager (m/w/d)",
+            "company": "Teampicnic",
+            "location": "Falkensee, Brandenburg",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Bei Picnic betreiben wir einige der modernsten teilautomatisierten Fulfillment Center (FC) für Lebensmittel Europas - mit einer Mischung aus Robotik, smarter Software und einer People-First-Kultur. Mit über 3.000 EPVs (Electric Picnic Vehicle) liefern wir in über 100 deutschen Städten täglich Lebensmittel aus. Unsere jüngste",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/senior-operations-manager-falkensee-brandenburg-323478",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Operations"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_marketing-einkauf-werkstudent-dusseldorf-north-rhine-westphalia-256748",
+            "title": "Marketing Einkauf Werkstudent (m/w/d)",
+            "company": "Teampicnic",
+            "location": "Düsseldorf, North Rhine-Westphalia",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Als Online-Supermarkt ist das Herzstück unseres Businesses natürlich die Picnic App. Das Category Management Team sorgt dafür, dass unsere digitalen Regale in&amp;nbsp;&lt;strong&gt;allen 6 Regionen&lt;/strong&gt; perfekt mit lokalen Produkten ausgestattet sind.&lt;/p&gt; &lt;p&gt;Als WerkstudentIn bist du das operative Rück",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/marketing-einkauf-werkstudent-dusseldorf-north-rhine-westphalia-256748",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Students"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_graduate-operations-supervisor-nurnberg-bavaria-365340",
+            "title": "Graduate Operations Supervisor (m/w/d)",
+            "company": "Teampicnic",
+            "location": "Nürnberg, Bavaria",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Du hast dein Studium in der Tasche, sprühst vor Energie und willst nicht nur zuschauen, sondern echte Verantwortung übernehmen?&lt;br&gt;&lt;br&gt;Bei Picnic startest du direkt in einer Führungsrolle durch! Als Operations Supervisor (m/w/d) in unserem Fulfillment Center (FC) in Nürnberg bist du der Motor des Standorts. Unter",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/graduate-operations-supervisor-nurnberg-bavaria-365340",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Operations"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_einkauf-werkstudent-dusseldorf-north-rhine-westphalia-205146",
+            "title": "Einkauf Werkstudent (m/w/d)",
+            "company": "Teampicnic",
+            "location": "Düsseldorf, North Rhine-Westphalia",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Als Online-Supermarkt ist das Herzstück unseres Businesses natürlich die Picnic App. Das Einkauf Team sorgt dafür, dass unsere digitalen Regale in &lt;strong&gt;allen 6 Regionen&lt;/strong&gt; perfekt mit lokalen Produkten ausgestattet sind.&lt;/p&gt; &lt;p&gt;Als WerkstudentIn bist du das operative Rückgrat unseres Teams. M",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/einkauf-werkstudent-dusseldorf-north-rhine-westphalia-205146",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Students"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_e-commerce-werkstudent-dusseldorf-north-rhine-westphalia-94488",
+            "title": "E-Commerce Werkstudent (m/w/d)",
+            "company": "Teampicnic",
+            "location": "Düsseldorf, North Rhine-Westphalia",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Als Online-Supermarkt ist das Herzstück unseres Businesses natürlich die Picnic App. Das E-Commerce Team sorgt dafür, dass unsere digitalen Regale in &lt;strong&gt;allen 6 Regionen&lt;/strong&gt; perfekt mit lokalen Produkten ausgestattet sind.&lt;/p&gt; &lt;p&gt;Als WerkstudentIn bist du das operative Rückgrat unseres Teams",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/e-commerce-werkstudent-dusseldorf-north-rhine-westphalia-94488",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Students"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_commercial-future-leaders-graduate-program-dusseldorf-north-rhine-westphalia-91941",
+            "title": "Commercial - Future Leaders Graduate Program",
+            "company": "Teampicnic",
+            "location": "Düsseldorf, North Rhine-Westphalia",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Du kommst frisch aus dem Studium und bist bereit, direkt ins Herz unseres Businesses einzusteigen? Komplexe Challenges schrecken dich nicht ab - sondern motivieren dich erst recht? Dann gehörst du ins Consumer Team von Picnic. Unser 1-jähriges Trainee Programm ist kein Warm-up, sondern dein echtes Launchpad. Du startest dire",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/commercial-future-leaders-graduate-program-dusseldorf-north-rhine-westphalia-91941",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Graduate Programs"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_category-management-werkstudent-dusseldorf-north-rhine-westphalia-98132",
+            "title": "Category Management Werkstudent (m/w/d)",
+            "company": "Teampicnic",
+            "location": "Düsseldorf, North Rhine-Westphalia",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Als Online-Supermarkt ist das Herzstück unseres Businesses natürlich die Picnic App. Das Category Management Team sorgt dafür, dass unsere digitalen Regale in&amp;nbsp;&lt;strong&gt;allen 6 Regionen&lt;/strong&gt; perfekt mit lokalen Produkten ausgestattet sind.&lt;/p&gt; &lt;p&gt;&amp;nbsp;&lt;/p&gt; &lt;p&gt;Als Werkstuden",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/category-management-werkstudent-dusseldorf-north-rhine-westphalia-98132",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Students"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_category-management-future-leaders-graduate-program-dusseldorf-north-rhine-westphalia-369895",
+            "title": "Category Management - Future Leaders Graduate Program",
+            "company": "Teampicnic",
+            "location": "Düsseldorf, North Rhine-Westphalia",
+            "remote": false,
+            "description": "&lt;h2 style=&quot;text-align: justify;&quot;&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Du hast deinen Master frisch in der Tasche und willst im Commercial-Team bei Picnic durchstarten? Unser 1-jähriges Trainee Programm ohne Rotation&amp;nbsp;ist kein Warm-up, sondern dein echtes Launchpad. Als Junior Business Manager arbeitest du im Herzen unserer App - du tauchst tief in",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/category-management-future-leaders-graduate-program-dusseldorf-north-rhine-westphalia-369895",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Graduate Programs"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_graphene-device-physics-modeling-expert-aachen-88872",
+            "title": "Graphene Device Physics Modeling Expert (f/m/d)",
+            "company": "Black Semiconductor GmbH",
+            "location": "Aachen, Germany",
+            "remote": false,
+            "description": "About us We see the semiconductor industry as a realm of possibility. We see opportunity. We see the profound impact that our graphene solutions will have in transforming the industry. We invite you to join us in driving change with our fundamentally human-centered approach, uniting bright minds around a shared vision. The vision is: Prove to everybody that you can make a fundamental change. Prove",
+            "url": "https://www.arbeitnow.com/jobs/companies/black-semiconductor-gmbh/graphene-device-physics-modeling-expert-aachen-88872",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Design Enablement"
+            ],
+            "jobType": "Full Time"
+          },
+          {
+            "id": "arbeitnow_general-manager-league-of-legends-berlin-284785",
+            "title": "General Manager, League of Legends",
+            "company": "Fnatic",
+            "location": "Berlin",
+            "remote": false,
+            "description": "Fnatic League of Legends holds one of the richest histories and legacies in the game, from its inception to the present day. As General Manager, you will lead one of the premier teams in Fnatic’s portfolio, with a critical role in continually raising the bar and adding to that legacy of success. In 2027 we go into a rebuild, and we are looking for an exciting new General Manager to lead that effor",
+            "url": "https://www.arbeitnow.com/jobs/companies/fnatic/general-manager-league-of-legends-berlin-284785",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Pro-Gaming"
+            ],
+            "jobType": "Full Time"
+          },
+          {
+            "id": "arbeitnow_revenue-operations-manager-sales-excellence-cologne-148925",
+            "title": "Revenue Operations Manager - Sales Excellence",
+            "company": "SoSafe",
+            "location": "Cologne",
+            "remote": false,
+            "description": "About SoSafe SoSafe is a leading human risk management platform designed to transform the \"human factor\" from a security vulnerability into a proactive layer of defense. We focus on driving measurable behavior change and quantifiable risk reduction for our global customers. Your Role: Drive Sales Performance &amp; Velocity As Revenue Operations Manager for Sales Excellence, you will be the strateg",
+            "url": "https://www.arbeitnow.com/jobs/companies/sosafe/revenue-operations-manager-sales-excellence-cologne-148925",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Sales"
+            ],
+            "jobType": "Full Time"
+          },
+          {
+            "id": "arbeitnow_revenue-operations-manager-demand-generation-cologne-374664",
+            "title": "Revenue Operations Manager - Demand Generation",
+            "company": "SoSafe",
+            "location": "Cologne",
+            "remote": false,
+            "description": "About SoSafe SoSafe is a leading human risk management platform designed to transform the \"human factor\" from a security vulnerability into a proactive layer of defense. We focus on driving measurable behavior change and quantifiable risk reduction for our global customers. Your Role: Architect of Our Demand Engine As Revenue Operations Manager for Demand Generation, you will own the end-to-end op",
+            "url": "https://www.arbeitnow.com/jobs/companies/sosafe/revenue-operations-manager-demand-generation-cologne-374664",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Sales"
+            ],
+            "jobType": "Full Time"
+          },
+          {
+            "id": "arbeitnow_paid-social-growth-development-manager-berlin-429931",
+            "title": "Paid Social & Growth Development Manager (w/m/d)",
+            "company": "Enpal",
+            "location": "Berlin",
+            "remote": false,
+            "description": "Unser Ziel ist eine Solaranlage auf jedem Dach, ein Speicher in jedem Haus und ein E-Auto in jeder Garage. Enpal macht das möglich mit einer integrierten Gesamtlösung für dezentrale Energie – von Solaranlage und Batteriespeicher über Wallbox, Smart Meter bis zur Wärmepumpe. Herzstück ist unsere KI-gestützte Plattform Enpal.One +, die tausende Systeme intelligent vernetzt und Strombezug sowie -eins",
+            "url": "https://www.arbeitnow.com/jobs/companies/enpal/paid-social-growth-development-manager-berlin-429931",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Headquarter Growth"
+            ],
+            "jobType": "Full Time"
+          },
+          {
+            "id": "arbeitnow_analyst-cgo-office-berlin-403639",
+            "title": "Analyst CGO Office  (w/m/d)",
+            "company": "Enpal",
+            "location": "Berlin",
+            "remote": false,
+            "description": "Unser Ziel ist eine Solaranlage auf jedem Dach, ein Speicher in jedem Haus und ein E-Auto in jeder Garage. Enpal macht das möglich mit einer integrierten Gesamtlösung für dezentrale Energie – von Solaranlage und Batteriespeicher über Wallbox, Smart Meter bis zur Wärmepumpe. Herzstück ist unsere KI-gestützte Plattform Enpal.One +, die tausende Systeme intelligent vernetzt und Strombezug sowie -eins",
+            "url": "https://www.arbeitnow.com/jobs/companies/enpal/analyst-cgo-office-berlin-403639",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Headquarter Growth"
+            ],
+            "jobType": "Full Time"
           }
         ],
-        "totalFound": 1,
-        "attributions": [],
+        "totalFound": 32,
+        "attributions": [
+          {
+            "name": "Remotive",
+            "url": "https://remotive.com",
+            "text": "Powered by Remotive Remote Jobs API"
+          },
+          {
+            "name": "Arbeitnow",
+            "url": "https://www.arbeitnow.com",
+            "text": "Jobs provided via Arbeitnow Open Job Board API"
+          },
+          {
+            "name": "RemoteOK",
+            "url": "https://remoteok.com",
+            "text": "Remote positions aggregated via RemoteOK Public Feed"
+          },
+          {
+            "name": "The Muse",
+            "url": "https://www.themuse.com",
+            "text": "Job listings curated via The Muse Open Career Platform"
+          }
+        ],
         "sourcesQueried": [
-          "Remotive"
+          "Remotive",
+          "Arbeitnow",
+          "RemoteOK",
+          "The Muse"
+        ],
+        "providerStatus": [
+          {
+            "provider": "Remotive",
+            "status": "ok",
+            "count": 12,
+            "tookMs": 3082
+          },
+          {
+            "provider": "Arbeitnow",
+            "status": "ok",
+            "count": 20,
+            "tookMs": 4846
+          },
+          {
+            "provider": "RemoteOK",
+            "status": "ok",
+            "count": 0,
+            "tookMs": 4245
+          },
+          {
+            "provider": "The Muse",
+            "status": "failed",
+            "count": 0,
+            "tookMs": 4178,
+            "error": "HTTP 404"
+          },
+          {
+            "provider": "Adzuna",
+            "status": "skipped",
+            "count": 0,
+            "tookMs": 0,
+            "error": "ADZUNA_APP_ID or ADZUNA_APP_KEY is not configured"
+          },
+          {
+            "provider": "Jooble",
+            "status": "skipped",
+            "count": 0,
+            "tookMs": 0,
+            "error": "JOOBLE_API_KEY is not configured"
+          }
         ]
       },
-      "expiresAt": "2026-10-31T08:02:24.578Z",
-      "createdAt": "2026-10-31T02:02:24.578Z"
+      "expiresAt": "2026-11-08T16:02:05.481Z",
+      "createdAt": "2026-11-08T10:02:05.481Z"
+    },
+    {
+      "cacheKey": "job_search:software engineer:cairo, egypt:all:eg",
+      "data": {
+        "jobs": [
+          {
+            "id": "remotive_2091045",
+            "title": "Tier III Service Desk Engineer",
+            "company": "Unio Digital",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "Unió Digital is an Arizona-based managed service provider (MSP) delivering Managed IT Services, Low Voltage Cabling, Access Control, Video Surveillance, and Intrusion Services. We believe technology should be intuitive, not intimidating. We are looking for an experienced Tier 3 Service Desk Technician with exceptional problem-solving skills. You will serve as the escalation point within the team, ",
+            "url": "https://remotive.com/remote-jobs/information-technology/tier-iii-service-desk-engineer-2091045",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-11-06",
+            "tags": [
+              "azure",
+              "cisco",
+              "security",
+              "video",
+              "documentation",
+              "hardware",
+              "helpdesk",
+              "onboarding",
+              "MSP",
+              "ticketing",
+              "Microsoft 365",
+              "IT systems"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_2091168",
+            "title": "US Remote Patient Care Advocate (Customer Service)",
+            "company": "VXI Global Solutions",
+            "location": "USA",
+            "remote": true,
+            "description": "Job Title: Patient Care Advocate Job Location: Remote About Us: We are a dedicated team focused on improving access to affordable prescription medications for patients. By partnering with insurance companies, healthcare providers, and pharmacies, we work to reduce the financial burden of medications, ensuring that patients can access the treatments they need without excessive costs. Role Overview:",
+            "url": "https://remotive.com/remote-jobs/customer-service/us-remote-patient-care-advocate-customer-service-2091168",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-11-06",
+            "salary": "$25k - $35k",
+            "tags": [
+              "healthcare",
+              "insurance"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_1185979",
+            "title": "Freelance Writer",
+            "company": "IAPWE",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "Our organization is seeking content writers to create articles and blog posts on a variety of topics. The rate of pay is $20 per 100 words (this comes out to approximately $100 per article or $50 per hour). Some topics you may be asked to write about include the following (you can always turn down a topic if you do not feel comfortable writing about it, however if you have experience or expertise ",
+            "url": "https://remotive.com/remote-jobs/writing/freelance-writer-1185979",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-11-04",
+            "salary": "$50-$75 /hour",
+            "tags": [
+              "REST"
+            ],
+            "jobType": "freelance"
+          },
+          {
+            "id": "remotive_2091166",
+            "title": "Content Reviewer - United States",
+            "company": "TELUS Digital",
+            "location": "USA",
+            "remote": true,
+            "description": "We are looking for an independent, flexible, remote opportunity where you can help improve AI-powered search technology from the comfort of your home? If you're curious, internet-savvy, and enjoy evaluating online content, this freelance project could be a great fit. A Day in the Life of a Content Reviewer - US In this role, you will analyze and provide feedback on text, webpages, images, and othe",
+            "url": "https://remotive.com/remote-jobs/all-others/content-reviewer-united-states-2091166",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-11-04",
+            "salary": "$14/hour",
+            "tags": [
+              "android",
+              "ios",
+              "social media",
+              "AI/ML"
+            ],
+            "jobType": "part_time"
+          },
+          {
+            "id": "remotive_1749306",
+            "title": "Freelance Copywriter",
+            "company": "Coalition Technologies ",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "CT Marketing Agency is seeking skilled Freelance Copywriters to write high-quality, SEO-driven content for eCommerce and lead generation websites. This is a freelance, project-based writing role. The ideal candidate has excellent English writing skills, strong research ability, and experience writing content that follows detailed, client-specific guidelines. Projects commonly include category page",
+            "url": "https://remotive.com/remote-jobs/writing/freelance-copywriter-1749306",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-11-02",
+            "salary": "$20k -$35k",
+            "tags": [
+              "accounting",
+              "excel",
+              "research",
+              "data analysis",
+              "bookkeeping",
+              "google sheets",
+              "quickbooks",
+              "data entry",
+              "insurance",
+              "G Suite"
+            ],
+            "jobType": "freelance"
+          },
+          {
+            "id": "remotive_2091165",
+            "title": "Full-Stack Developer",
+            "company": "Fluence International, Inc.",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "We’re looking for a pragmatic, security-minded Full-Stack Developer to help build and scale Fluence’s B2B products used by clinicians, researchers, and organizations in psychedelic-assisted therapy and mental health. You’ll work closely with and report to our Senior AI &amp; Design Lead to turn product requirements into robust, secure, and well-documented applications, as well as maintain existing",
+            "url": "https://remotive.com/remote-jobs/software-development/full-stack-developer-2091165",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-29",
+            "salary": "$3.5k–$5k/month",
+            "tags": [
+              "admin",
+              "api",
+              "AWS",
+              "backend",
+              "cloud",
+              "docker",
+              "frontend",
+              "fullstack",
+              "javascript",
+              "react",
+              "security",
+              "UI/UX",
+              "AI/ML",
+              "automation",
+              "documentation",
+              "healthcare",
+              "Typescript ",
+              "web applications",
+              "SOLID",
+              "JSON",
+              "serverless",
+              "next.js",
+              "github",
+              "REST",
+              "mental health",
+              "BaaS",
+              "datadog"
+            ],
+            "jobType": "contract"
+          },
+          {
+            "id": "remotive_2091135",
+            "title": "Senior Back-end Developer",
+            "company": "Lemon.io",
+            "location": "Europe, USA, Canada, Australia, Singapore, Mexico, Saudi Arabia",
+            "remote": true,
+            "description": "Lemon.io helps companies in the US and Europe hire experienced engineers, from funded startups to teams like Klarna, Retool, and Pinterest. We’ve been doing this since 2015, and more than 1,500 companies have hired engineers through us. Currently, we have a few open positions from our client, an AI-native cloud company. AI teams use its platform to run inference on open-source models, fine-tune th",
+            "url": "https://remotive.com/remote-jobs/software-development/senior-back-end-developer-2091135",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-27",
+            "tags": [
+              ".Net",
+              "android",
+              "C",
+              "C#",
+              "C++",
+              "cloud",
+              "data science",
+              "golang",
+              "ios",
+              "java",
+              "javascript",
+              "kubernetes",
+              "node.js",
+              "php",
+              "python",
+              "react",
+              "ruby/rails",
+              "scala",
+              "shopify",
+              "swift",
+              "UI/UX",
+              "wordpress",
+              "blockchain",
+              "AI/ML",
+              "automation",
+              "project management",
+              "react native",
+              "rust",
+              "unity",
+              "electron",
+              "spring",
+              "laravel",
+              "Ethereum",
+              "graphic design",
+              "Typescript ",
+              "distributed systems",
+              "angular ",
+              "firebase",
+              "data engineering",
+              "Site Reliability",
+              "Symfony",
+              "Linux/Unix",
+              "next.js",
+              "infrastructure",
+              "flutter",
+              "GPU"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_2091134",
+            "title": "Head of Engineering",
+            "company": "Lemon.io",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "About Lemon.io Lemon.io is a profitable, growing talent marketplace that connects vetted senior engineers with companies that need them. We’ve been in business for 10 years, have 60 people across Ukraine, Europe, Canada, and the US, and process over $16M in annual GMV. We compress the traditional 2–5 week hiring timeline down to 24–48 hours through a curated, pre-vetted supply of developers. Hirin",
+            "url": "https://remotive.com/remote-jobs/software-development/head-of-engineering-2091134",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-26",
+            "tags": [
+              "AI/ML",
+              "startup",
+              "marketplace",
+              "fundraising"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_2091161",
+            "title": "AI Trainer - Video Annotation",
+            "company": "iMerit Technology",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "AI Trainer - Video Annotation Remote | Independent Contractor Prove your skills. Get certified. Robotics AI is advancing rapidly, and high-quality video data helps intelligent systems better understand the world around them. We are inviting detail-oriented professionals to complete our certification process for potential robotics AI projects. ▌ What you will do As part of the certification process",
+            "url": "https://remotive.com/remote-jobs/artificial-intelligence/ai-trainer-video-annotation-2091161",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-22",
+            "salary": "70K-80K",
+            "tags": [
+              "video",
+              "AI/ML",
+              "robotics"
+            ],
+            "jobType": "freelance"
+          },
+          {
+            "id": "remotive_2091158",
+            "title": "Software Engineer, AI Coding Tasks",
+            "company": "Askable",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "We're looking for experienced software engineers to build AI coding tasks from a codebase they know well. US$1,000 per task, and you can do as many tasks as you want. You turn a real change from a repository you know into a task that today's best AI coding models struggle with: hard for the models, but fair for a skilled engineer. Your tasks are used to measure and train AI coding models. Remote, ",
+            "url": "https://remotive.com/remote-jobs/software-development/software-engineer-ai-coding-tasks-2091158",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-17",
+            "salary": "$1000 per task",
+            "tags": [
+              "C++",
+              "docker",
+              "git",
+              "go",
+              "java",
+              "python",
+              "security",
+              "AI/ML",
+              "rust",
+              "Typescript ",
+              "distributed systems",
+              "SOLID",
+              "Linux/Unix",
+              "testing",
+              "infrastructure"
+            ],
+            "jobType": "contract"
+          },
+          {
+            "id": "remotive_2069746",
+            "title": "Tech Lead Full-Stack Rails Engineer",
+            "company": "Mitre Media",
+            "location": "USA, Canada, USA timezones",
+            "remote": true,
+            "description": "About Mitre Media Mitre Media is redefining FinTech with AI-driven tools that empower millions of investors. Our portfolio, including Dividend.com and MutualFunds.com, leverages LLMs to deliver novel data insights and visually rich user experiences. For over a decade, we’ve served individual investors, financial advisors, and top asset managers like BlackRock and Vanguard through our premium data,",
+            "url": "https://remotive.com/remote-jobs/software-development/tech-lead-full-stack-rails-engineer-2069746",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-14",
+            "salary": "$170k - $200k",
+            "tags": [
+              "api",
+              "CSS",
+              "docker",
+              "elasticsearch",
+              "fullstack",
+              "html",
+              "javascript",
+              "kubernetes",
+              "postgresql",
+              "react",
+              "ror",
+              "ruby/rails",
+              "AI/ML",
+              "CAD",
+              "advertising",
+              "Redis",
+              "ES6",
+              "web applications",
+              "MySQL",
+              "NLP",
+              "fintech",
+              "Micro services",
+              "github",
+              "system architecture"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_1680495",
+            "title": "Remote Office Assistant",
+            "company": "Coalition Technologies ",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "Coalition Technologies is seeking a reliable, detail-oriented, and highly organized Remote Office Assistant to support administrative, bookkeeping, billing, reporting, data entry, and internal operations tasks. This role is ideal for someone with strong communication skills, discretion, attention to detail, and a willingness to learn and grow within a fast-paced remote work environment. As an Offi",
+            "url": "https://remotive.com/remote-jobs/marketing/remote-office-assistant-1680495",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-11",
+            "salary": "$35,3k- $52k",
+            "tags": [
+              "CSS",
+              "excel",
+              "frontend",
+              "git",
+              "html",
+              "illustrator",
+              "magento",
+              "photoshop",
+              "php",
+              "shopify",
+              "wordpress",
+              "MySQL",
+              "startup",
+              "responsive",
+              "themes",
+              "bootstrap",
+              "insurance",
+              "jQuery",
+              "Ajax"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "remotive_2086540",
+            "title": "Inside Sales Contractor",
+            "company": "Credit Wellness, LLC",
+            "location": "Worldwide",
+            "remote": true,
+            "description": "About Us We are a financial services start up focusing on helping to improve consumer credit profiles. We are currently seeking KPI driven sales representatives looking to earn up to 45K in their first year while working remotely. We offer comprehensive training and continuous sales coaching to help you meet your financial goals. During our training period we offer a guaranteed training stipend wh",
+            "url": "https://remotive.com/remote-jobs/sales/inside-sales-contractor-2086540",
+            "source": "Remotive",
+            "sourceBadge": "Remotive",
+            "postedDate": "2026-10-08",
+            "salary": "OTE $25k - $35k",
+            "tags": [
+              "CRM",
+              "google sheets",
+              "financial services",
+              "Inside Sales"
+            ],
+            "jobType": "full_time"
+          },
+          {
+            "id": "arbeitnow_senior-account-manager-enterprise-de-munich-273318",
+            "title": "Senior Account Manager, Enterprise",
+            "company": "Airwallex",
+            "location": "DE - Munich",
+            "remote": false,
+            "description": "About Airwallex Airwallex is the AI-native financial operating system for a real-time, intelligent economy. More than 675,000 businesses, including McLaren Racing, Qantas, SHEIN, and TikTok, use us, directly or through our platform partners, to run their financial operations or build and monetize financial products of their own. We started in Melbourne in 2015 to build the infrastructure global co",
+            "url": "https://www.arbeitnow.com/jobs/companies/airwallex/senior-account-manager-enterprise-de-munich-273318",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Enterprise Business"
+            ],
+            "jobType": "Full Time"
+          },
+          {
+            "id": "arbeitnow_mid-senior-ai-llm-engineer-full-remote-germany-226087",
+            "title": "Mid/Senior AI LLM Engineer (Full Remote - Germany)",
+            "company": "EverAI",
+            "location": "Germany",
+            "remote": false,
+            "description": "Our Vision &amp; Products 🚀 EverAI — Building the Future of AI Companionship One of the Top 15 Largest &amp; Fastest-Growing AI Companies in the World 50 Million Users in 2 years — Help Us Reach 100M first, 500M next At EverAI , we’re shaping what it means to connect with AI. With 50 million users and counting , we're not just building products — we're creating entirely new categories. Our flagsh",
+            "url": "https://www.arbeitnow.com/jobs/companies/everai/mid-senior-ai-llm-engineer-full-remote-germany-226087",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "R&D"
+            ],
+            "jobType": "Full Time"
+          },
+          {
+            "id": "arbeitnow_remote-praktikant-consulting-headquarter-hamburg-und-stuttgart-228463",
+            "title": "Praktikant Consulting (w/m/d) | Headquarter Hamburg und Stuttgart",
+            "company": "enomyc GmbH",
+            "location": "Homeoffice",
+            "remote": true,
+            "description": "Wir sind die europaweit agierende Beratung für mittelständische Unternehmen, die im Digital- und KI-Zeitalter profitabel wachsen wollen. Dich erwartet ein Umfeld, in dem unternehmerische Freiheit auf höchste Professionalität trifft: anspruchsvolle Projekte, interdisziplinäre Teams und erfahrene Mentor:innen, die dein Potenzial gezielt fördern. Ob Praktikum, Berufseinstieg oder nächste Karrierestuf",
+            "url": "https://www.arbeitnow.com/jobs/companies/enomyc-gmbh/remote-praktikant-consulting-headquarter-hamburg-und-stuttgart-228463",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Remote"
+            ],
+            "jobType": "Student college"
+          },
+          {
+            "id": "arbeitnow_remote-interim-cro-chief-restructuring-officer-stuttgart-236539",
+            "title": "Interim CRO / Chief Restructuring Officer (m/w/d)",
+            "company": "enomyc GmbH",
+            "location": "Homeoffice",
+            "remote": true,
+            "description": "enomyc – Wir gestalten den Mittelstand von morgen. Wenn Unternehmen in herausfordernde Situationen geraten, braucht es Erfahrung, Klarheit und Menschen, die Verantwortung übernehmen. Für aktuelle und zukünftige Mandate bei mittelständischen Unternehmen bauen wir unser enomyc Interim Executive Network gezielt weiter aus und suchen erfahrene Chief Restructuring Officers (CRO) und Restrukturierungsma",
+            "url": "https://www.arbeitnow.com/jobs/companies/enomyc-gmbh/remote-interim-cro-chief-restructuring-officer-stuttgart-236539",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "People Advisory",
+              "Remote"
+            ],
+            "jobType": "Senior manager"
+          },
+          {
+            "id": "arbeitnow_data-scientist-heidelberg-388458",
+            "title": "Data Scientist (m/w/d)",
+            "company": "Rewire",
+            "location": "Heidelberg, Baden-Württemberg, Germany",
+            "remote": false,
+            "description": "Make impact. Be human. Stay curious. Who we are Founded in 2006, Rewire is an applied AI company helping organizations reinvent how they work with data and AI. We partner with leading organizations across industries to create scalable business impact by solving complex challenges through data, AI, and technology. Our team of 100+ data scientists, engineers, and change agents operates across Europe",
+            "url": "https://www.arbeitnow.com/jobs/companies/rewire/data-scientist-heidelberg-388458",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Data Science"
+            ],
+            "jobType": "Entry"
+          },
+          {
+            "id": "arbeitnow_cloud-engineer-heidelberg-100809",
+            "title": "Cloud Engineer (m/w/d)",
+            "company": "Rewire",
+            "location": "Heidelberg, Baden-Württemberg, Germany",
+            "remote": false,
+            "description": "Make impact. Be human. Stay curious. Who we are Founded in 2006, Rewire is an applied AI company helping organizations reinvent how they work with data and AI. We partner with leading organizations across industries to create scalable business impact by solving complex challenges through data, AI, and technology. Our team of 100+ data scientists, engineers, and change agents operates across Europe",
+            "url": "https://www.arbeitnow.com/jobs/companies/rewire/cloud-engineer-heidelberg-100809",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Cloud Engineering"
+            ],
+            "jobType": "Entry"
+          },
+          {
+            "id": "arbeitnow_security-engineer-hamburg-430741",
+            "title": "Security Engineer",
+            "company": "freiheit.com technologies",
+            "location": "Hamburg",
+            "remote": false,
+            "description": "ÜBER UNSERE COMPANY freiheit.com wurde 1999 in Hamburg gegründet und entwickelt seitdem custom large-scale Softwareprodukte. Unsere Mission ist: “Ship great software”. In mehr als zwei Jahrzehnten haben wir immer das ausgeliefert, was wir versprochen haben – “always on time, on budget, on target and on quality”. 85% unserer Members sind Software Engineers mit Abschlüssen in Informatik, Physik oder",
+            "url": "https://www.arbeitnow.com/jobs/companies/freiheitcom-technologies/security-engineer-hamburg-430741",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Security"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_account-executive-dach-smb-dusseldorf-72222",
+            "title": "Account Executive DACH - SMB (m/f/d)",
+            "company": "Agicap",
+            "location": "Düsseldorf 🇩🇪",
+            "remote": false,
+            "description": "About Agicap &nbsp; Created in Lyon in 2016 by three French entrepreneurs, Agicap is one of the fastest scale-ups in Europe, with over 8000 customers, 650 employees and fast revenue growth (7x between 2021 and 2024). Agicap is part of the French Tech 120, rewarding the most promising startups in France. &nbsp; Agicap allows Finance teams of Mid-Market companies to efficiently manage and forecast t",
+            "url": "https://www.arbeitnow.com/jobs/companies/agicap/account-executive-dach-smb-dusseldorf-72222",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Account Executives"
+            ],
+            "jobType": "Permanent - Full-time"
+          },
+          {
+            "id": "arbeitnow_account-executive-dach-mid-market-berlin-374133",
+            "title": "Account Executive DACH - Mid-Market (m/f/d)",
+            "company": "Agicap",
+            "location": "Berlin 🇩🇪",
+            "remote": false,
+            "description": "About Agicap Created in Lyon in 2016 by three French entrepreneurs, Agicap is one of the fastest scale-ups in Europe, with over 8000 customers, 650 employees and fast revenue growth (7x between 2021 and 2024). Agicap is part of the French Tech 120, rewarding the most promising startups in France. Agicap allows Finance teams of Mid-Market companies to efficiently manage and forecast their cash, pay",
+            "url": "https://www.arbeitnow.com/jobs/companies/agicap/account-executive-dach-mid-market-berlin-374133",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Account Executives"
+            ],
+            "jobType": "Permanent - Full-time"
+          },
+          {
+            "id": "arbeitnow_account-executive-dach-mid-market-dusseldorf-271701",
+            "title": "Account Executive DACH - Mid-Market (m/f/d)",
+            "company": "Agicap",
+            "location": "Düsseldorf 🇩🇪",
+            "remote": false,
+            "description": "About Agicap Created in Lyon in 2016 by three French entrepreneurs, Agicap is one of the fastest scale-ups in Europe, with over 8000 customers, 650 employees and fast revenue growth (7x between 2021 and 2024). Agicap is part of the French Tech 120, rewarding the most promising startups in France. Agicap allows Finance teams of Mid-Market companies to efficiently manage and forecast their cash, pay",
+            "url": "https://www.arbeitnow.com/jobs/companies/agicap/account-executive-dach-mid-market-dusseldorf-271701",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Account Executives"
+            ],
+            "jobType": "Permanent - Full-time"
+          },
+          {
+            "id": "arbeitnow_ms-dynamics-senior-functional-manager-frankfurt-91274",
+            "title": "MS Dynamics Senior Functional Manager",
+            "company": "Emma – The Sleep Company",
+            "location": "Frankfurt",
+            "remote": false,
+            "description": "Ready to lead, disrupt and reinvent the sleep industry? We are Emma – The Sleep Company . Founded in 2015, we have grown into the world’s largest direct-to-consumer (D2C) sleep brand, with a presence in over 20 markets and more than 35 Emma stores across Europe. Our mission is simple: to develop sleep comfort products that empower our customers to awaken their best every day. Today, our products a",
+            "url": "https://www.arbeitnow.com/jobs/companies/emma-the-sleep-company/ms-dynamics-senior-functional-manager-frankfurt-91274",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "ERP"
+            ],
+            "jobType": "Permanent – Full Time"
+          },
+          {
+            "id": "arbeitnow_senior-frontend-engineer-react-berlin-436327",
+            "title": "Senior Frontend Engineer - React",
+            "company": "Researchgate",
+            "location": "Berlin",
+            "remote": false,
+            "description": "ResearchGate is the professional network for scientists and researchers. From climate change and emerging diseases to food security and the responsible development of AI, the challenges facing our world are complex. Still, we’re optimistic about the power of millions of scientists working together to tackle them. We provide scientists with the help and support they need by connecting them to the w",
+            "url": "https://www.arbeitnow.com/jobs/companies/researchgate/senior-frontend-engineer-react-berlin-436327",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Engineering"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_performance-marketing-manager-berlin-490590",
+            "title": "Performance Marketing Manager",
+            "company": "HeyVera GmbH",
+            "location": "Berlin",
+            "remote": false,
+            "description": "Über HeyVera Unsere KI-Assistentin Vera übernimmt die Telefonie für Hausverwaltungen: Sie nimmt Anliegen auf, erkennt Notfälle und spielt alles direkt in die Verwaltersoftware ein. Über 250 Hausverwaltungen setzen bereits auf HeyVera. Damit uns noch mehr Verwaltungen kennenlernen, suchen wir jemanden, der unser Marketing mit messbaren Kampagnen voranbringt. Deine Rolle Als Performance Marketing Ma",
+            "url": "https://www.arbeitnow.com/jobs/companies/heyvera-gmbh/performance-marketing-manager-berlin-490590",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Online Marketing"
+            ],
+            "jobType": "Unbefristeter arbeitsvertrag"
+          },
+          {
+            "id": "arbeitnow_staff-software-engineer-opentelemetry-python-instrumentation-germany-remote-427337",
+            "title": "Staff Software Engineer - OpenTelemetry Python instrumentation | Germany | Remote",
+            "company": "grafanalabs",
+            "location": "Europe / Global",
+            "remote": false,
+            "description": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Grafana Labs is the company behind Grafana Cloud, the fully managed observability platform trusted by more than 10,000 organizations to ensure reliability, resolve incidents faster, and optimize telemetry at scale. Built on open source and open standards and designed for interoperability across any stack, Grafana Cloud brings AI to observability ",
+            "url": "https://www.arbeitnow.com/jobs/companies/grafanalabs/staff-software-engineer-opentelemetry-python-instrumentation-germany-remote-427337",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "R&D: Ops"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_senior-full-stack-engineer-database-observability-grafana-cloud-germany-remote-305330",
+            "title": "Senior Full Stack Engineer | Database Observability, Grafana Cloud | Germany | Remote",
+            "company": "grafanalabs",
+            "location": "Europe / Global",
+            "remote": false,
+            "description": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Grafana Labs is the company behind Grafana Cloud, the fully managed observability platform trusted by more than 10,000 organizations to ensure reliability, resolve incidents faster, and optimize telemetry at scale. Built on open source and open standards and designed for interoperability across any stack, Grafana Cloud brings AI to observability ",
+            "url": "https://www.arbeitnow.com/jobs/companies/grafanalabs/senior-full-stack-engineer-database-observability-grafana-cloud-germany-remote-305330",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "R&D: Observability"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_senior-research-consultant-dach-b2b-focus-hamburg-hamburg-412684",
+            "title": "(Senior) Research Consultant DACH (B2B Focus) (m/f/d)",
+            "company": "appinio",
+            "location": "Hamburg, Hamburg",
+            "remote": false,
+            "description": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;&lt;strong&gt;Allow us to introduce ourselves&lt;/strong&gt;&lt;/p&gt; &lt;p&gt;Hello there! We’re Appinio, a global market research company that combines an AI-powered insights platform with expert consultancy. On a mission to make the world a little more fact-based, we help companies understand how consumers think and make smarter decisions.&lt",
+            "url": "https://www.arbeitnow.com/jobs/companies/appinio/senior-research-consultant-dach-b2b-focus-hamburg-hamburg-412684",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Research Excellence"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_senior-applied-value-engineer-munich-405479",
+            "title": "Senior Applied Value Engineer",
+            "company": "celonis",
+            "location": "Munich",
+            "remote": false,
+            "description": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;Celonis is the trusted platform to industrialize Enterprise AI. At our core is the Celonis Context Model — which combines process data, business knowledge, and intelligence into a living digital twin of the enterprise that AI can actually understand, turning AI&#39;s operational blind spots into operational clarity. World&#39;s leading companies ",
+            "url": "https://www.arbeitnow.com/jobs/companies/celonis/senior-applied-value-engineer-munich-405479",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Value Engineering"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_data-platform-engineer-mid-level-berlin-396788",
+            "title": "Data Platform Engineer (Mid-Level)",
+            "company": "sumup",
+            "location": "Berlin",
+            "remote": false,
+            "description": "&lt;p&gt;&lt;span style=&quot;text-decoration: underline;&quot;&gt;Onsite Role - Office First&lt;/span&gt;&lt;/p&gt; &lt;h2&gt;&lt;strong&gt;Team description&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;As part of the Platform tribe, we&#39;re building a self-service, AI-ready &lt;strong&gt;Data Platform&lt;/strong&gt; that powers SumUp&#39;s next big bets: data, AI, and real-time analytics. Our team design",
+            "url": "https://www.arbeitnow.com/jobs/companies/sumup/data-platform-engineer-mid-level-berlin-396788",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Data Engineer/Scientist"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_strategy-future-leaders-graduate-program-dusseldorf-north-rhine-westphalia-300238",
+            "title": "Strategy - Future Leaders Graduate Program",
+            "company": "Teampicnic",
+            "location": "Düsseldorf, North Rhine-Westphalia",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Du kommst frisch aus dem Studium und bist bereit, direkt ins Herz unseres Businesses einzusteigen? Komplexe Challenges schrecken dich nicht ab - sondern motivieren dich erst recht? Dann gehörst du ins Consumer Team von Picnic. Unser 1-jähriges Trainee Programm ist kein Warm-up, sondern dein echtes Launchpad. Du startest dire",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/strategy-future-leaders-graduate-program-dusseldorf-north-rhine-westphalia-300238",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Graduate Programs"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "arbeitnow_senior-operations-manager-falkensee-brandenburg-323478",
+            "title": "Senior Operations Manager (m/w/d)",
+            "company": "Teampicnic",
+            "location": "Falkensee, Brandenburg",
+            "remote": false,
+            "description": "&lt;h2&gt;&lt;strong&gt;Kurz und knapp&lt;/strong&gt;&lt;/h2&gt; &lt;p&gt;Bei Picnic betreiben wir einige der modernsten teilautomatisierten Fulfillment Center (FC) für Lebensmittel Europas - mit einer Mischung aus Robotik, smarter Software und einer People-First-Kultur. Mit über 3.000 EPVs (Electric Picnic Vehicle) liefern wir in über 100 deutschen Städten täglich Lebensmittel aus. Unsere jüngste",
+            "url": "https://www.arbeitnow.com/jobs/companies/teampicnic/senior-operations-manager-falkensee-brandenburg-323478",
+            "source": "Arbeitnow",
+            "sourceBadge": "Arbeitnow",
+            "postedDate": "2026-11-08",
+            "tags": [
+              "Operations"
+            ],
+            "jobType": "Full-time"
+          },
+          {
+            "id": "remoteok_1131629",
+            "title": "Intern SD Engineer",
+            "company": "Copious",
+            "location": "Maharashtra",
+            "remote": true,
+            "description": "&lt;p dir=&quot;ltr&quot; style=&quot;line-height:1.38;text-align: justify;background-color:#ffffff;margin-top:0pt;margin-bottom:0pt;&quot;&gt;&lt;span style=&quot;font-size:10pt;font-family:&#39;DM Sans&#39;,sans-serif;color:#434343;background-color:transparent;font-weight:600;font-style:italic;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre;white-space:pre-wrap;&",
+            "url": "https://remoteOK.com/remote-jobs/remote-intern-sd-engineer-copious-1131629",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-19",
+            "tags": [
+              "internship",
+              "engineer",
+              "software",
+              "dev"
+            ],
+            "jobType": "Full-time Remote"
+          },
+          {
+            "id": "remoteok_1131578",
+            "title": "Senior Software Engineer",
+            "company": "CentralReach",
+            "location": "Remote - US",
+            "remote": true,
+            "description": "CentralReach is a leading provider of autism and IDD care software for Applied Behavior Analysis (ABA), multidisciplinary therapy, and special education. Trusted by more than 200,000 users, we enable therapy providers, educators, and employers to scale the way they deliver ABA and related therapies with innovative technology, market-leading industry expertise, and world-class customer satisfaction",
+            "url": "https://remoteOK.com/remote-jobs/remote-senior-software-engineer-centralreach-1131578",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-13",
+            "tags": [
+              "senior",
+              "software",
+              "engineer",
+              "saas",
+              "healthcare",
+              "medical"
+            ],
+            "jobType": "Full-time Remote"
+          },
+          {
+            "id": "remoteok_1131575",
+            "title": "Engenharia Software Engineer III Golang",
+            "company": "Stone",
+            "location": "Remoto",
+            "remote": true,
+            "description": "Quem Ã© Stone Tech? A Stone nasceu com o propÃ³sito de ser protagonista na transformaÃ§Ã£o da indÃºstria de pagamentos, lutando para oferecer as melhores soluÃ§Ãµes para quem empreende no Brasil. Pensando nisso, construÃ­mos a Stone Tech! A junÃ§Ã£o dos times de tecnologia Stone Co. e as empresas financeiras do grupo que reconhecem o potencial empreendedor de cada brasileiro. Por aqui, temos todas",
+            "url": "https://remoteOK.com/remote-jobs/remote-engenharia-software-engineer-iii-golang-stone-1131575",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-13",
+            "tags": [
+              "golang",
+              "engineer",
+              "software",
+              "senior",
+              "backend"
+            ],
+            "jobType": "Full-time Remote"
+          },
+          {
+            "id": "remoteok_1131567",
+            "title": "Senior Software Engineer",
+            "company": "Phaidra",
+            "location": "Remote - United States",
+            "remote": true,
+            "description": "About Phaidra Phaidra is building the future of industrial automation. The world today is filled with static, monolithic infrastructure. Factories, power plants, buildings, etc. operate the same they've operated for decades â because the controls programming is hard-coded. Thousands of lines of rules and heuristics that define how the machines interact with each other. The result of all this har",
+            "url": "https://remoteOK.com/remote-jobs/remote-senior-software-engineer-phaidra-1131567",
+            "source": "RemoteOK",
+            "sourceBadge": "RemoteOK",
+            "postedDate": "2026-05-13",
+            "tags": [
+              "senior",
+              "engineer",
+              "software",
+              "ai",
+              "machine learning",
+              "artificial intelligence"
+            ],
+            "jobType": "Full-time Remote"
+          }
+        ],
+        "totalFound": 37,
+        "attributions": [
+          {
+            "name": "Remotive",
+            "url": "https://remotive.com",
+            "text": "Powered by Remotive Remote Jobs API"
+          },
+          {
+            "name": "Arbeitnow",
+            "url": "https://www.arbeitnow.com",
+            "text": "Jobs provided via Arbeitnow Open Job Board API"
+          },
+          {
+            "name": "RemoteOK",
+            "url": "https://remoteok.com",
+            "text": "Remote positions aggregated via RemoteOK Public Feed"
+          },
+          {
+            "name": "The Muse",
+            "url": "https://www.themuse.com",
+            "text": "Job listings curated via The Muse Open Career Platform"
+          }
+        ],
+        "sourcesQueried": [
+          "Remotive",
+          "Arbeitnow",
+          "RemoteOK",
+          "The Muse"
+        ],
+        "providerStatus": [
+          {
+            "provider": "Remotive",
+            "status": "ok",
+            "count": 13,
+            "tookMs": 582
+          },
+          {
+            "provider": "Arbeitnow",
+            "status": "ok",
+            "count": 20,
+            "tookMs": 2433
+          },
+          {
+            "provider": "RemoteOK",
+            "status": "ok",
+            "count": 4,
+            "tookMs": 820
+          },
+          {
+            "provider": "The Muse",
+            "status": "failed",
+            "count": 0,
+            "tookMs": 490,
+            "error": "HTTP 403"
+          },
+          {
+            "provider": "Adzuna",
+            "status": "skipped",
+            "count": 0,
+            "tookMs": 0,
+            "error": "ADZUNA_APP_ID or ADZUNA_APP_KEY is not configured"
+          },
+          {
+            "provider": "Jooble",
+            "status": "skipped",
+            "count": 0,
+            "tookMs": 0,
+            "error": "JOOBLE_API_KEY is not configured"
+          }
+        ]
+      },
+      "expiresAt": "2026-11-08T18:41:19.812Z",
+      "createdAt": "2026-11-08T12:41:19.812Z"
     }
   ],
   "orders": [

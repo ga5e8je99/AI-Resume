@@ -316,7 +316,7 @@ const ar: TranslationDictionary = {
   common_copied: 'تم النسخ',
 
   // Auth & Demo
-  auth_demo_button: '⚡ تجربة فورية بدون تسجيل',
+  auth_demo_button: '  تجربة فورية بدون تسجيل',
   auth_demo_loading: 'جارٍ تجهيز حساب المعاينة...',
   auth_demo_desc: 'جرب جميع المزايا فوراً مع سيرة ذاتية جاهزة، ونتائج تشخيص للـ ATS، وخطابات تقديم مخصصة.',
   auth_login_title: 'مرحباً بعودتك',
@@ -475,7 +475,7 @@ const ar: TranslationDictionary = {
 
   // Additional Hero Keys
   hero_scan_cta: 'افحص سيرتي مجاناً',
-  hero_demo_cta: '⚡ جرب النسخة التجريبية',
+  hero_demo_cta: '  جرب النسخة التجريبية',
   hero_trust_free: 'مجاني للبدء',
   hero_trust_no_card: 'بدون بطاقة بنكية',
   hero_trust_instant: 'نتائج فورية',
@@ -497,7 +497,7 @@ const ar: TranslationDictionary = {
   // Additional Auth Keys
   auth_login_submitting: 'جاري تسجيل الدخول...',
   auth_login_or_demo: 'أو استكشف فورياً بدون تسجيل:',
-  auth_login_demo_btn: '⚡ جرب النسخة التجريبية فوراً',
+  auth_login_demo_btn: 'جرب النسخة التجريبية فوراً',
   auth_login_demo_hint: 'جلسة تجريبية فورية ببيانات جاهزة',
   auth_login_trust_banner_title: 'سير ذاتية مهندسة لأنظمة التوظيف الحديثة',
   auth_login_trust_feature1: 'تنسيقات عمود واحد معتمدة لدى Workday وTaleo',

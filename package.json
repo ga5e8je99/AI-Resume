@@ -33,6 +33,7 @@
     "mammoth": "^1.13.0",
     "mongoose": "^9.11.3",
     "next": "16.0.7",
+    "nodemailer": "^10.4.0",
     "pdfjs-dist": "^5.4.449",
     "posthog-js": "^1.438.24",
     "react": "19.2.0",

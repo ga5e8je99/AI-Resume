@@ -12,6 +12,7 @@ import CompactTemplate from '../templates/CompactTemplate';
 import TwoColumnTemplate from '../templates/TwoColumnTemplate';
 import AtsFriendlyTemplate from '../templates/AtsFriendlyTemplate';
 import SimpleTemplate from '../templates/SimpleTemplate';
+import MinimalTemplate from '../templates/MinimalTemplate';
 import { ZoomIn, ZoomOut, Maximize2, Printer, Check } from 'lucide-react';
 
 interface ResumePreviewProps {
@@ -102,6 +103,8 @@ export const ResumePreview = React.memo(function ResumePreview({
         return <LondonTemplate data={data} theme={theme} />;
       case 'modern':
         return <ModernTemplate data={data} theme={theme} />;
+      case 'minimal':
+        return <MinimalTemplate data={data} theme={theme} />;
       case 'classic':
       default:
         return <ClassicTemplate data={data} theme={theme} />;
@@ -192,6 +195,7 @@ export const ResumePreview = React.memo(function ResumePreview({
             {/* Paper Sheet with printable ID */}
             <div
               id="resume-preview"
+              data-font-size={theme.fontSize || 'base'}
               dir={theme.documentLanguage === 'ar' ? 'rtl' : 'ltr'}
               className={`bg-white text-ink shadow-xs border border-line print:border-none print:shadow-none overflow-hidden print:w-full print:min-h-0 print:m-0 ${
                 theme.documentLanguage === 'ar' ? 'font-arabic' : ''

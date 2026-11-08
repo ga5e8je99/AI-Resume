@@ -19,7 +19,7 @@ export default function LondonTemplate({ data, theme }: TemplateProps) {
   return (
     <div 
       className="bg-white text-gray-900 w-full min-h-[1050px] p-12 font-serif leading-relaxed text-[13px] print:p-8"
-      style={{ fontFamily: theme.documentLanguage === 'ar' ? 'var(--font-arabic), "IBM Plex Sans Arabic", sans-serif' : (theme.fontFamily.includes('serif') ? theme.fontFamily : 'Georgia, serif') }}
+      style={{ fontFamily: theme.fontFamily || (theme.documentLanguage === 'ar' ? 'var(--font-arabic), "IBM Plex Sans Arabic", sans-serif' : 'Georgia, serif') }}
       dir={h.dir}
     >
       {/* Centered London Header */}

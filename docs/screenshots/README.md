@@ -27,7 +27,7 @@ Capture all screenshots in **Dark Mode** (`class="dark"` on `<html>`, default sy
 
 2. **Authenticate with Demo Data:**
    - Navigate to `http://localhost:3000/login`
-   - Click **"⚡ Try Demo Instantly"** (`⚡ جرّب النظام فوراً`) to populate sample resumes and ATS reports.
+   - Click **"  Try Demo Instantly"** (`  جرّب النظام فوراً`) to populate sample resumes and ATS reports.
 
 3. **Capture Viewports:**
    - **Desktop Screenshots (01 to 06):** Set browser viewport to `1440px × 900px` (or `1920px × 1080px`).

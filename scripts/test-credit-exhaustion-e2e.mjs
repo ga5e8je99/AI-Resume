@@ -25,7 +25,7 @@ async function startServerIfNeeded() {
     return null;
   }
 
-  console.log(`⚡ Starting Next.js test server on ${BASE_URL}...`);
+  console.log(`  Starting Next.js test server on ${BASE_URL}...`);
   const server = spawn('npx', ['next', 'start', '-p', String(PORT)], {
     shell: true,
     stdio: 'ignore',

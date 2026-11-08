@@ -15,8 +15,8 @@
 ## 🌐 Live Demo & Instant Access
 
 - **Live Application:** [https://YOUR-APP.vercel.app](https://YOUR-APP.vercel.app) *(Replace with your Vercel deployment URL)*
-- **⚡ Try Demo Instantly (`⚡ جرّب النظام فوراً`):**
-  Navigate to `/login` and click the prominent amber **"⚡ Try Demo Instantly"** button. You will be authenticated immediately with zero registration required. The demo session is pre-seeded with:
+- **  Try Demo Instantly (`  جرّب النظام فوراً`):**
+  Navigate to `/login` and click the prominent amber **"  Try Demo Instantly"** button. You will be authenticated immediately with zero registration required. The demo session is pre-seeded with:
   1. A complete **Junior Full-Stack Developer** resume that renders in the builder.
   2. A realistic **ATS Diagnostic Report** with an overall score of `88` ("Strong Match"), keyword analysis, and formatting suggestions.
   3. A tailored **AI Cover Letter Draft** formatted for cloud engineering applications.
@@ -45,7 +45,7 @@
 - **Keyword Extraction:** Automatic skill extraction from raw job description text or direct URL fetching with SSRF protection.
 - **Zero-Downtime Fallback Engine:** If external AI keys are omitted, rate-limited, or offline, the platform seamlessly activates its built-in algorithmic ATS synthesizer without failing or interrupting the user experience.
 
-### ⚡ Guest Demo System & Security
+###   Guest Demo System & Security
 - **Idempotent Seeding:** Pre-populates clean demonstration data without creating duplicate documents on repeated clicks.
 - **Hardened Demo Guards:** Demo accounts are locked in exploration mode; credentials cannot be modified, accounts cannot be deleted, and paid credits cannot be drained.
 - **Enterprise-Grade Security:** Sliding-window in-memory rate limiting, strict IDOR ownership checks, CSRF origin verification, and HTML/XSS sanitization.

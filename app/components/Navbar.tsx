@@ -320,7 +320,6 @@ export default function Navbar() {
   const isStandaloneRoute =
     pathname === '/admin' ||
     pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/builder') ||
     pathname.startsWith('/cv-builder') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
@@ -575,7 +574,7 @@ export default function Navbar() {
   return (
     <>
       <header
-        className={`sticky top-0 z-40 w-full transition-all duration-[250ms] ${
+        className={`print:hidden sticky top-0 z-40 w-full transition-all duration-[250ms] ${
           isScrolled
             ? 'bg-paper/90 backdrop-blur-md border-b border-line-strong shadow-subtle'
             : 'bg-paper/80 backdrop-blur-xs border-b border-transparent'

@@ -26,14 +26,17 @@ export default function AosProvider() {
       document.documentElement.classList.remove('js-aos');
     }
 
-    AOS.init({
-      duration: 700,
-      easing: 'ease-out-cubic',
-      once: true,
-      offset: 80,
-      disable: () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    });
-    aosInitialized = true;
+    // Initialize AOS safely on the next tick after initial React hydration completes
+    const initTimer = setTimeout(() => {
+      AOS.init({
+        duration: 700,
+        easing: 'ease-out-cubic',
+        once: true,
+        offset: 80,
+        disable: () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      });
+      aosInitialized = true;
+    }, 50);
 
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     const handleMotionChange = (e: MediaQueryListEvent) => {
@@ -47,6 +50,7 @@ export default function AosProvider() {
 
     mediaQuery.addEventListener('change', handleMotionChange);
     return () => {
+      clearTimeout(initTimer);
       mediaQuery.removeEventListener('change', handleMotionChange);
     };
   }, []);

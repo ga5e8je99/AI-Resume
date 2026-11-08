@@ -54,7 +54,7 @@ Key achievements:
   - Autofocus on primary input on modal mount and correct `autocomplete`/`inputmode` attributes for mobile keyboards.
 - **Authentication Pages Overhaul:**
   - Polished split-screen layout for `/login` and `/register` with subtle ambient blur gradients.
-  - Distinct amber CTA for **"⚡ Try Demo Instantly"** (`⚡ جرّب النظام فوراً`) providing 1-click zero-registration access.
+  - Distinct amber CTA for **"  Try Demo Instantly"** (`  جرّب النظام فوراً`) providing 1-click zero-registration access.
   - Links to Terms of Service and Privacy Policy.
 - **Destructive Action Confirmations:**
   - Introduced `ConfirmModal.tsx` for deleting resumes, reports, and cover letters.

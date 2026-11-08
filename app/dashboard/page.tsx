@@ -868,6 +868,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-xs font-mono font-bold text-brand px-2.5 py-1 rounded-full bg-brand-soft border border-brand/20">
                     {t('checklist_progress_label')
+                      .replace('{completed}', String(doneCount))
                       .replace('{done}', String(doneCount))
                       .replace('{total}', '4')}
                   </span>

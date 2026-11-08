@@ -316,7 +316,7 @@ const fr: TranslationDictionary = {
   common_copied: 'Copié!',
 
   // Auth & Demo
-  auth_demo_button: '⚡ Essai Instantané sans Compte',
+  auth_demo_button: '  Essai Instantané sans Compte',
   auth_demo_loading: 'Préparation du compte démo...',
   auth_demo_desc: 'Testez immédiatement toutes les fonctions avec un CV d’exemple, un audit ATS et une lettre de motivation.',
   auth_login_title: 'Bon retour parmi nous',
@@ -475,7 +475,7 @@ const fr: TranslationDictionary = {
 
   // Additional Hero Keys
   hero_scan_cta: 'Analyser mon CV gratuitement',
-  hero_demo_cta: '⚡ Essayer la Démo Immédiatement',
+  hero_demo_cta: '  Essayer la Démo Immédiatement',
   hero_trust_free: 'Gratuit pour commencer',
   hero_trust_no_card: 'Sans carte bancaire',
   hero_trust_instant: 'Résultats instantanés',
@@ -497,7 +497,7 @@ const fr: TranslationDictionary = {
   // Additional Auth Keys
   auth_login_submitting: 'Connexion en cours...',
   auth_login_or_demo: 'Ou explorez immédiatement sans créer de compte :',
-  auth_login_demo_btn: '⚡ Lancer la Démo Immédiatement',
+  auth_login_demo_btn: '  Lancer la Démo Immédiatement',
   auth_login_demo_hint: 'Session pré-remplie avec données d’exemple',
   auth_login_trust_banner_title: 'Des CV conçus pour surpasser les systèmes de recrutement',
   auth_login_trust_feature1: 'Formats une seule colonne validés par Workday & Taleo',

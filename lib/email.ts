@@ -24,6 +24,30 @@ const FORBIDDEN_SENDER_DOMAINS = new Set([
 
 // Lazy initialization of Resend client (with test injection support)
 let resendInstance: Resend | null = null;
+let smtpTransporter: any = null;
+
+export function getSmtpTransporter() {
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim().replace(/\s+/g, '');
+  if (!user || !pass) return null;
+  if (!smtpTransporter) {
+    try {
+      const nodemailer = require('nodemailer');
+      smtpTransporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user,
+          pass,
+        },
+      });
+    } catch (e) {
+      console.error('[Nodemailer Init Error]:', e);
+      return null;
+    }
+  }
+  return smtpTransporter;
+}
+
 let customResendSenderForTests:
   | ((payload: {
       from: string;
@@ -60,6 +84,11 @@ function getResendClient(): Resend | null {
  * Falls back to `JobMatch AI <noreply@jobmatch.ai>` if a consumer webmail domain is detected.
  */
 export function resolveVerifiedSenderAddress(explicitFrom?: string): string {
+  // If local SMTP is explicitly configured (e.g. Gmail App Password for temporary use), allow the configured sender
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    return explicitFrom || process.env.EMAIL_FROM || `JobMatch AI <${process.env.SMTP_USER}>`;
+  }
+
   const candidate = (explicitFrom || process.env.EMAIL_FROM || DEFAULT_PROJECT_FROM).trim();
   const emailMatch = candidate.match(/<([^<>]+)>/) || [null, candidate];
   const rawEmail = (emailMatch[1] || candidate).trim().toLowerCase();
@@ -199,6 +228,31 @@ async function attemptDirectSend(payload: {
       return { ok: true, id: res?.data?.id || `test_${Date.now()}` };
     } catch (err: any) {
       return { ok: false, error: err?.message || 'Send exception', rawError: err };
+    }
+  }
+
+  const smtp = getSmtpTransporter();
+  if (smtp) {
+    try {
+      const fromAddr = payload.from || `JobMatch AI <${process.env.SMTP_USER}>`;
+      const info = await smtp.sendMail({
+        from: fromAddr,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+      });
+      console.log(`[Gmail SMTP Success] Sent email to ${payload.to}. MessageId: ${info.messageId}`);
+      return {
+        ok: true,
+        id: info.messageId,
+      };
+    } catch (smtpErr: any) {
+      console.error('[Gmail SMTP Error]:', smtpErr);
+      return {
+        ok: false,
+        error: smtpErr?.message || 'Gmail SMTP delivery failed',
+        rawError: smtpErr,
+      };
     }
   }
 

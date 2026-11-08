@@ -108,6 +108,7 @@ export function Reveal({
       data-aos-duration={duration ? String(duration) : undefined}
       data-aos-once={once ? 'true' : 'false'}
       className={className || undefined}
+      suppressHydrationWarning
     >
       {children}
     </div>

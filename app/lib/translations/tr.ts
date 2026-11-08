@@ -316,7 +316,7 @@ const tr: TranslationDictionary = {
   common_copied: 'Kopyalandı!',
 
   // Auth & Demo
-  auth_demo_button: '⚡ Demoyu Hemen Dene',
+  auth_demo_button: '  Demoyu Hemen Dene',
   auth_demo_loading: 'Demo hesabı hazırlanıyor...',
   auth_demo_desc: 'Örnek özgeçmiş, ATS taraması ve ön yazı ile tüm özellikleri anında keşfedin.',
   auth_login_title: 'Tekrar Hoş Geldiniz',
@@ -475,7 +475,7 @@ const tr: TranslationDictionary = {
 
   // Additional Hero Keys
   hero_scan_cta: 'Özgeçmişimi ücretsiz tara',
-  hero_demo_cta: '⚡ Demoyu Anında Dene',
+  hero_demo_cta: '  Demoyu Anında Dene',
   hero_trust_free: 'Başlamak ücretsiz',
   hero_trust_no_card: 'Kredi kartı gerekmez',
   hero_trust_instant: 'Anında sonuçlar',
@@ -497,7 +497,7 @@ const tr: TranslationDictionary = {
   // Additional Auth Keys
   auth_login_submitting: 'Giriş yapılıyor...',
   auth_login_or_demo: 'Veya üye olmadan anında keşfedin:',
-  auth_login_demo_btn: '⚡ Demoyu Anında Dene',
+  auth_login_demo_btn: '  Demoyu Anında Dene',
   auth_login_demo_hint: 'Örnek verilerle doldurulmuş anlık oturum',
   auth_login_trust_banner_title: 'İşe alım filtrelerini geçmek için tasarlanmış özgeçmişler',
   auth_login_trust_feature1: 'Workday ve Taleo tarafından taranan tek sütunlu formatlar',

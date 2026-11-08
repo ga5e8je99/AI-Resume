@@ -79,7 +79,7 @@ export default function SectionWave({
             <linearGradient id={gradientId} x1="18%" y1="88%" x2="82%" y2="12%">
               <stop offset="5%" stopColor="var(--brand)" stopOpacity="0.55" />
               <stop offset="50%" stopColor="var(--brand-hover, #0B4A3E)" stopOpacity="0.65" />
-              <stop offset="95%" stopColor="var(--highlight, #C8892B)" stopOpacity="0.45" />
+              <stop offset="95%" stopColor="var(--brand-hover, #0B4A3E)" stopOpacity="0.45" />
             </linearGradient>
           ) : (
             <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">

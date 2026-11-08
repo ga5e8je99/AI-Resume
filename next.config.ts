@@ -22,6 +22,32 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
+  // Route redirects for common typos and aliases
+  async redirects() {
+    return [
+      {
+        source: '/cover-leter',
+        destination: '/cover-letter',
+        permanent: true,
+      },
+      {
+        source: '/cover-later',
+        destination: '/cover-letter',
+        permanent: true,
+      },
+      {
+        source: '/coverletter',
+        destination: '/cover-letter',
+        permanent: true,
+      },
+      {
+        source: '/cover_letter',
+        destination: '/cover-letter',
+        permanent: true,
+      },
+    ];
+  },
+
   // HTTP Performance, Caching, and Security Headers
   async headers() {
     const isDev = process.env.NODE_ENV !== 'production';

@@ -26,7 +26,7 @@ pie title الحالة الراهنة لجاهزية المشروع
 
 - [ ] **1. إضافة وضع الزائر السريع (One-Click Demo Guest Mode)**
   - **الملف المستهدف:** [`app/login/page.tsx`](file:///c:/Users/dell/Desktop/freelance/top-projects/AI-Resume/app/login/page.tsx) و [`app/api/auth/demo/route.ts`](file:///c:/Users/dell/Desktop/freelance/top-projects/AI-Resume/app/api/auth)
-  - **الوصف:** إضافة زر `⚡ الدخول كزائر لتجربة النظام (Try Demo Instantly)` يقوم بتسجيل الدخول تلقائياً بحساب تجريبي محشو مسبقاً ببيانات:
+  - **الوصف:** إضافة زر `  الدخول كزائر لتجربة النظام (Try Demo Instantly)` يقوم بتسجيل الدخول تلقائياً بحساب تجريبي محشو مسبقاً ببيانات:
     - سيرة ذاتية جاهزة ومكتملة لعرض الـ Builder.
     - تقرير فحص ATS محفوظ لعرض الـ Dashboard.
     - مسودة خطاب تقديم جاهزة للعرض الفوري.

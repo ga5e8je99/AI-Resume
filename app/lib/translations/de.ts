@@ -316,7 +316,7 @@ const de: TranslationDictionary = {
   common_copied: 'Kopiert!',
 
   // Auth & Demo
-  auth_demo_button: '⚡ Sofortiger Demo-Zugang',
+  auth_demo_button: '  Sofortiger Demo-Zugang',
   auth_demo_loading: 'Demo-Konto wird vorbereitet...',
   auth_demo_desc: 'Alle Funktionen sofort mit Musterlebenslauf, ATS-Score und Anschreiben testen.',
   auth_login_title: 'Willkommen zurück',
@@ -475,7 +475,7 @@ const de: TranslationDictionary = {
 
   // Additional Hero Keys
   hero_scan_cta: 'Lebenslauf gratis prüfen',
-  hero_demo_cta: '⚡ Demo sofort testen',
+  hero_demo_cta: '  Demo sofort testen',
   hero_trust_free: 'Kostenlos starten',
   hero_trust_no_card: 'Keine Kreditkarte',
   hero_trust_instant: 'Sofortige Ergebnisse',
@@ -497,7 +497,7 @@ const de: TranslationDictionary = {
   // Additional Auth Keys
   auth_login_submitting: 'Anmeldung läuft...',
   auth_login_or_demo: 'Oder sofort ohne Anmeldung erkunden:',
-  auth_login_demo_btn: '⚡ Sofort Demo testen',
+  auth_login_demo_btn: '  Sofort Demo testen',
   auth_login_demo_hint: 'Sofortige Test-Sitzung mit vorbereiteten Daten',
   auth_login_trust_banner_title: 'Lebensläufe, die ATS-Filter erfolgreich meistern',
   auth_login_trust_feature1: 'Einspaltige Formate, von Workday & Taleo geprüft',
